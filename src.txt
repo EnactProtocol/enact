@@ -1,0 +1,1940 @@
+Path: ./src/utils/help.ts
+// src/utils/help.ts
+import pc from 'picocolors';
+
+/**
+ * Show the main help message
+ */
+export function showHelp(): void {
+  console.log(`
+${pc.bold('Enact CLI')} ${pc.dim('v0.1.0')}
+${pc.dim('A simple CLI tool to publish documents')}
+
+${pc.bold('Usage:')}
+  ${pc.cyan('enact')} ${pc.green('<command>')} [options]
+
+${pc.bold('Commands:')}
+  ${pc.green('publish')}    Publishes a document to a server
+  
+${pc.bold('Options:')}
+  ${pc.yellow('--help, -h')}    Show this help message
+  ${pc.yellow('--version, -v')} Show version information
+
+${pc.bold('Examples:')}
+  ${pc.cyan('enact')} ${pc.green('publish')} document.md
+  ${pc.cyan('enact')} ${pc.green('publish')} ${pc.yellow('--url')} https://example.com/api document.md
+`);
+}
+
+/**
+ * Show version information
+ */
+export function showVersion(): void {
+  console.log(`enact-cli v0.1.0`);
+}
+
+/**
+ * Show help for the publish command
+ */
+export function showPublishHelp(): void {
+  console.log(`
+${pc.bold('Usage:')} ${pc.cyan('enact')} ${pc.green('publish')} [options] [file]
+
+${pc.bold('Publishes a document to a server')}
+
+${pc.bold('Arguments:')}
+  ${pc.green('file')}        The file to publish. If not provided, will prompt for a file.
+
+${pc.bold('Options:')}
+  ${pc.yellow('--help, -h')}    Show this help message
+  ${pc.yellow('--url')}         Specify the server URL to publish to
+
+${pc.bold('Examples:')}
+  ${pc.cyan('enact')} ${pc.green('publish')} document.md
+  ${pc.cyan('enact')} ${pc.green('publish')} ${pc.yellow('--url')} https://example.com/api document.md
+`);
+}
+Path: ./src/utils/logger.ts
+// src/utils/logger.ts
+import color from 'picocolors';
+
+export enum LogLevel {
+  DEBUG = 0,
+  INFO = 1,
+  SUCCESS = 2,
+  WARN = 3,
+  ERROR = 4,
+}
+
+// Default log level
+let currentLogLevel = LogLevel.INFO;
+
+/**
+ * Sets the current log level
+ */
+export function setLogLevel(level: LogLevel): void {
+  currentLogLevel = level;
+}
+
+/**
+ * Debug log - only shown when log level is DEBUG
+ */
+export function debug(message: string): void {
+  if (currentLogLevel <= LogLevel.DEBUG) {
+    console.log(color.dim(`🔍 ${message}`));
+  }
+}
+
+/**
+ * Info log - general information
+ */
+export function info(message: string): void {
+  if (currentLogLevel <= LogLevel.INFO) {
+    console.log(color.blue(`ℹ️ ${message}`));
+  }
+}
+
+/**
+ * Success log - operation completed successfully
+ */
+export function success(message: string): void {
+  if (currentLogLevel <= LogLevel.SUCCESS) {
+    console.log(color.green(`✓ ${message}`));
+  }
+}
+
+/**
+ * Warning log - non-critical issues
+ */
+export function warn(message: string): void {
+  if (currentLogLevel <= LogLevel.WARN) {
+    console.log(color.yellow(`⚠️ ${message}`));
+  }
+}
+
+/**
+ * Error log - critical issues
+ */
+export function error(message: string, details?: any): void {
+  if (currentLogLevel <= LogLevel.ERROR) {
+    console.log(color.red(`✗ Error: ${message}`));
+    
+    if (details && currentLogLevel === LogLevel.DEBUG) {
+      console.log(color.dim('Details:'));
+      console.log(details);
+    }
+  }
+}
+
+/**
+ * Table log - display tabular data
+ */
+export function table(data: any[], columns?: string[]): void {
+  if (currentLogLevel <= LogLevel.INFO) {
+    if (columns) {
+      console.table(data, columns);
+    } else {
+      console.table(data);
+    }
+  }
+}
+Path: ./src/utils/version.ts
+// src/utils/version.ts
+import color from 'picocolors';
+
+/**
+ * Displays the CLI version with nice formatting
+ */
+export function showVersion(): void {
+  // Bun automatically sets npm_package_version when running scripts via package.json
+  const version = process.env.npm_package_version || '0.0.1-dev';
+  const versionText = `v${version}`;
+  
+  console.log(`
+${color.bold('Enact CLI')} ${color.cyan(versionText)}
+${color.dim('A tool to create and publish enact documents.')}
+`);
+}
+Path: ./src/utils/config.ts
+// src/utils/config.ts
+import { homedir } from 'os';
+import { join } from 'path';
+import { existsSync } from 'fs';
+import { mkdir, readFile, writeFile } from 'fs/promises';
+
+// Define config paths
+const CONFIG_DIR = join(homedir(), '.enact');
+const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
+
+// Define config interface
+export interface EnactConfig {
+  defaultUrl?: string;
+  history?: string[];
+}
+
+/**
+ * Ensure config directory and file exist
+ */
+export async function ensureConfig(): Promise<void> {
+  if (!existsSync(CONFIG_DIR)) {
+    await mkdir(CONFIG_DIR, { recursive: true });
+  }
+  
+  if (!existsSync(CONFIG_FILE)) {
+    await writeConfig({ history: [] });
+  }
+}
+
+/**
+ * Read the config file
+ */
+export async function readConfig(): Promise<EnactConfig> {
+  await ensureConfig();
+  
+  try {
+    const data = await readFile(CONFIG_FILE, 'utf8');
+    return JSON.parse(data) as EnactConfig;
+  } catch (error) {
+    console.error('Failed to read config:', (error as Error).message);
+    return { history: [] };
+  }
+}
+
+/**
+ * Write to the config file
+ */
+export async function writeConfig(config: EnactConfig): Promise<void> {
+  await ensureConfig();
+  await writeFile(CONFIG_FILE, JSON.stringify(config, null, 2));
+}
+
+/**
+ * Add a file to the publish history
+ */
+export async function addToHistory(filePath: string): Promise<void> {
+  const config = await readConfig();
+  
+  if (!config.history) {
+    config.history = [];
+  }
+  
+  // Add to history if not already there
+  if (!config.history.includes(filePath)) {
+    config.history.unshift(filePath);
+    
+    // Keep history to a reasonable size
+    config.history = config.history.slice(0, 10);
+    
+    await writeConfig(config);
+  }
+}
+
+/**
+ * Get the publish history
+ */
+export async function getHistory(): Promise<string[]> {
+  const config = await readConfig();
+  return config.history || [];
+}
+
+/**
+ * Set the default publish URL
+ */
+export async function setDefaultUrl(url: string): Promise<void> {
+  const config = await readConfig();
+  config.defaultUrl = url;
+  await writeConfig(config);
+}
+
+/**
+ * Get the default publish URL
+ */
+export async function getDefaultUrl(): Promise<string | undefined> {
+  const config = await readConfig();
+  return config.defaultUrl;
+}
+Path: ./src/commands/publish.ts
+// src/commands/publish.ts
+import { existsSync } from 'fs';
+import { readFile } from 'fs/promises';
+import { basename } from 'path';
+import * as p from '@clack/prompts';
+import pc from 'picocolors';
+import { showPublishHelp } from '../utils/help';
+import { 
+  addToHistory, 
+  getHistory, 
+  getDefaultUrl, 
+  setDefaultUrl 
+} from '../utils/config';
+
+// Define the options interface
+export interface PublishOptions {
+  help?: boolean;
+  url?: string;
+}
+
+/**
+ * Handle the publish command
+ */
+export async function handlePublishCommand(
+  args: string[], 
+  options: PublishOptions
+): Promise<void> {
+  // Show help if requested
+  if (options.help) {
+    showPublishHelp();
+    return;
+  }
+
+  // Start the interactive prompt
+  p.intro(pc.bgBlue(pc.white(' Publish Document ')));
+
+  // Get the file to publish
+  let filePath = args[0];
+  
+  if (!filePath) {
+    // No file provided, show interactive prompt
+    const history = await getHistory();
+    
+    if (history.length > 0) {
+      // User has publish history, offer to reuse
+      const action = await p.select({
+        message: 'Select a file to publish:',
+        options: [
+          { value: 'select', label: 'Choose from recent files' },
+          { value: 'new', label: 'Specify a new file' }
+        ]
+      });
+      
+      if (action === 'select') {
+        const fileOptions = history
+          .filter(file => existsSync(file))
+          .map(file => ({
+            value: file,
+            label: file
+          }));
+        
+        if (fileOptions.length > 0) {
+          filePath = await p.select({
+            message: 'Select a file:',
+            options: fileOptions
+          }) as string;
+        } else {
+          p.note('No recent files found.', 'History');
+          filePath = await p.text({
+            message: 'Enter the path to the file:',
+            validate: validateFile
+          }) as string;
+        }
+      } else {
+        filePath = await p.text({
+          message: 'Enter the path to the file:',
+          validate: validateFile
+        }) as string;
+      }
+    } else {
+      // No history, just ask for a file
+      filePath = await p.text({
+        message: 'Enter the path to the file:',
+        validate: validateFile
+      }) as string;
+    }
+    
+    if (filePath === null) {
+      p.outro(pc.yellow('Operation cancelled'));
+      return;
+    }
+  } else {
+    // Validate the provided file
+    if (!existsSync(filePath)) {
+      p.outro(pc.red(`Error: File not found: ${filePath}`));
+      return;
+    }
+  }
+
+  // Get the URL to publish to
+  let url = options.url;
+  
+  if (!url) {
+    const defaultUrl = await getDefaultUrl();
+    
+    if (defaultUrl) {
+      const useDefault = await p.confirm({
+        message: `Use default URL (${defaultUrl})?`
+      });
+      
+      if (useDefault === null) {
+        p.outro(pc.yellow('Operation cancelled'));
+        return;
+      }
+      
+      if (useDefault) {
+        url = defaultUrl;
+      }
+    }
+    
+    if (!url) {
+      url = await p.text({
+        message: 'Enter the server URL:',
+        placeholder: 'https://example.com/api',
+        validate: (value) => {
+          if (!value) return 'URL is required';
+          if (!value.startsWith('http')) return 'URL must start with http:// or https://';
+          return undefined;
+        }
+      }) as string;
+      
+      if (url === null) {
+        p.outro(pc.yellow('Operation cancelled'));
+        return;
+      }
+      
+      // Ask if this should be the default URL
+      const saveAsDefault = await p.confirm({
+        message: 'Save as default URL?'
+      });
+      
+      if (saveAsDefault) {
+        await setDefaultUrl(url);
+        p.note('URL saved as default.', 'Config');
+      }
+    }
+  }
+
+  // Confirm the publish action
+  const shouldPublish = await p.confirm({
+    message: `Publish ${pc.cyan(basename(filePath))} to ${pc.green(url)}?`
+  });
+  
+  if (!shouldPublish) {
+    p.outro(pc.yellow('Publish cancelled'));
+    return;
+  }
+
+  // Show a spinner during publish
+  const spinner = p.spinner();
+  spinner.start('Publishing document');
+
+  try {
+    // Read the file content
+    const content = await readFile(filePath, 'utf8');
+    
+    // Simulate publishing (in a real app, this would be an API call)
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Add to history
+    await addToHistory(filePath);
+    
+    // Complete
+    spinner.stop('Document published successfully');
+    p.outro(pc.green(`✓ ${pc.bold(basename(filePath))} published to ${pc.bold(url)}`));
+  } catch (error) {
+    spinner.stop('Failed to publish document');
+    p.note((error as Error).message, 'Error');
+    p.outro(pc.red('Publish failed'));
+  }
+}
+
+/**
+ * Validate that a file exists
+ */
+function validateFile(value: string): string | undefined {
+  if (!value) return 'File path is required';
+  if (!existsSync(value)) return 'File does not exist';
+  return undefined;
+}
+Path: ./src/commands/remote.ts
+// src/commands/remote.ts
+import { intro, outro, text, select, confirm, spinner, note } from '@clack/prompts';
+import color from 'picocolors';
+import { existsSync } from 'fs';
+import { join } from 'path';
+import { homedir } from 'os';
+
+interface RemoteOptions {
+  help?: boolean;
+}
+
+// Configuration file setup
+const CONFIG_DIR = join(homedir(), '.enact');
+const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
+
+export async function handleRemoteCommand(args: string[], options: RemoteOptions): Promise<void> {
+  if (options.help || !args[0]) {
+    console.log(`
+Usage: enact remote <subcommand> [options]
+
+Manages remote server configurations for publishing enact documents.
+
+Subcommands:
+  add <name> <url>    Adds a new remote server.
+  remove <name>       Removes an existing remote server.
+  list                Lists all configured remote servers.
+  ls                  Alias for list.
+
+Options:
+  --help, -h          Show this help message
+`);
+    return;
+  }
+
+  const subCommand = args[0];
+  const subCommandArgs = args.slice(1);
+
+  // Initialize config if it doesn't exist
+  await ensureConfig();
+
+  intro(color.bgMagenta(color.black(' Remote Server Management ')));
+
+  switch (subCommand) {
+    case 'add': {
+      // Interactive mode if arguments are missing
+      let name = subCommandArgs[0];
+      let url = subCommandArgs[1];
+      
+      if (!name) {
+        name = await text({
+          message: 'Remote name:',
+          placeholder: 'production',
+          validate(value) {
+            if (!value) return 'Name is required';
+          }
+        }) as string;
+        
+        if (name === null) {
+          outro(color.yellow('Operation cancelled'));
+          return;
+        }
+      }
+      
+      if (!url) {
+        url = await text({
+          message: 'Remote URL:',
+          placeholder: 'https://api.example.com/publish',
+          validate(value) {
+            if (!value) return 'URL is required';
+            if (!value.startsWith('http')) return 'URL must start with http:// or https://';
+          }
+        }) as string;
+        
+        if (url === null) {
+          outro(color.yellow('Operation cancelled'));
+          return;
+        }
+      }
+
+      const config = await readConfig();
+      
+      // Check if remote already exists
+      if (config.remotes[name]) {
+        const overwrite = await confirm({
+          message: `Remote "${name}" already exists. Overwrite?`
+        });
+        
+        if (!overwrite) {
+          outro(color.yellow('Operation cancelled'));
+          return;
+        }
+      }
+      
+      // Save the remote
+      const s = spinner();
+      s.start(`Adding remote "${name}"`);
+      
+      config.remotes[name] = { url };
+      await writeConfig(config);
+      
+      s.stop(`Remote "${name}" added`);
+      outro(color.green(`✓ Remote ${color.bold(name)} configured with URL ${color.bold(url)}`));
+      break;
+    }
+    
+    case 'remove': {
+      let name = subCommandArgs[0];
+      const config = await readConfig();
+      
+      // Interactive mode if no name provided
+      if (!name) {
+        if (Object.keys(config.remotes).length === 0) {
+          note('No remotes configured yet', 'Info');
+          outro('');
+          return;
+        }
+        
+        name = await select({
+          message: 'Select remote to remove:',
+          options: Object.keys(config.remotes).map(remoteName => ({
+            value: remoteName,
+            label: `${remoteName} (${config.remotes[remoteName].url})`
+          }))
+        }) as string;
+        
+        if (name === null) {
+          outro(color.yellow('Operation cancelled'));
+          return;
+        }
+      }
+      
+      // Check if remote exists
+      if (!config.remotes[name]) {
+        outro(color.red(`✗ Remote "${name}" does not exist`));
+        return;
+      }
+      
+      // Confirm removal
+      const shouldRemove = await confirm({
+        message: `Are you sure you want to remove remote "${name}"?`
+      });
+      
+      if (!shouldRemove) {
+        outro(color.yellow('Operation cancelled'));
+        return;
+      }
+      
+      // Remove the remote
+      const s = spinner();
+      s.start(`Removing remote "${name}"`);
+      
+      delete config.remotes[name];
+      await writeConfig(config);
+      
+      s.stop(`Remote "${name}" removed`);
+      outro(color.green(`✓ Remote ${color.bold(name)} has been removed`));
+      break;
+    }
+    
+    case 'list':
+    case 'ls': {
+      const config = await readConfig();
+      const remotes = Object.entries(config.remotes);
+      
+      if (remotes.length === 0) {
+        note('No remotes configured yet', 'Info');
+        outro('');
+        return;
+      }
+      
+// Fix 'data' is of type 'unknown'
+// Line 173
+note(
+  remotes.map(([name, data]) => 
+    `${color.bold(name)}: ${(data as { url: string }).url}`
+  ).join('\n'),
+  'Configured Remotes'
+);
+
+
+      
+      outro('');
+      break;
+    }
+    
+    default:
+      outro(color.red(`✗ Unknown remote subcommand "${subCommand}"`));
+      return;
+  }
+}
+
+// Helper functions for config management
+async function ensureConfig() {
+  // Create config directory if it doesn't exist
+  if (!existsSync(CONFIG_DIR)) {
+    await import('fs/promises').then(fs => fs.mkdir(CONFIG_DIR, { recursive: true }));
+  }
+  
+  // Create default config if it doesn't exist
+  if (!existsSync(CONFIG_FILE)) {
+    await writeConfig({ remotes: {} });
+  }
+}
+
+async function readConfig() {
+  const text = await Bun.file(CONFIG_FILE).text();
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    return { remotes: {} };
+  }
+}
+
+
+
+// Fix 'Parameter 'config' implicitly has an 'any' type'
+// Line 210
+async function writeConfig(config: { remotes: Record<string, { url: string }> }): Promise<void> {
+  await Bun.write(CONFIG_FILE, JSON.stringify(config, null, 2));
+}
+Path: ./src/commands/create.ts
+// src/commands/create.ts
+import { intro, outro, text, select, confirm, spinner } from '@clack/prompts';
+import color from 'picocolors';
+
+interface CreateOptions {
+  help?: boolean;
+  template?: string;
+}
+
+export async function handleCreateCommand(args: string[], options: CreateOptions): Promise<void> {
+  if (options.help) {
+    console.log(`
+Usage: enact create [targetPath] [options]
+
+Creates a new enact document in the specified path or current repository.
+
+Arguments:
+  targetPath  The path where the enact document should be created. Defaults to '.' (current directory).
+
+Options:
+  --help, -h          Show this help message
+  --template <name>   Specify a template to use for the new document
+`);
+    return;
+  }
+
+  let targetPath = args[0] || '.'; // Default to current directory
+
+  // Pretty intro
+  intro(color.bgCyan(color.black(' Create a new Enact document ')));
+
+  // Interactive path confirmation if not explicitly provided
+  if (args.length === 0) {
+    const targetPathResponse = await text({
+      message: 'Where should we create the document?',
+      placeholder: '.',
+      initialValue: '.',
+      validate(value: string) {
+        if (!value) return 'Please enter a valid path';
+        return undefined;
+      }
+    });
+    
+    if (targetPathResponse === null) {
+      outro(color.yellow('Operation cancelled'));
+      return;
+    }
+    
+    targetPath = targetPathResponse as string;
+  }
+
+  // Template selection
+  const templateChoice = await select({
+    message: 'Select a template:',
+    options: [
+      { value: 'basic', label: 'Basic document' },
+      { value: 'article', label: 'Article with sections' },
+      { value: 'report', label: 'Detailed report' },
+    ]
+  });
+  
+  if (templateChoice === null) {
+    outro(color.yellow('Operation cancelled'));
+    return;
+  }
+
+  // Document metadata
+  const titleResponse = await text({
+    message: 'Document title:',
+    placeholder: 'My Enact Document',
+    validate(value: string) {
+      if (!value) return 'Title is required';
+      return undefined;
+    }
+  });
+  
+  if (titleResponse === null) {
+    outro(color.yellow('Operation cancelled'));
+    return;
+  }
+  
+  const title = titleResponse as string;
+
+  // Confirmation
+  const shouldProceed = await confirm({
+    message: `Create a new ${String(templateChoice)} document at "${targetPath}"?`
+  });
+  
+  if (!shouldProceed) {
+    outro(color.yellow('Operation cancelled'));
+    return;
+  }
+
+  // Progress spinner
+  const loadingSpinner = spinner();
+  loadingSpinner.start('Creating your document');
+  
+  try {
+    // Fake a delay to show the spinner
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Create the document based on template
+    const content = generateTemplateContent(templateChoice as string, title);
+    const filename = `${title.toLowerCase().replace(/\s+/g, '-')}.enact.md`;
+    const fullPath = targetPath === '.' ? filename : `${targetPath}/${filename}`;
+    
+    await Bun.write(fullPath, content);
+    
+    loadingSpinner.stop('Document created successfully');
+    outro(color.green(`✓ Created ${color.bold(fullPath)}`));
+  } catch (error) {
+    loadingSpinner.stop('Failed to create document');
+    outro(color.red(`✗ Error: ${(error as Error).message}`));
+  }
+}
+
+function generateTemplateContent(template: string, title: string): string {
+  const date = new Date().toISOString().split('T')[0];
+  
+  switch (template) {
+    case 'basic':
+      return `---
+title: ${title}
+date: ${date}
+---
+
+# ${title}
+
+Write your content here.
+`;
+    case 'article':
+      return `---
+title: ${title}
+date: ${date}
+type: article
+---
+
+# ${title}
+
+## Introduction
+
+Write your introduction here.
+
+## Main Content
+
+Write your main content here.
+
+## Conclusion
+
+Write your conclusion here.
+`;
+    case 'report':
+      return `---
+title: ${title}
+date: ${date}
+type: report
+---
+
+# ${title}
+
+## Executive Summary
+
+Write your executive summary here.
+
+## Findings
+
+### Finding 1
+
+Details about finding 1.
+
+### Finding 2
+
+Details about finding 2.
+
+## Recommendations
+
+List your recommendations here.
+
+## Appendix
+
+Additional information.
+`;
+    default:
+      return `---
+title: ${title}
+date: ${date}
+---
+
+# ${title}
+
+Write your content here.
+`;
+  }
+}
+Path: ./src/index.ts
+#!/usr/bin/env bun
+// src/index.ts
+import { parseArgs } from 'util';
+import pc from 'picocolors';
+import * as p from '@clack/prompts';
+import { handlePublishCommand } from './commands/publish';
+import { showHelp, showVersion } from './utils/help';
+import { handleRemoteCommand } from './commands/remote';
+
+// Parse arguments
+const { values, positionals } = parseArgs({
+  args: Bun.argv,
+  options: {
+    help: {
+      type: 'boolean',
+      short: 'h',
+    },
+    version: {
+      type: 'boolean',
+      short: 'v',
+    },
+    url: {
+      type: 'string',
+    }
+  },
+  allowPositionals: true,
+  strict: false,
+});
+
+// Extract command and args
+const command = positionals[2]; // First arg after 'bun index.ts'
+const commandArgs = positionals.slice(3);
+
+// Handle global flags
+if (values.version) {
+  showVersion();
+  process.exit(0);
+}
+
+if (values.help && !command) {
+  showHelp();
+  process.exit(0);
+}
+
+// Main function
+async function main() {
+  try {
+    // Route to the appropriate command
+    switch (command) {
+      case 'publish':
+        await handlePublishCommand(commandArgs, {
+          help: values.help as boolean | undefined,
+          url: values.url as string | undefined
+        });
+        break;
+      case 'remote':
+        // Handle remote command (not implemented in this snippet)
+        await handleRemoteCommand(commandArgs, {
+          help: values.help as boolean | undefined
+        });
+        break;
+        
+      case undefined:
+        // No command specified, show interactive mode
+        if (values.help) {
+          showHelp();
+        } else {
+          p.intro(pc.bgCyan(pc.black(' Enact CLI ')));
+          
+          const action = await p.select({
+            message: 'What would you like to do?',
+            options: [
+              { value: 'publish', label: 'Publish a document' },
+              { value: 'help', label: 'Show help' },
+              { value: 'exit', label: 'Exit' }
+            ]
+          });
+          
+          if (action === null || action === 'exit') {
+            p.outro('Goodbye!');
+            return;
+          }
+          
+          if (action === 'help') {
+            showHelp();
+            return;
+          }
+          
+          if (action === 'publish') {
+            await handlePublishCommand([], {});
+          }
+        }
+        break;
+        
+      default:
+        console.error(pc.red(`Unknown command: ${command}`));
+        showHelp();
+        process.exit(1);
+    }
+  } catch (error) {
+    console.error(pc.red(`Error: ${(error as Error).message}`));
+    process.exit(1);
+  }
+}
+
+// Run the CLI
+main();
+Path: ./src/utils/help.ts
+// src/utils/help.ts
+import pc from 'picocolors';
+
+/**
+ * Show the main help message
+ */
+export function showHelp(): void {
+  console.log(`
+${pc.bold('Enact CLI')} ${pc.dim('v0.1.0')}
+${pc.dim('A simple CLI tool to publish documents')}
+
+${pc.bold('Usage:')}
+  ${pc.cyan('enact')} ${pc.green('<command>')} [options]
+
+${pc.bold('Commands:')}
+  ${pc.green('publish')}    Publishes a document to a server
+  
+${pc.bold('Options:')}
+  ${pc.yellow('--help, -h')}    Show this help message
+  ${pc.yellow('--version, -v')} Show version information
+
+${pc.bold('Examples:')}
+  ${pc.cyan('enact')} ${pc.green('publish')} document.md
+  ${pc.cyan('enact')} ${pc.green('publish')} ${pc.yellow('--url')} https://example.com/api document.md
+`);
+}
+
+/**
+ * Show version information
+ */
+export function showVersion(): void {
+  console.log(`enact-cli v0.1.0`);
+}
+
+/**
+ * Show help for the publish command
+ */
+export function showPublishHelp(): void {
+  console.log(`
+${pc.bold('Usage:')} ${pc.cyan('enact')} ${pc.green('publish')} [options] [file]
+
+${pc.bold('Publishes a document to a server')}
+
+${pc.bold('Arguments:')}
+  ${pc.green('file')}        The file to publish. If not provided, will prompt for a file.
+
+${pc.bold('Options:')}
+  ${pc.yellow('--help, -h')}    Show this help message
+  ${pc.yellow('--url')}         Specify the server URL to publish to
+
+${pc.bold('Examples:')}
+  ${pc.cyan('enact')} ${pc.green('publish')} document.md
+  ${pc.cyan('enact')} ${pc.green('publish')} ${pc.yellow('--url')} https://example.com/api document.md
+`);
+}
+Path: ./src/utils/logger.ts
+// src/utils/logger.ts
+import color from 'picocolors';
+
+export enum LogLevel {
+  DEBUG = 0,
+  INFO = 1,
+  SUCCESS = 2,
+  WARN = 3,
+  ERROR = 4,
+}
+
+// Default log level
+let currentLogLevel = LogLevel.INFO;
+
+/**
+ * Sets the current log level
+ */
+export function setLogLevel(level: LogLevel): void {
+  currentLogLevel = level;
+}
+
+/**
+ * Debug log - only shown when log level is DEBUG
+ */
+export function debug(message: string): void {
+  if (currentLogLevel <= LogLevel.DEBUG) {
+    console.log(color.dim(`🔍 ${message}`));
+  }
+}
+
+/**
+ * Info log - general information
+ */
+export function info(message: string): void {
+  if (currentLogLevel <= LogLevel.INFO) {
+    console.log(color.blue(`ℹ️ ${message}`));
+  }
+}
+
+/**
+ * Success log - operation completed successfully
+ */
+export function success(message: string): void {
+  if (currentLogLevel <= LogLevel.SUCCESS) {
+    console.log(color.green(`✓ ${message}`));
+  }
+}
+
+/**
+ * Warning log - non-critical issues
+ */
+export function warn(message: string): void {
+  if (currentLogLevel <= LogLevel.WARN) {
+    console.log(color.yellow(`⚠️ ${message}`));
+  }
+}
+
+/**
+ * Error log - critical issues
+ */
+export function error(message: string, details?: any): void {
+  if (currentLogLevel <= LogLevel.ERROR) {
+    console.log(color.red(`✗ Error: ${message}`));
+    
+    if (details && currentLogLevel === LogLevel.DEBUG) {
+      console.log(color.dim('Details:'));
+      console.log(details);
+    }
+  }
+}
+
+/**
+ * Table log - display tabular data
+ */
+export function table(data: any[], columns?: string[]): void {
+  if (currentLogLevel <= LogLevel.INFO) {
+    if (columns) {
+      console.table(data, columns);
+    } else {
+      console.table(data);
+    }
+  }
+}
+Path: ./src/utils/version.ts
+// src/utils/version.ts
+import color from 'picocolors';
+
+/**
+ * Displays the CLI version with nice formatting
+ */
+export function showVersion(): void {
+  // Bun automatically sets npm_package_version when running scripts via package.json
+  const version = process.env.npm_package_version || '0.0.1-dev';
+  const versionText = `v${version}`;
+  
+  console.log(`
+${color.bold('Enact CLI')} ${color.cyan(versionText)}
+${color.dim('A tool to create and publish enact documents.')}
+`);
+}
+Path: ./src/utils/config.ts
+// src/utils/config.ts
+import { homedir } from 'os';
+import { join } from 'path';
+import { existsSync } from 'fs';
+import { mkdir, readFile, writeFile } from 'fs/promises';
+
+// Define config paths
+const CONFIG_DIR = join(homedir(), '.enact');
+const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
+
+// Define config interface
+export interface EnactConfig {
+  defaultUrl?: string;
+  history?: string[];
+}
+
+/**
+ * Ensure config directory and file exist
+ */
+export async function ensureConfig(): Promise<void> {
+  if (!existsSync(CONFIG_DIR)) {
+    await mkdir(CONFIG_DIR, { recursive: true });
+  }
+  
+  if (!existsSync(CONFIG_FILE)) {
+    await writeConfig({ history: [] });
+  }
+}
+
+/**
+ * Read the config file
+ */
+export async function readConfig(): Promise<EnactConfig> {
+  await ensureConfig();
+  
+  try {
+    const data = await readFile(CONFIG_FILE, 'utf8');
+    return JSON.parse(data) as EnactConfig;
+  } catch (error) {
+    console.error('Failed to read config:', (error as Error).message);
+    return { history: [] };
+  }
+}
+
+/**
+ * Write to the config file
+ */
+export async function writeConfig(config: EnactConfig): Promise<void> {
+  await ensureConfig();
+  await writeFile(CONFIG_FILE, JSON.stringify(config, null, 2));
+}
+
+/**
+ * Add a file to the publish history
+ */
+export async function addToHistory(filePath: string): Promise<void> {
+  const config = await readConfig();
+  
+  if (!config.history) {
+    config.history = [];
+  }
+  
+  // Add to history if not already there
+  if (!config.history.includes(filePath)) {
+    config.history.unshift(filePath);
+    
+    // Keep history to a reasonable size
+    config.history = config.history.slice(0, 10);
+    
+    await writeConfig(config);
+  }
+}
+
+/**
+ * Get the publish history
+ */
+export async function getHistory(): Promise<string[]> {
+  const config = await readConfig();
+  return config.history || [];
+}
+
+/**
+ * Set the default publish URL
+ */
+export async function setDefaultUrl(url: string): Promise<void> {
+  const config = await readConfig();
+  config.defaultUrl = url;
+  await writeConfig(config);
+}
+
+/**
+ * Get the default publish URL
+ */
+export async function getDefaultUrl(): Promise<string | undefined> {
+  const config = await readConfig();
+  return config.defaultUrl;
+}
+Path: ./src/commands/publish.ts
+// src/commands/publish.ts
+import { existsSync } from 'fs';
+import { readFile } from 'fs/promises';
+import { basename } from 'path';
+import * as p from '@clack/prompts';
+import pc from 'picocolors';
+import { showPublishHelp } from '../utils/help';
+import { 
+  addToHistory, 
+  getHistory, 
+  getDefaultUrl, 
+  setDefaultUrl 
+} from '../utils/config';
+
+// Define the options interface
+export interface PublishOptions {
+  help?: boolean;
+  url?: string;
+}
+
+/**
+ * Handle the publish command
+ */
+export async function handlePublishCommand(
+  args: string[], 
+  options: PublishOptions
+): Promise<void> {
+  // Show help if requested
+  if (options.help) {
+    showPublishHelp();
+    return;
+  }
+
+  // Start the interactive prompt
+  p.intro(pc.bgBlue(pc.white(' Publish Document ')));
+
+  // Get the file to publish
+  let filePath = args[0];
+  
+  if (!filePath) {
+    // No file provided, show interactive prompt
+    const history = await getHistory();
+    
+    if (history.length > 0) {
+      // User has publish history, offer to reuse
+      const action = await p.select({
+        message: 'Select a file to publish:',
+        options: [
+          { value: 'select', label: 'Choose from recent files' },
+          { value: 'new', label: 'Specify a new file' }
+        ]
+      });
+      
+      if (action === 'select') {
+        const fileOptions = history
+          .filter(file => existsSync(file))
+          .map(file => ({
+            value: file,
+            label: file
+          }));
+        
+        if (fileOptions.length > 0) {
+          filePath = await p.select({
+            message: 'Select a file:',
+            options: fileOptions
+          }) as string;
+        } else {
+          p.note('No recent files found.', 'History');
+          filePath = await p.text({
+            message: 'Enter the path to the file:',
+            validate: validateFile
+          }) as string;
+        }
+      } else {
+        filePath = await p.text({
+          message: 'Enter the path to the file:',
+          validate: validateFile
+        }) as string;
+      }
+    } else {
+      // No history, just ask for a file
+      filePath = await p.text({
+        message: 'Enter the path to the file:',
+        validate: validateFile
+      }) as string;
+    }
+    
+    if (filePath === null) {
+      p.outro(pc.yellow('Operation cancelled'));
+      return;
+    }
+  } else {
+    // Validate the provided file
+    if (!existsSync(filePath)) {
+      p.outro(pc.red(`Error: File not found: ${filePath}`));
+      return;
+    }
+  }
+
+  // Get the URL to publish to
+  let url = options.url;
+  
+  if (!url) {
+    const defaultUrl = await getDefaultUrl();
+    
+    if (defaultUrl) {
+      const useDefault = await p.confirm({
+        message: `Use default URL (${defaultUrl})?`
+      });
+      
+      if (useDefault === null) {
+        p.outro(pc.yellow('Operation cancelled'));
+        return;
+      }
+      
+      if (useDefault) {
+        url = defaultUrl;
+      }
+    }
+    
+    if (!url) {
+      url = await p.text({
+        message: 'Enter the server URL:',
+        placeholder: 'https://example.com/api',
+        validate: (value) => {
+          if (!value) return 'URL is required';
+          if (!value.startsWith('http')) return 'URL must start with http:// or https://';
+          return undefined;
+        }
+      }) as string;
+      
+      if (url === null) {
+        p.outro(pc.yellow('Operation cancelled'));
+        return;
+      }
+      
+      // Ask if this should be the default URL
+      const saveAsDefault = await p.confirm({
+        message: 'Save as default URL?'
+      });
+      
+      if (saveAsDefault) {
+        await setDefaultUrl(url);
+        p.note('URL saved as default.', 'Config');
+      }
+    }
+  }
+
+  // Confirm the publish action
+  const shouldPublish = await p.confirm({
+    message: `Publish ${pc.cyan(basename(filePath))} to ${pc.green(url)}?`
+  });
+  
+  if (!shouldPublish) {
+    p.outro(pc.yellow('Publish cancelled'));
+    return;
+  }
+
+  // Show a spinner during publish
+  const spinner = p.spinner();
+  spinner.start('Publishing document');
+
+  try {
+    // Read the file content
+    const content = await readFile(filePath, 'utf8');
+    
+    // Simulate publishing (in a real app, this would be an API call)
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Add to history
+    await addToHistory(filePath);
+    
+    // Complete
+    spinner.stop('Document published successfully');
+    p.outro(pc.green(`✓ ${pc.bold(basename(filePath))} published to ${pc.bold(url)}`));
+  } catch (error) {
+    spinner.stop('Failed to publish document');
+    p.note((error as Error).message, 'Error');
+    p.outro(pc.red('Publish failed'));
+  }
+}
+
+/**
+ * Validate that a file exists
+ */
+function validateFile(value: string): string | undefined {
+  if (!value) return 'File path is required';
+  if (!existsSync(value)) return 'File does not exist';
+  return undefined;
+}
+Path: ./src/commands/remote.ts
+// src/commands/remote.ts
+import { intro, outro, text, select, confirm, spinner, note } from '@clack/prompts';
+import color from 'picocolors';
+import { existsSync } from 'fs';
+import { join } from 'path';
+import { homedir } from 'os';
+
+interface RemoteOptions {
+  help?: boolean;
+}
+
+// Configuration file setup
+const CONFIG_DIR = join(homedir(), '.enact');
+const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
+
+export async function handleRemoteCommand(args: string[], options: RemoteOptions): Promise<void> {
+  if (options.help || !args[0]) {
+    console.log(`
+Usage: enact remote <subcommand> [options]
+
+Manages remote server configurations for publishing enact documents.
+
+Subcommands:
+  add <name> <url>    Adds a new remote server.
+  remove <name>       Removes an existing remote server.
+  list                Lists all configured remote servers.
+  ls                  Alias for list.
+
+Options:
+  --help, -h          Show this help message
+`);
+    return;
+  }
+
+  const subCommand = args[0];
+  const subCommandArgs = args.slice(1);
+
+  // Initialize config if it doesn't exist
+  await ensureConfig();
+
+  intro(color.bgMagenta(color.black(' Remote Server Management ')));
+
+  switch (subCommand) {
+    case 'add': {
+      // Interactive mode if arguments are missing
+      let name = subCommandArgs[0];
+      let url = subCommandArgs[1];
+      
+      if (!name) {
+        name = await text({
+          message: 'Remote name:',
+          placeholder: 'production',
+          validate(value) {
+            if (!value) return 'Name is required';
+          }
+        }) as string;
+        
+        if (name === null) {
+          outro(color.yellow('Operation cancelled'));
+          return;
+        }
+      }
+      
+      if (!url) {
+        url = await text({
+          message: 'Remote URL:',
+          placeholder: 'https://api.example.com/publish',
+          validate(value) {
+            if (!value) return 'URL is required';
+            if (!value.startsWith('http')) return 'URL must start with http:// or https://';
+          }
+        }) as string;
+        
+        if (url === null) {
+          outro(color.yellow('Operation cancelled'));
+          return;
+        }
+      }
+
+      const config = await readConfig();
+      
+      // Check if remote already exists
+      if (config.remotes[name]) {
+        const overwrite = await confirm({
+          message: `Remote "${name}" already exists. Overwrite?`
+        });
+        
+        if (!overwrite) {
+          outro(color.yellow('Operation cancelled'));
+          return;
+        }
+      }
+      
+      // Save the remote
+      const s = spinner();
+      s.start(`Adding remote "${name}"`);
+      
+      config.remotes[name] = { url };
+      await writeConfig(config);
+      
+      s.stop(`Remote "${name}" added`);
+      outro(color.green(`✓ Remote ${color.bold(name)} configured with URL ${color.bold(url)}`));
+      break;
+    }
+    
+    case 'remove': {
+      let name = subCommandArgs[0];
+      const config = await readConfig();
+      
+      // Interactive mode if no name provided
+      if (!name) {
+        if (Object.keys(config.remotes).length === 0) {
+          note('No remotes configured yet', 'Info');
+          outro('');
+          return;
+        }
+        
+        name = await select({
+          message: 'Select remote to remove:',
+          options: Object.keys(config.remotes).map(remoteName => ({
+            value: remoteName,
+            label: `${remoteName} (${config.remotes[remoteName].url})`
+          }))
+        }) as string;
+        
+        if (name === null) {
+          outro(color.yellow('Operation cancelled'));
+          return;
+        }
+      }
+      
+      // Check if remote exists
+      if (!config.remotes[name]) {
+        outro(color.red(`✗ Remote "${name}" does not exist`));
+        return;
+      }
+      
+      // Confirm removal
+      const shouldRemove = await confirm({
+        message: `Are you sure you want to remove remote "${name}"?`
+      });
+      
+      if (!shouldRemove) {
+        outro(color.yellow('Operation cancelled'));
+        return;
+      }
+      
+      // Remove the remote
+      const s = spinner();
+      s.start(`Removing remote "${name}"`);
+      
+      delete config.remotes[name];
+      await writeConfig(config);
+      
+      s.stop(`Remote "${name}" removed`);
+      outro(color.green(`✓ Remote ${color.bold(name)} has been removed`));
+      break;
+    }
+    
+    case 'list':
+    case 'ls': {
+      const config = await readConfig();
+      const remotes = Object.entries(config.remotes);
+      
+      if (remotes.length === 0) {
+        note('No remotes configured yet', 'Info');
+        outro('');
+        return;
+      }
+      
+// Fix 'data' is of type 'unknown'
+// Line 173
+note(
+  remotes.map(([name, data]) => 
+    `${color.bold(name)}: ${(data as { url: string }).url}`
+  ).join('\n'),
+  'Configured Remotes'
+);
+
+
+      
+      outro('');
+      break;
+    }
+    
+    default:
+      outro(color.red(`✗ Unknown remote subcommand "${subCommand}"`));
+      return;
+  }
+}
+
+// Helper functions for config management
+async function ensureConfig() {
+  // Create config directory if it doesn't exist
+  if (!existsSync(CONFIG_DIR)) {
+    await import('fs/promises').then(fs => fs.mkdir(CONFIG_DIR, { recursive: true }));
+  }
+  
+  // Create default config if it doesn't exist
+  if (!existsSync(CONFIG_FILE)) {
+    await writeConfig({ remotes: {} });
+  }
+}
+
+async function readConfig() {
+  const text = await Bun.file(CONFIG_FILE).text();
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    return { remotes: {} };
+  }
+}
+
+
+
+// Fix 'Parameter 'config' implicitly has an 'any' type'
+// Line 210
+async function writeConfig(config: { remotes: Record<string, { url: string }> }): Promise<void> {
+  await Bun.write(CONFIG_FILE, JSON.stringify(config, null, 2));
+}
+Path: ./src/commands/create.ts
+// src/commands/create.ts
+import { intro, outro, text, select, confirm, spinner } from '@clack/prompts';
+import color from 'picocolors';
+
+interface CreateOptions {
+  help?: boolean;
+  template?: string;
+}
+
+export async function handleCreateCommand(args: string[], options: CreateOptions): Promise<void> {
+  if (options.help) {
+    console.log(`
+Usage: enact create [targetPath] [options]
+
+Creates a new enact document in the specified path or current repository.
+
+Arguments:
+  targetPath  The path where the enact document should be created. Defaults to '.' (current directory).
+
+Options:
+  --help, -h          Show this help message
+  --template <name>   Specify a template to use for the new document
+`);
+    return;
+  }
+
+  let targetPath = args[0] || '.'; // Default to current directory
+
+  // Pretty intro
+  intro(color.bgCyan(color.black(' Create a new Enact document ')));
+
+  // Interactive path confirmation if not explicitly provided
+  if (args.length === 0) {
+    const targetPathResponse = await text({
+      message: 'Where should we create the document?',
+      placeholder: '.',
+      initialValue: '.',
+      validate(value: string) {
+        if (!value) return 'Please enter a valid path';
+        return undefined;
+      }
+    });
+    
+    if (targetPathResponse === null) {
+      outro(color.yellow('Operation cancelled'));
+      return;
+    }
+    
+    targetPath = targetPathResponse as string;
+  }
+
+  // Template selection
+  const templateChoice = await select({
+    message: 'Select a template:',
+    options: [
+      { value: 'basic', label: 'Basic document' },
+      { value: 'article', label: 'Article with sections' },
+      { value: 'report', label: 'Detailed report' },
+    ]
+  });
+  
+  if (templateChoice === null) {
+    outro(color.yellow('Operation cancelled'));
+    return;
+  }
+
+  // Document metadata
+  const titleResponse = await text({
+    message: 'Document title:',
+    placeholder: 'My Enact Document',
+    validate(value: string) {
+      if (!value) return 'Title is required';
+      return undefined;
+    }
+  });
+  
+  if (titleResponse === null) {
+    outro(color.yellow('Operation cancelled'));
+    return;
+  }
+  
+  const title = titleResponse as string;
+
+  // Confirmation
+  const shouldProceed = await confirm({
+    message: `Create a new ${String(templateChoice)} document at "${targetPath}"?`
+  });
+  
+  if (!shouldProceed) {
+    outro(color.yellow('Operation cancelled'));
+    return;
+  }
+
+  // Progress spinner
+  const loadingSpinner = spinner();
+  loadingSpinner.start('Creating your document');
+  
+  try {
+    // Fake a delay to show the spinner
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Create the document based on template
+    const content = generateTemplateContent(templateChoice as string, title);
+    const filename = `${title.toLowerCase().replace(/\s+/g, '-')}.enact.md`;
+    const fullPath = targetPath === '.' ? filename : `${targetPath}/${filename}`;
+    
+    await Bun.write(fullPath, content);
+    
+    loadingSpinner.stop('Document created successfully');
+    outro(color.green(`✓ Created ${color.bold(fullPath)}`));
+  } catch (error) {
+    loadingSpinner.stop('Failed to create document');
+    outro(color.red(`✗ Error: ${(error as Error).message}`));
+  }
+}
+
+function generateTemplateContent(template: string, title: string): string {
+  const date = new Date().toISOString().split('T')[0];
+  
+  switch (template) {
+    case 'basic':
+      return `---
+title: ${title}
+date: ${date}
+---
+
+# ${title}
+
+Write your content here.
+`;
+    case 'article':
+      return `---
+title: ${title}
+date: ${date}
+type: article
+---
+
+# ${title}
+
+## Introduction
+
+Write your introduction here.
+
+## Main Content
+
+Write your main content here.
+
+## Conclusion
+
+Write your conclusion here.
+`;
+    case 'report':
+      return `---
+title: ${title}
+date: ${date}
+type: report
+---
+
+# ${title}
+
+## Executive Summary
+
+Write your executive summary here.
+
+## Findings
+
+### Finding 1
+
+Details about finding 1.
+
+### Finding 2
+
+Details about finding 2.
+
+## Recommendations
+
+List your recommendations here.
+
+## Appendix
+
+Additional information.
+`;
+    default:
+      return `---
+title: ${title}
+date: ${date}
+---
+
+# ${title}
+
+Write your content here.
+`;
+  }
+}
+Path: ./src/index.ts
+#!/usr/bin/env bun
+// src/index.ts
+import { parseArgs } from 'util';
+import pc from 'picocolors';
+import * as p from '@clack/prompts';
+import { handlePublishCommand } from './commands/publish';
+import { showHelp, showVersion } from './utils/help';
+import { handleRemoteCommand } from './commands/remote';
+
+// Parse arguments
+const { values, positionals } = parseArgs({
+  args: Bun.argv,
+  options: {
+    help: {
+      type: 'boolean',
+      short: 'h',
+    },
+    version: {
+      type: 'boolean',
+      short: 'v',
+    },
+    url: {
+      type: 'string',
+    }
+  },
+  allowPositionals: true,
+  strict: false,
+});
+
+// Extract command and args
+const command = positionals[2]; // First arg after 'bun index.ts'
+const commandArgs = positionals.slice(3);
+
+// Handle global flags
+if (values.version) {
+  showVersion();
+  process.exit(0);
+}
+
+if (values.help && !command) {
+  showHelp();
+  process.exit(0);
+}
+
+// Main function
+async function main() {
+  try {
+    // Route to the appropriate command
+    switch (command) {
+      case 'publish':
+        await handlePublishCommand(commandArgs, {
+          help: values.help as boolean | undefined,
+          url: values.url as string | undefined
+        });
+        break;
+      case 'remote':
+        // Handle remote command (not implemented in this snippet)
+        await handleRemoteCommand(commandArgs, {
+          help: values.help as boolean | undefined
+        });
+        break;
+        
+      case undefined:
+        // No command specified, show interactive mode
+        if (values.help) {
+          showHelp();
+        } else {
+          p.intro(pc.bgCyan(pc.black(' Enact CLI ')));
+          
+          const action = await p.select({
+            message: 'What would you like to do?',
+            options: [
+              { value: 'publish', label: 'Publish a document' },
+              { value: 'help', label: 'Show help' },
+              { value: 'exit', label: 'Exit' }
+            ]
+          });
+          
+          if (action === null || action === 'exit') {
+            p.outro('Goodbye!');
+            return;
+          }
+          
+          if (action === 'help') {
+            showHelp();
+            return;
+          }
+          
+          if (action === 'publish') {
+            await handlePublishCommand([], {});
+          }
+        }
+        break;
+        
+      default:
+        console.error(pc.red(`Unknown command: ${command}`));
+        showHelp();
+        process.exit(1);
+    }
+  } catch (error) {
+    console.error(pc.red(`Error: ${(error as Error).message}`));
+    process.exit(1);
+  }
+}
+
+// Run the CLI
+main();
