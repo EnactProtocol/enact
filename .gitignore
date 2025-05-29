@@ -38,3 +38,4 @@ out/
 *.swp
 *.swo
 src.txt
+enact-cli-*.tgz
