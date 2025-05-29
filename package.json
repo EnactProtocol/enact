@@ -1,14 +1,20 @@
 {
   "name": "enact-cli",
-  "version": "0.0.1",
-  "description": "A CLI tool to enact and manage documents.",
+  "version": "1.0.0",
+  "description": "Official CLI for the Enact Protocol - package, secure, and discover AI tools",
   "type": "module",
   "main": "./dist/index.js",
   "bin": {
     "enact": "./dist/index.js"
   },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target bun",
+    "build": "bun build ./src/index.ts --outdir ./dist --target node",
+    "prepublishOnly": "npm run build",
     "start": "bun ./dist/index.js",
     "dev": "bun run --watch src/index.ts",
     "dev:cmd": "bun src/index.ts",
@@ -18,15 +24,32 @@
     "build:all": "npm run build:linux && npm run build:macos && npm run build:windows",
     "build:linux": "bun build ./src/index.ts --compile --target=bun-linux-x64 --outfile dist/enact-linux",
     "build:macos": "bun build ./src/index.ts --compile --target=bun-darwin-x64 --outfile dist/enact-macos",
-    "build:windows": "bun build ./src/index.ts --compile --target=bun-windows-x64 --outfile dist/enact-windows.exe"
+    "build:windows": "bun build ./src/index.ts --compile --target=bun-windows-x64 --outfile dist/enact-windows.exe",
+    "release": "npm run build:all && npm run build"
   },
   "keywords": [
     "cli",
-    "bun",
-    "enact"
+    "enact",
+    "enact-protocol",
+    "ai-tools",
+    "mcp",
+    "model-context-protocol",
+    "tool-discovery",
+    "command-line-tool"
   ],
-  "author": "Your Name",
+  "author": "EnactProtocol",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EnactProtocol/enact-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/EnactProtocol/enact-cli/issues"
+  },
+  "homepage": "https://github.com/EnactProtocol/enact-cli#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "devDependencies": {
     "bun-types": "latest",
     "@types/node": "^20.12.12",

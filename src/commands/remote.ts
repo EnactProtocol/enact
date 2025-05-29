@@ -2,6 +2,7 @@
 import { intro, outro, text, select, confirm, spinner, note } from '@clack/prompts';
 import color from 'picocolors';
 import { existsSync } from 'fs';
+import { readFile, writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { homedir } from 'os';
 
@@ -168,16 +169,12 @@ Options:
         return;
       }
       
-// Fix 'data' is of type 'unknown'
-// Line 173
-note(
-  remotes.map(([name, data]) => 
-    `${color.bold(name)}: ${(data as { url: string }).url}`
-  ).join('\n'),
-  'Configured Remotes'
-);
-
-
+      note(
+        remotes.map(([name, data]) => 
+          `${color.bold(name)}: ${(data as { url: string }).url}`
+        ).join('\n'),
+        'Configured Remotes'
+      );
       
       outro('');
       break;
@@ -189,11 +186,11 @@ note(
   }
 }
 
-// Helper functions for config management
+// Helper functions for config management (now using Node.js fs instead of Bun)
 async function ensureConfig() {
   // Create config directory if it doesn't exist
   if (!existsSync(CONFIG_DIR)) {
-    await import('fs/promises').then(fs => fs.mkdir(CONFIG_DIR, { recursive: true }));
+    await mkdir(CONFIG_DIR, { recursive: true });
   }
   
   // Create default config if it doesn't exist
@@ -203,18 +200,14 @@ async function ensureConfig() {
 }
 
 async function readConfig() {
-  const text = await Bun.file(CONFIG_FILE).text();
   try {
+    const text = await readFile(CONFIG_FILE, 'utf8');
     return JSON.parse(text);
   } catch (e) {
     return { remotes: {} };
   }
 }
 
-
-
-// Fix 'Parameter 'config' implicitly has an 'any' type'
-// Line 210
 async function writeConfig(config: { remotes: Record<string, { url: string }> }): Promise<void> {
-  await Bun.write(CONFIG_FILE, JSON.stringify(config, null, 2));
+  await writeFile(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf8');
 }

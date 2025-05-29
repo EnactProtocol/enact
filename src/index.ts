@@ -1,4 +1,3 @@
-#!/usr/bin/env bun
 // src/index.ts
 import { parseArgs } from 'util';
 import pc from 'picocolors';
@@ -7,9 +6,9 @@ import { handlePublishCommand } from './commands/publish';
 import { showHelp, showVersion } from './utils/help';
 import { handleRemoteCommand } from './commands/remote';
 
-// Parse arguments
+// Parse arguments using process.argv (portable)
 const { values, positionals } = parseArgs({
-  args: Bun.argv,
+  args: process.argv,
   options: {
     help: {
       type: 'boolean',
@@ -28,7 +27,7 @@ const { values, positionals } = parseArgs({
 });
 
 // Extract command and args
-const command = positionals[2]; // First arg after 'bun index.ts'
+const command = positionals[2]; // First arg after 'node index.js' or binary name
 const commandArgs = positionals.slice(3);
 
 // Handle global flags
@@ -54,7 +53,6 @@ async function main() {
         });
         break;
       case 'remote':
-        // Handle remote command (not implemented in this snippet)
         await handleRemoteCommand(commandArgs, {
           help: values.help as boolean | undefined
         });

@@ -1,6 +1,7 @@
 // src/commands/create.ts
 import { intro, outro, text, select, confirm, spinner } from '@clack/prompts';
 import color from 'picocolors';
+import { writeFile } from 'fs/promises';
 
 interface CreateOptions {
   help?: boolean;
@@ -104,7 +105,8 @@ Options:
     const filename = `${title.toLowerCase().replace(/\s+/g, '-')}.enact.md`;
     const fullPath = targetPath === '.' ? filename : `${targetPath}/${filename}`;
     
-    await Bun.write(fullPath, content);
+    // Use Node.js writeFile instead of Bun.write
+    await writeFile(fullPath, content, 'utf8');
     
     loadingSpinner.stop('Document created successfully');
     outro(color.green(`✓ Created ${color.bold(fullPath)}`));
