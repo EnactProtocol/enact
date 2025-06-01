@@ -5,6 +5,7 @@ import * as p from '@clack/prompts';
 import { handlePublishCommand } from './commands/publish';
 import { showHelp, showVersion } from './utils/help';
 import { handleRemoteCommand } from './commands/remote';
+import { handleInitCommand } from './commands/init';
 
 // Parse arguments using process.argv (portable)
 const { values, positionals } = parseArgs({
@@ -57,7 +58,11 @@ async function main() {
           help: values.help as boolean | undefined
         });
         break;
-        
+      case 'init':
+        await handleInitCommand(commandArgs, {
+          help: values.help as boolean | undefined
+        });
+        break;
       case undefined:
         // No command specified, show interactive mode
         if (values.help) {
