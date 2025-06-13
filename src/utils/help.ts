@@ -1,12 +1,29 @@
 // src/utils/help.ts
 import pc from 'picocolors';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+/**
+ * Get the package version from package.json
+ */
+function getVersion(): string {
+  try {
+    const packageJsonPath = join(__dirname, '../../package.json');
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+    return packageJson.version || '0.1.0';
+  } catch (error) {
+    // Fallback version if package.json can't be read
+    return '0.1.0';
+  }
+}
 
 /**
  * Show the main help message
  */
 export function showHelp(): void {
+  const version = getVersion();
   console.log(`
-${pc.bold('Enact CLI')} ${pc.dim('v0.1.0')}
+${pc.bold('Enact CLI')} ${pc.dim(`v${version}`)}
 ${pc.dim('A CLI tool for managing and publishing Enact tools')}
 
 ${pc.bold('Usage:')}
@@ -40,7 +57,8 @@ ${pc.bold('More Help:')}
  * Show version information
  */
 export function showVersion(): void {
-  console.log(`enact-cli v0.1.0`);
+  const version = getVersion();
+  console.log(`enact-cli v${version}`);
 }
 
 /**
