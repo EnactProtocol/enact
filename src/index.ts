@@ -1,4 +1,4 @@
-// src/index.ts
+// src/index.ts - Updated with user command integration
 import { parseArgs } from 'util';
 import pc from 'picocolors';
 import * as p from '@clack/prompts';
@@ -7,6 +7,8 @@ import { handleAuthCommand } from './commands/auth';
 import { showHelp, showVersion } from './utils/help';
 import { handleRemoteCommand } from './commands/remote';
 import { handleInitCommand } from './commands/init';
+import { handleSearchCommand } from './commands/search';
+import { handleUserCommand } from './commands/user';
 
 // Parse arguments using process.argv (portable)
 const { values, positionals } = parseArgs({
@@ -38,6 +40,21 @@ const { values, positionals } = parseArgs({
     minimal: {
       type: 'boolean',
       short: 'm',
+    },
+    limit: {
+      type: 'string',
+      short: 'l',
+    },
+    tags: {
+      type: 'string',
+    },
+    format: {
+      type: 'string',
+      short: 'f',
+    },
+    author: {
+      type: 'string',
+      short: 'a',
     }
   },
   allowPositionals: true,
@@ -80,6 +97,16 @@ async function main() {
         });
         break;
         
+      case 'search':
+        await handleSearchCommand(commandArgs, {
+          help: values.help as boolean | undefined,
+          limit: values.limit ? parseInt(values.limit as string) : undefined,
+          tags: values.tags ? (values.tags+"").split(',').map(t => t.trim()) : undefined,
+          format: values.format as string | undefined,
+          author: values.author as string | undefined
+        });
+        break;
+        
       case 'remote':
         await handleRemoteCommand(commandArgs, {
           help: values.help as boolean | undefined
@@ -93,6 +120,15 @@ async function main() {
         });
         break;
         
+      case 'user': // New case for user command
+        await handleUserCommand(commandArgs, {
+          help: values.help as boolean | undefined,
+          server: values.server as string | undefined,
+          token: values.token as string | undefined,
+          format: values.format as string | undefined
+        });
+        break;
+        
       case undefined:
         // No command specified, show interactive mode
         if (values.help) {
@@ -103,12 +139,14 @@ async function main() {
           const action = await p.select({
             message: 'What would you like to do?',
             options: [
-              { value: 'auth', label: 'Manage authentication' },
-              { value: 'publish', label: 'Publish a document' },
-              { value: 'init', label: 'Create a new tool definition' },
-              { value: 'remote', label: 'Manage remote servers' },
-              { value: 'help', label: 'Show help' },
-              { value: 'exit', label: 'Exit' }
+              { value: 'search', label: '🔍 Search for tools' },
+              { value: 'publish', label: '📤 Publish a tool' },
+              { value: 'init', label: '📝 Create a new tool definition' },
+              { value: 'auth', label: '🔐 Manage authentication' },
+              { value: 'remote', label: '🌐 Manage remote servers' },
+              { value: 'user', label: '👤 User operations' }, // New option
+              { value: 'help', label: '❓ Show help' },
+              { value: 'exit', label: '👋 Exit' }
             ]
           });
           
@@ -122,15 +160,20 @@ async function main() {
             return;
           }
           
+          if (action === 'search') {
+            await handleSearchCommand([], {});
+            return;
+          }
+          
           if (action === 'auth') {
             // Show auth submenu
             const authAction = await p.select({
               message: 'Authentication:',
               options: [
-                { value: 'login', label: 'Login (OAuth)' },
-                { value: 'status', label: 'Check auth status' },
-                { value: 'logout', label: 'Logout' },
-                { value: 'token', label: 'Show token' }
+                { value: 'login', label: '🔑 Login (OAuth)' },
+                { value: 'status', label: '📊 Check auth status' },
+                { value: 'logout', label: '🚪 Logout' },
+                { value: 'token', label: '🔐 Show token' }
               ]
             });
             
@@ -142,10 +185,12 @@ async function main() {
           
           if (action === 'publish') {
             await handlePublishCommand([], {});
+            return;
           }
           
           if (action === 'init') {
             await handleInitCommand([], {});
+            return;
           }
           
           if (action === 'remote') {
@@ -153,14 +198,29 @@ async function main() {
             const remoteAction = await p.select({
               message: 'Remote management:',
               options: [
-                { value: 'add', label: 'Add remote server' },
-                { value: 'list', label: 'List remote servers' },
-                { value: 'remove', label: 'Remove remote server' }
+                { value: 'add', label: '➕ Add remote server' },
+                { value: 'list', label: '📋 List remote servers' },
+                { value: 'remove', label: '🗑️ Remove remote server' }
               ]
             });
             
             if (remoteAction !== null) {
               await handleRemoteCommand([remoteAction as string], {});
+            }
+            return;
+          }
+          
+          if (action === 'user') {
+            // Show user submenu
+            const userAction = await p.select({
+              message: 'User operations:',
+              options: [
+                { value: 'public-key', label: '🔑 Get user public key' }
+              ]
+            });
+            
+            if (userAction !== null) {
+              await handleUserCommand([userAction as string], {});
             }
             return;
           }

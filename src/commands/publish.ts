@@ -1,4 +1,4 @@
-// src/commands/publish.ts
+// src/commands/publish.ts - Refactored to use the consolidated API client
 import { existsSync } from 'fs';
 import { readFile } from 'fs/promises';
 import { basename, extname } from 'path';
@@ -13,58 +13,19 @@ import {
   setDefaultUrl 
 } from '../utils/config';
 import { getAuthHeaders } from './auth';
+import { enactApi, EnactApiError } from '../api/enact-api';
+import { createEnactApiClient } from '../api/enact-api';
+import { EnactToolDefinition } from '../api/types';
 
 // Define the options interface
 export interface PublishOptions {
   help?: boolean;
   url?: string;
-  token?: string; // Support manual token override
-}
-
-// Enact tool definition interface based on the protocol
-interface EnactToolDefinition {
-  name: string;
-  description: string;
-  command: string;
-  version?: string;
-  timeout?: string;
-  tags?: string[];
-  inputSchema?: any;
-  outputSchema?: any;
-  examples?: any[];
-  annotations?: {
-    title?: string;
-    readOnlyHint?: boolean;
-    destructiveHint?: boolean;
-    idempotentHint?: boolean;
-    openWorldHint?: boolean;
-  };
-  env?: Record<string, {
-    description: string;
-    source?: string;
-    required: boolean;
-    default?: string;
-  }>;
-  resources?: {
-    memory?: string;
-    gpu?: string;
-    disk?: string;
-  };
-  signature?: {
-    algorithm: string;
-    type: string;
-    signer: string;
-    created: string;
-    value: string;
-    role?: string;
-  };
-  enact?: string;
-  // Allow custom extensions
-  [key: string]: any;
+  token?: string;
 }
 
 /**
- * Handle the publish command for Enact tools
+ * Handle the publish command for Enact tools using the consolidated API client
  */
 export async function handlePublishCommand(
   args: string[], 
@@ -80,18 +41,13 @@ export async function handlePublishCommand(
   p.intro(pc.bgBlue(pc.white(' Publish Enact Tool ')));
 
   // Check authentication first
-  let authHeaders: Record<string, string>;
+  let token: string;
   try {
     if (options.token) {
-      // Manual token provided via CLI option
-      authHeaders = {
-        // 'Authorization': `Bearer ${options.token}`,
-        'Content-Type': 'application/json',
-        'X-API-Key': options.token // Use X-Api-Token for manual token
-      };
+      token = options.token;
     } else {
-      // Use OAuth token
-      authHeaders = await getAuthHeaders();
+      const authHeaders = await getAuthHeaders();
+      token = authHeaders['X-API-Key'];
     }
   } catch (error) {
     p.outro(pc.red(`✗ Authentication required. Run "enact auth login" to authenticate.`));
@@ -99,57 +55,11 @@ export async function handlePublishCommand(
   }
 
   // Get the file to publish
-  let filePath = args[0];
+  let filePath: string|null = args[0];
   
   if (!filePath) {
-    // No file provided, show interactive prompt
-    const history = await getHistory();
-    
-    if (history.length > 0) {
-      // User has publish history, offer to reuse
-      const action = await p.select({
-        message: 'Select a tool manifest to publish:',
-        options: [
-          { value: 'select', label: 'Choose from recent files' },
-          { value: 'new', label: 'Specify a new file' }
-        ]
-      });
-      
-      if (action === 'select') {
-        const fileOptions = history
-          .filter(file => existsSync(file) && isEnactFile(file))
-          .map(file => ({
-            value: file,
-            label: file
-          }));
-        
-        if (fileOptions.length > 0) {
-          filePath = await p.select({
-            message: 'Select a tool manifest:',
-            options: fileOptions
-          }) as string;
-        } else {
-          p.note('No recent Enact tool manifests found.', 'History');
-          filePath = await p.text({
-            message: 'Enter the path to the tool manifest (.yaml or .yml):',
-            validate: validateEnactFile
-          }) as string;
-        }
-      } else {
-        filePath = await p.text({
-          message: 'Enter the path to the tool manifest (.yaml or .yml):',
-          validate: validateEnactFile
-        }) as string;
-      }
-    } else {
-      // No history, just ask for a file
-      filePath = await p.text({
-        message: 'Enter the path to the tool manifest (.yaml or .yml):',
-        validate: validateEnactFile
-      }) as string;
-    }
-    
-    if (filePath === null) {
+    filePath = await getFilePathInteractively();
+    if (!filePath) {
       p.outro(pc.yellow('Operation cancelled'));
       return;
     }
@@ -168,10 +78,10 @@ export async function handlePublishCommand(
     const content = await readFile(filePath, 'utf8');
     toolDefinition = yaml.parse(content) as EnactToolDefinition;
     
-    // Validate required fields
-    const validation = validateToolDefinition(toolDefinition);
-    if (validation) {
-      p.outro(pc.red(`Invalid tool manifest: ${validation}`));
+    // Validate using the API client's validation
+    const validation = enactApi.validateTool(toolDefinition);
+    if (!validation.valid) {
+      p.outro(pc.red(`Invalid tool manifest:\n${validation.errors.join('\n')}`));
       return;
     }
   } catch (error) {
@@ -179,7 +89,7 @@ export async function handlePublishCommand(
     return;
   }
 
-  // Get the API URL
+  // Get the API URL (this is now handled by the API client, but we keep for compatibility)
   let apiUrl = options.url;
   
   if (!apiUrl) {
@@ -245,87 +155,47 @@ export async function handlePublishCommand(
   spinner.start('Publishing tool to Enact registry');
 
   try {
-    // Check if tool already exists (try to get it first)
-    let isUpdate = false;
-    try {
-      const checkResponse = await fetch(`${apiUrl}/${encodeURIComponent(toolDefinition.name)}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (checkResponse.ok) {
-        isUpdate = true;
-        spinner.message('Tool exists, updating...');
-      }
-    } catch (checkError) {
-      // Tool doesn't exist, will create new
-    }
-
-    // Prepare the tool data according to Enact protocol
-    const toolData = {
-      ...toolDefinition,
-      // Map Enact fields to API fields
-      inputSchema: toolDefinition.inputSchema,
-      outputSchema: toolDefinition.outputSchema,
-      env: toolDefinition.env,
-      // Add any missing protocol version
-      enact: toolDefinition.enact || '1.0.0'
-    };
-
-    // Make the API call
-    const method = isUpdate ? 'PUT' : 'POST';
-    const url = isUpdate ? `${apiUrl}/${encodeURIComponent(toolDefinition.name)}` : apiUrl;
-    
-    spinner.message(`Publishing to URL: ${url} with method: ${method}`); 
-    const publishResponse = await fetch(url, {
-      method,
-      headers: authHeaders,
-      body: JSON.stringify(toolData)
-    });
-
-    if (!publishResponse.ok) {
-      const errorData = await publishResponse.json().catch(() => ({ error: 'Unknown error' })) as { error?: string };
-      
-      if (publishResponse.status === 409) {
-        throw new Error(`Tool '${toolDefinition.name}' already exists. Use a different name or update the existing tool.`);
-      } else if (publishResponse.status === 400) {
-        throw new Error(`Invalid tool definition: ${errorData.error || 'Bad request'}`);
-      } else {
-        throw new Error(`Publish failed (${publishResponse.status}): ${errorData.error || publishResponse.statusText}`);
-      }
-    }
-
-    const result: any = await publishResponse.json();
+    // Create API client with custom URL if provided
+    const apiClient = apiUrl ? createEnactApiClient(apiUrl) : enactApi;
+    p.note(`Using API URL: ${pc.cyan(apiClient.baseUrl)}`, 'API Client'); 
+    // Use the consolidated API client to publish or update
+    const result = await apiClient.publishOrUpdateTool(toolDefinition, token, 'cli');
     
     // Add to history
     await addToHistory(filePath);
     
     // Complete
-    spinner.stop(`Tool ${isUpdate ? 'updated' : 'published'} successfully`);
+    spinner.stop(`Tool ${result.isUpdate ? 'updated' : 'published'} successfully`);
     
     // Show success message
-    let successMessage = `✓ ${pc.bold(toolDefinition.name)} ${isUpdate ? 'updated' : 'published'} to Enact registry`;
-    if (result.tool?.id) {
-      successMessage += `\n📄 Tool ID: ${pc.cyan(result.tool.id)}`;
+    let successMessage = `✓ ${pc.bold(toolDefinition.name)} ${result.isUpdate ? 'updated' : 'published'} to Enact registry`;
+    if (result.result?.tool?.id) {
+      successMessage += `\n📄 Tool ID: ${pc.cyan(result.result.tool.id)}`;
     }
-    if (result.tool?.name) {
-      successMessage += `\n🔧 Tool Name: ${pc.blue(result.tool.name)}`;
+    if (result.result?.tool?.name) {
+      successMessage += `\n🔧 Tool Name: ${pc.blue(result.result.tool.name)}`;
     }
     successMessage += `\n🔍 Discoverable via: "enact search ${toolDefinition.tags?.join(' ') || toolDefinition.name}"`;
     
     p.outro(pc.green(successMessage));
     
-  } catch (error) {
+  } catch (error: any) {
     spinner.stop('Failed to publish tool');
     
-    // Handle specific error types
-    if (error instanceof Error) {
-      if (error.message.includes('401') || error.message.includes('403')) {
+    // Handle specific error types using the API client's error handling
+    if (error instanceof EnactApiError) {
+      if (error.statusCode === 401 || error.statusCode === 403) {
         p.note('Authentication failed. Your token may have expired.', 'Error');
         p.note('Run "enact auth login" to re-authenticate.', 'Suggestion');
-      } else if (error.message.includes('ENOTFOUND') || error.message.includes('ECONNREFUSED')) {
+      } else if (error.statusCode === 409) {
+        p.note(`Tool '${toolDefinition.name}' already exists and you don't have permission to update it.`, 'Error');
+      } else if (error.statusCode === 400) {
+        p.note(`Invalid tool definition: ${error.message}`, 'Error');
+      } else {
+        p.note(error.message, 'Error');
+      }
+    } else if (error instanceof Error) {
+      if (error.message.includes('ENOTFOUND') || error.message.includes('ECONNREFUSED')) {
         p.note('Could not connect to the Enact registry. Check your internet connection and registry URL.', 'Error');
       } else {
         p.note(error.message, 'Error');
@@ -333,6 +203,57 @@ export async function handlePublishCommand(
     }
     
     p.outro(pc.red('Publish failed'));
+  }
+}
+
+/**
+ * Interactive file path selection
+ */
+async function getFilePathInteractively(): Promise<string | null> {
+  const history = await getHistory();
+  
+  if (history.length > 0) {
+    // User has publish history, offer to reuse
+    const action = await p.select({
+      message: 'Select a tool manifest to publish:',
+      options: [
+        { value: 'select', label: 'Choose from recent files' },
+        { value: 'new', label: 'Specify a new file' }
+      ]
+    });
+    
+    if (action === 'select') {
+      const fileOptions = history
+        .filter(file => existsSync(file) && isEnactFile(file))
+        .map(file => ({
+          value: file,
+          label: file
+        }));
+      
+      if (fileOptions.length > 0) {
+        return await p.select({
+          message: 'Select a tool manifest:',
+          options: fileOptions
+        }) as string;
+      } else {
+        p.note('No recent Enact tool manifests found.', 'History');
+        return await p.text({
+          message: 'Enter the path to the tool manifest (.yaml or .yml):',
+          validate: validateEnactFile
+        }) as string;
+      }
+    } else {
+      return await p.text({
+        message: 'Enter the path to the tool manifest (.yaml or .yml):',
+        validate: validateEnactFile
+      }) as string;
+    }
+  } else {
+    // No history, just ask for a file
+    return await p.text({
+      message: 'Enter the path to the tool manifest (.yaml or .yml):',
+      validate: validateEnactFile
+    }) as string;
   }
 }
 
@@ -351,54 +272,5 @@ function validateEnactFile(value: string): string | undefined {
   if (!value) return 'File path is required';
   if (!existsSync(value)) return 'File does not exist';
   if (!isEnactFile(value)) return 'File must be a YAML file (.yaml or .yml)';
-  return undefined;
-}
-
-/**
- * Validate the Enact tool definition according to the protocol
- */
-function validateToolDefinition(tool: any): string | undefined {
-  if (!tool) return 'Tool definition is required';
-  
-  // Check required fields
-  if (!tool.name || typeof tool.name !== 'string') {
-    return 'Tool name is required and must be a string';
-  }
-  
-  if (!tool.description || typeof tool.description !== 'string') {
-    return 'Tool description is required and must be a string';
-  }
-  
-  if (!tool.command || typeof tool.command !== 'string') {
-    return 'Tool command is required and must be a string';
-  }
-  
-  // Validate hierarchical name format
-  if (!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_\/-]+$/.test(tool.name)) {
-    return 'Tool name must follow hierarchical format: org/category/tool-name';
-  }
-  
-  // Validate timeout format if provided
-  if (tool.timeout && typeof tool.timeout === 'string') {
-    // Go duration format validation (basic)
-    if (!/^\d+[smh]$/.test(tool.timeout)) {
-      return 'Timeout must be in Go duration format (e.g., "30s", "5m", "1h")';
-    }
-  }
-  
-  // Validate tags if provided
-  if (tool.tags && !Array.isArray(tool.tags)) {
-    return 'Tags must be an array of strings';
-  }
-  
-  // Validate schemas if provided
-  if (tool.inputSchema && typeof tool.inputSchema !== 'object') {
-    return 'inputSchema must be a valid JSON Schema object';
-  }
-  
-  if (tool.outputSchema && typeof tool.outputSchema !== 'object') {
-    return 'outputSchema must be a valid JSON Schema object';
-  }
-  
   return undefined;
 }

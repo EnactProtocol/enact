@@ -1,4 +1,4 @@
-// src/commands/auth.ts
+// src/commands/auth.ts - Refactored to use the consolidated API client
 import { intro, outro, text, select, confirm, spinner, note } from '@clack/prompts';
 import color from 'picocolors';
 import { existsSync } from 'fs';
@@ -10,6 +10,7 @@ import { parse } from 'url';
 import { randomBytes, createHash } from 'crypto';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { enactApi, EnactApiError } from '../api/enact-api';
 
 const execAsync = promisify(exec);
 
@@ -23,7 +24,7 @@ interface AuthOptions {
 const CONFIG_DIR = join(homedir(), '.enact');
 const AUTH_FILE = join(CONFIG_DIR, 'auth.json');
 const DEFAULT_SERVER = 'https://enact.tools';
-const SUPABASE_PROJECT_URL = 'https://xjnhhxwxovjifdxdwzih.supabase.co';
+
 export async function handleAuthCommand(args: string[], options: AuthOptions): Promise<void> {
   if (options.help || !args[0]) {
     console.log(`
@@ -81,7 +82,6 @@ Options:
   }
 }
 
-
 async function handleLogin(serverUrl: string, callbackPort: number): Promise<void> {
   try {
     // Check if already authenticated
@@ -103,18 +103,15 @@ async function handleLogin(serverUrl: string, callbackPort: number): Promise<voi
     const state = generateState();
     const redirectUri = `http://localhost:${callbackPort}/callback`;
 
-    // Build authorization URL
-    const authParams = new URLSearchParams({
-      response_type: 'code',
-      client_id: 'enact-cli',
-      redirect_uri: redirectUri,
+    // Use the API client to generate OAuth URL
+    const authUrl = enactApi.generateOAuthUrl({
+      clientId: 'enact-cli',
+      redirectUri,
       scope: 'publish read write',
-      state: state,
-      code_challenge: codeChallenge,
-      code_challenge_method: 'S256'
+      state,
+      codeChallenge,
+      codeChallengeMethod: 'S256'
     });
-
-    const authUrl = `${serverUrl}/auth/cli/oauth?${authParams.toString()}`;
 
     // Start local callback server for fallback
     const s = spinner();
@@ -174,7 +171,7 @@ async function handleLogin(serverUrl: string, callbackPort: number): Promise<voi
         return;
       }
 
-      // Exchange the manual code for token
+      // Exchange the manual code for token using API client
       await exchangeCodeForToken(authCode, redirectUri, codeVerifier, serverUrl);
     }
 
@@ -314,68 +311,28 @@ async function startCallbackServerWithFallback(
   });
 }
 
-
 async function exchangeCodeForToken(
   code: string, 
   redirectUri: string, 
   codeVerifier: string, 
   serverUrl: string
 ): Promise<void> {
-  // Always use the Supabase URL for edge functions, regardless of serverUrl
-  const tokenEndpoint = `${SUPABASE_PROJECT_URL}/functions/v1/cli-oauth`;
-  
-  console.log(`Exchanging code for token at: ${tokenEndpoint}`);
+  console.log(`Exchanging code for token...`);
   console.log('Exchange params:', { 
     code: code.substring(0, 8) + '...', 
     redirectUri, 
     codeVerifier: codeVerifier.substring(0, 8) + '...' 
   });
   
-  // Add timeout to token exchange request
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-  
   try {
-    const tokenResponse = await fetch(tokenEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        grant_type: 'authorization_code',
-        code: code,
-        redirect_uri: redirectUri,
-        client_id: 'enact-cli',
-        code_verifier: codeVerifier
-      }),
-      signal: controller.signal
+    // Use the API client to exchange OAuth code for token
+    const tokenData = await enactApi.exchangeOAuthCode({
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: redirectUri,
+      client_id: 'enact-cli',
+      code_verifier: codeVerifier
     });
-    
-    clearTimeout(timeoutId);
-
-    // First, get the response as text to see what we're actually receiving
-    const responseText = await tokenResponse.text();
-    console.log('Token exchange response status:', tokenResponse.status);
-    
-    if (!tokenResponse.ok) {
-      console.error('Token exchange failed with status:', tokenResponse.status);
-      console.error('Response body:', responseText);
-      throw new Error(`Token exchange failed (${tokenResponse.status}): ${responseText}`);
-    }
-
-    // Try to parse the response as JSON
-    let tokenData: any;
-    try {
-      tokenData = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('Failed to parse token response as JSON:', responseText);
-      throw new Error(`Invalid JSON response from token endpoint`);
-    }
-    
-    if (!tokenData.access_token) {
-      console.error('No access token in response:', tokenData);
-      throw new Error('No access token received from server');
-    }
 
     // Store the token with the server URL for future reference
     const expiresAt = new Date(Date.now() + (tokenData.expires_in * 1000));
@@ -390,13 +347,12 @@ async function exchangeCodeForToken(
     console.log('✓ Token stored successfully');
     
   } catch (error: unknown) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('Token exchange request timed out');
+    if (error instanceof EnactApiError) {
+      throw new Error(`Token exchange failed: ${error.message}`);
     }
     throw error;
   }
 }
-
 
 async function handleLogout(): Promise<void> {
   const currentAuth = await readAuthConfig();
