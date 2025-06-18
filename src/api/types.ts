@@ -68,3 +68,21 @@ export interface ApiResponse<T = any> {
   data?: T;
   error?: string;
 }
+
+export interface VerificationPolicy {
+  minimumSignatures?: number;
+  trustedSigners?: string[];
+  allowedAlgorithms?: string[];
+}
+
+export interface EnactExecOptions {
+  help?: boolean;
+  input?: string;
+  params?: string;
+  timeout?: string;
+  dry?: boolean;
+  verbose?: boolean;
+  skipVerification?: boolean;  // New option to skip signature verification
+  verifyPolicy?: string;       // Verification policy to use
+  force?: boolean;             // Force execution even if verification fails
+}

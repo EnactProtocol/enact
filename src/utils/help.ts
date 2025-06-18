@@ -31,9 +31,11 @@ ${pc.bold('Usage:')}
 
 ${pc.bold('Commands:')}
   ${pc.green('auth')}       Manage authentication (login, logout, status, token)
+  ${pc.green('exec')}       Execute a tool by fetching and running it
   ${pc.green('init')}       Create a new tool definition
   ${pc.green('publish')}    Publish a tool to the registry
   ${pc.green('search')}     Search for tools in the registry
+  ${pc.green('sign')}       Sign and verify tools with cryptographic signatures
   ${pc.green('remote')}     Manage remote servers (add, list, remove)
   ${pc.green('user')}       User operations (get public key)
 
@@ -42,11 +44,13 @@ ${pc.bold('Global Options:')}
   ${pc.yellow('--version, -v')}  Show version information
 
 ${pc.bold('Examples:')}
-  ${pc.cyan('enact')}                    ${pc.dim('# Interactive mode')}
-  ${pc.cyan('enact')} ${pc.green('search')} ${pc.yellow('--tags')} web,api     ${pc.dim('# Search tools by tags')}
-  ${pc.cyan('enact')} ${pc.green('publish')} my-tool.yaml        ${pc.dim('# Publish a tool')}
-  ${pc.cyan('enact')} ${pc.green('auth')} login               ${pc.dim('# Login with OAuth')}
-  ${pc.cyan('enact')} ${pc.green('init')} ${pc.yellow('--minimal')}           ${pc.dim('# Create minimal tool template')}
+  ${pc.cyan('enact')}                           ${pc.dim('# Interactive mode')}
+  ${pc.cyan('enact')} ${pc.green('search')} ${pc.yellow('--tags')} web,api         ${pc.dim('# Search tools by tags')}
+  ${pc.cyan('enact')} ${pc.green('exec')} enact/text/slugify      ${pc.dim('# Execute a tool')}
+  ${pc.cyan('enact')} ${pc.green('sign')} verify my-tool.yaml     ${pc.dim('# Verify tool signatures')}
+  ${pc.cyan('enact')} ${pc.green('publish')} my-tool.yaml           ${pc.dim('# Publish a tool')}
+  ${pc.cyan('enact')} ${pc.green('auth')} login                   ${pc.dim('# Login with OAuth')}
+  ${pc.cyan('enact')} ${pc.green('init')} ${pc.yellow('--minimal')}               ${pc.dim('# Create minimal tool template')}
 
 ${pc.bold('More Help:')}
   ${pc.cyan('enact')} ${pc.green('<command>')} ${pc.yellow('--help')}          ${pc.dim('# Show command-specific help')}

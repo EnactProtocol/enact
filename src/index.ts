@@ -9,6 +9,8 @@ import { handleRemoteCommand } from './commands/remote';
 import { handleInitCommand } from './commands/init';
 import { handleSearchCommand } from './commands/search';
 import { handleUserCommand } from './commands/user';
+import { handleExecCommand } from './commands/exec';
+import { handleSignCommand } from './commands/sign';
 
 // Parse arguments using process.argv (portable)
 const { values, positionals } = parseArgs({
@@ -55,6 +57,32 @@ const { values, positionals } = parseArgs({
     author: {
       type: 'string',
       short: 'a',
+    },
+    input: {
+      type: 'string',
+      short: 'i',
+    },
+    params: {
+      type: 'string',
+    },
+    dry: {
+      type: 'boolean',
+    },
+    verbose: {
+      type: 'boolean',
+      short: 'v',
+    },
+    policy: {
+      type: 'string',
+    },
+    'private-key': {
+      type: 'string',
+    },
+    role: {
+      type: 'string',
+    },
+    signer: {
+      type: 'string',
     }
   },
   allowPositionals: true,
@@ -129,6 +157,28 @@ async function main() {
         });
         break;
         
+      case 'exec': // New case for exec command
+        await handleExecCommand(commandArgs, {
+          help: values.help as boolean | undefined,
+          input: values.input as string | undefined,
+          params: values.params as string | undefined,
+          timeout: values.timeout as string | undefined,
+          dry: values.dry as boolean | undefined,
+          verbose: values.verbose as boolean | undefined
+        });
+        break;
+        
+      case 'sign': // New case for sign command
+        await handleSignCommand(commandArgs, {
+          help: values.help as boolean | undefined,
+          policy: values.policy as string | undefined,
+          privateKey: values['private-key'] as string | undefined,
+          role: values.role as string | undefined,
+          signer: values.signer as string | undefined,
+          verbose: values.verbose as boolean | undefined
+        });
+        break;
+        
       case undefined:
         // No command specified, show interactive mode
         if (values.help) {
@@ -140,8 +190,10 @@ async function main() {
             message: 'What would you like to do?',
             options: [
               { value: 'search', label: '🔍 Search for tools' },
+              { value: 'exec', label: '⚡ Execute a tool' },
               { value: 'publish', label: '📤 Publish a tool' },
               { value: 'init', label: '📝 Create a new tool definition' },
+              { value: 'sign', label: '✍️ Sign & verify tools' },
               { value: 'auth', label: '🔐 Manage authentication' },
               { value: 'remote', label: '🌐 Manage remote servers' },
               { value: 'user', label: '👤 User operations' }, // New option
@@ -162,6 +214,16 @@ async function main() {
           
           if (action === 'search') {
             await handleSearchCommand([], {});
+            return;
+          }
+          
+          if (action === 'exec') {
+            await handleExecCommand([], {});
+            return;
+          }
+          
+          if (action === 'sign') {
+            await handleSignCommand([], {});
             return;
           }
           
