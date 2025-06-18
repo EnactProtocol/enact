@@ -39,3 +39,5 @@ out/
 *.swo
 src.txt
 enact-cli-*.tgz
+tools/
+keys/
