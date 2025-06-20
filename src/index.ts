@@ -54,6 +54,9 @@ const { values, positionals } = parseArgs({
       type: 'string',
       short: 'f',
     },
+    json: {
+      type: 'boolean',
+    },
     author: {
       type: 'string',
       short: 'a',
@@ -130,7 +133,7 @@ async function main() {
           help: values.help as boolean | undefined,
           limit: values.limit ? parseInt(values.limit as string) : undefined,
           tags: values.tags ? (values.tags+"").split(',').map(t => t.trim()) : undefined,
-          format: values.format as string | undefined,
+          format: values.json ? 'json' : (values.format as string | undefined),
           author: values.author as string | undefined
         });
         break;

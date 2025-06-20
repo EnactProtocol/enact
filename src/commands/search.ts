@@ -33,6 +33,7 @@ Options:
   --limit <number>    Maximum number of results (default: 20)
   --tags <tags>       Filter by tags (comma-separated)
   --format <format>   Output format: table, json, list (default: table)
+  --json              Output results as JSON (shorthand for --format json)
   --author <author>   Filter by author
 
 Examples:
@@ -40,6 +41,7 @@ Examples:
   enact search formatter --tags cli,text
   enact search --author myorg
   enact search prettier --limit 5 --format json
+  enact search prettier --limit 5 --json
 `);
     return;
   }
