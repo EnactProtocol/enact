@@ -1,4 +1,4 @@
-// src/index.ts - Updated with user command integration
+// src/index.ts - Updated with user command integration and core library support
 import { parseArgs } from 'util';
 import pc from 'picocolors';
 import * as p from '@clack/prompts';
@@ -11,6 +11,14 @@ import { handleSearchCommand } from './commands/search';
 import { handleUserCommand } from './commands/user';
 import { handleExecCommand } from './commands/exec';
 import { handleSignCommand } from './commands/sign';
+
+// Import core-based handlers
+import { 
+  handleCoreSearchCommand, 
+  handleCoreExecCommand, 
+  handleCoreGetCommand,
+  handleCoreVerifyCommand 
+} from './commands/core';
 
 // Parse arguments using process.argv (portable)
 const { values, positionals } = parseArgs({
@@ -86,6 +94,19 @@ const { values, positionals } = parseArgs({
     },
     signer: {
       type: 'string',
+    },
+    // Core library options
+    'use-core': {
+      type: 'boolean',
+    },
+    'skip-verification': {
+      type: 'boolean',
+    },
+    force: {
+      type: 'boolean',
+    },
+    timeout: {
+      type: 'string',
     }
   },
   allowPositionals: true,
@@ -129,13 +150,24 @@ async function main() {
         break;
         
       case 'search':
-        await handleSearchCommand(commandArgs, {
-          help: values.help as boolean | undefined,
-          limit: values.limit ? parseInt(values.limit as string) : undefined,
-          tags: values.tags ? (values.tags+"").split(',').map(t => t.trim()) : undefined,
-          format: values.json ? 'json' : (values.format as string | undefined),
-          author: values.author as string | undefined
-        });
+        // Use core library if --use-core flag is set or as default
+        if (values['use-core'] !== false) {
+          await handleCoreSearchCommand(commandArgs, {
+            help: values.help as boolean | undefined,
+            limit: values.limit ? parseInt(values.limit as string) : undefined,
+            tags: values.tags ? (values.tags+"").split(',').map(t => t.trim()) : undefined,
+            format: values.json ? 'json' : (values.format as string | undefined),
+            author: values.author as string | undefined
+          });
+        } else {
+          await handleSearchCommand(commandArgs, {
+            help: values.help as boolean | undefined,
+            limit: values.limit ? parseInt(values.limit as string) : undefined,
+            tags: values.tags ? (values.tags+"").split(',').map(t => t.trim()) : undefined,
+            format: values.json ? 'json' : (values.format as string | undefined),
+            author: values.author as string | undefined
+          });
+        }
         break;
         
       case 'remote':
@@ -161,14 +193,29 @@ async function main() {
         break;
         
       case 'exec': // New case for exec command
-        await handleExecCommand(commandArgs, {
-          help: values.help as boolean | undefined,
-          input: values.input as string | undefined,
-          params: values.params as string | undefined,
-          timeout: values.timeout as string | undefined,
-          dry: values.dry as boolean | undefined,
-          verbose: values.verbose as boolean | undefined
-        });
+        // Use core library if --use-core flag is set or as default
+        if (values['use-core'] !== false) {
+          await handleCoreExecCommand(commandArgs, {
+            help: values.help as boolean | undefined,
+            input: values.input as string | undefined,
+            params: values.params as string | undefined,
+            timeout: values.timeout as string | undefined,
+            dry: values.dry as boolean | undefined,
+            verbose: values.verbose as boolean | undefined,
+            verifyPolicy: values.policy as ('permissive' | 'enterprise' | 'paranoid') | undefined,
+            skipVerification: values['skip-verification'] as boolean | undefined,
+            force: values.force as boolean | undefined
+          });
+        } else {
+          await handleExecCommand(commandArgs, {
+            help: values.help as boolean | undefined,
+            input: values.input as string | undefined,
+            params: values.params as string | undefined,
+            timeout: values.timeout as string | undefined,
+            dry: values.dry as boolean | undefined,
+            verbose: values.verbose as boolean | undefined
+          });
+        }
         break;
         
       case 'sign': // New case for sign command
@@ -178,6 +225,21 @@ async function main() {
           privateKey: values['private-key'] as string | undefined,
           role: values.role as string | undefined,
           signer: values.signer as string | undefined,
+          verbose: values.verbose as boolean | undefined
+        });
+        break;
+        
+      case 'get': // New case for get command (core library only)
+        await handleCoreGetCommand(commandArgs, {
+          help: values.help as boolean | undefined,
+          format: values.format as string | undefined
+        });
+        break;
+        
+      case 'verify': // New case for verify command (core library only)
+        await handleCoreVerifyCommand(commandArgs, {
+          help: values.help as boolean | undefined,
+          policy: values.policy as string | undefined,
           verbose: values.verbose as boolean | undefined
         });
         break;
@@ -193,7 +255,9 @@ async function main() {
             message: 'What would you like to do?',
             options: [
               { value: 'search', label: '🔍 Search for tools' },
+              { value: 'get', label: '📋 Get tool information' },
               { value: 'exec', label: '⚡ Execute a tool' },
+              { value: 'verify', label: '🔒 Verify tool signatures' },
               { value: 'publish', label: '📤 Publish a tool' },
               { value: 'init', label: '📝 Create a new tool definition' },
               { value: 'sign', label: '✍️ Sign & verify tools' },
@@ -216,12 +280,22 @@ async function main() {
           }
           
           if (action === 'search') {
-            await handleSearchCommand([], {});
+            await handleCoreSearchCommand([], {});
+            return;
+          }
+          
+          if (action === 'get') {
+            await handleCoreGetCommand([], {});
             return;
           }
           
           if (action === 'exec') {
-            await handleExecCommand([], {});
+            await handleCoreExecCommand([], {});
+            return;
+          }
+          
+          if (action === 'verify') {
+            await handleCoreVerifyCommand([], {});
             return;
           }
           
