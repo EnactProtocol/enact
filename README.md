@@ -1,3 +1,94 @@
+# Enact CLI
+
+Official CLI for the Enact Protocol - package, secure, and discover AI tools.
+
+## Features
+
+- 🔍 **Search & Discovery** - Find AI tools in the Enact ecosystem
+- ⚡ **Execute Tools** - Run tools directly with secure execution
+- 📦 **Publishing** - Publish your own tools to the registry
+- 🔐 **Security** - Cryptographic signing and verification
+- 🎯 **MCP Integration** - Full Model Context Protocol support
+- 🚀 **Direct Library** - Use as a library in your applications
+
+## Installation
+
+### For End Users
+
+```bash
+# Install globally
+npm install -g enact-cli
+
+# Now you can use:
+enact search --tags web,api
+enact exec author/tool-name
+enact-mcp-server  # Start MCP server
+```
+
+### For MCP (Model Context Protocol) Users
+
+After installation, you can use Enact with any MCP client:
+
+```bash
+# With MCP Inspector
+npx @modelcontextprotocol/inspector enact-mcp-server
+
+# In Claude Desktop (add to config)
+{
+  "mcpServers": {
+    "enact": {
+      "command": "enact-mcp-server"
+    }
+  }
+}
+```
+
+See [MCP_USAGE.md](./MCP_USAGE.md) for detailed MCP integration guide.
+
+## Quick Start
+
+### CLI Usage
+```bash
+# Search for tools
+enact search "text processing"
+
+# Get help
+enact --help
+
+# Execute a tool
+enact exec author/tool-name --input '{"key": "value"}'
+```
+
+### MCP Server Usage
+```bash
+# Start the comprehensive MCP server
+enact-mcp-server
+
+# Start the lightweight MCP server  
+enact-mcp-direct
+```
+
+### Library Usage
+```typescript
+import { executeToolByName, searchTools } from 'enact-cli/dist/lib/enact-direct.js';
+
+// Search for tools
+const tools = await searchTools({ query: 'text processing', limit: 5 });
+
+// Execute a tool
+const result = await executeToolByName('author/tool-name', { input: 'data' });
+```
+
+## Available MCP Servers
+
+This package provides multiple MCP server options:
+
+| Command | Description | Best For |
+|---------|-------------|----------|
+| `enact-mcp-server` | Full-featured (10 tools) | Production use |
+| `enact-mcp-direct` | Lightweight (4 core tools) | Simple integrations |
+| `enact-mcp` | Entry point wrapper | Development |
+
 ## Development
 
 This section provides instructions for setting up your development environment and contributing to the Enact CLI.

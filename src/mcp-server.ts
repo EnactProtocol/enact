@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 // src/mcp-server.ts - Direct MCP server entry point using core library
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
