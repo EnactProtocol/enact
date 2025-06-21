@@ -12,6 +12,8 @@ interface EnvOptions {
   encrypt?: boolean;
   format?: string;
   show?: boolean;
+  global?: boolean;
+  project?: boolean;
 }
 
 interface EnvVariable {

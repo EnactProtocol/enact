@@ -34,6 +34,7 @@ ${pc.bold('Commands:')}
   ${pc.green('env')}        Manage environment variables (set, get, list, delete)
   ${pc.green('exec')}       Execute a tool by fetching and running it
   ${pc.green('init')}       Create a new tool definition
+  ${pc.green('mcp')}        MCP client integration (install, list, status)
   ${pc.green('publish')}    Publish a tool to the registry
   ${pc.green('search')}     Search for tools in the registry
   ${pc.green('sign')}       Sign and verify tools with cryptographic signatures
@@ -48,6 +49,8 @@ ${pc.bold('Examples:')}
   ${pc.cyan('enact')}                           ${pc.dim('# Interactive mode')}
   ${pc.cyan('enact')} ${pc.green('search')} ${pc.yellow('--tags')} web,api         ${pc.dim('# Search tools by tags')}
   ${pc.cyan('enact')} ${pc.green('exec')} enact/text/slugify      ${pc.dim('# Execute a tool')}
+  ${pc.cyan('enact')} ${pc.green('mcp')} install ${pc.yellow('--client')} claude-desktop ${pc.dim('# Install MCP server')}
+  ${pc.cyan('enact')} ${pc.green('mcp')} install ${pc.yellow('--client')} goose       ${pc.dim('# Install for Goose AI')}
   ${pc.cyan('enact')} ${pc.green('env')} set API_KEY --encrypt   ${pc.dim('# Set encrypted env var')}
   ${pc.cyan('enact')} ${pc.green('sign')} verify my-tool.yaml     ${pc.dim('# Verify tool signatures')}
   ${pc.cyan('enact')} ${pc.green('publish')} my-tool.yaml           ${pc.dim('# Publish a tool')}

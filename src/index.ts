@@ -12,6 +12,7 @@ import { handleUserCommand } from './commands/user';
 import { handleExecCommand } from './commands/exec';
 import { handleSignCommand } from './commands/sign';
 import { handleEnvCommand } from './commands/env';
+import { handleMcpCommand } from './commands/mcp';
 
 // Import core-based handlers
 import { 
@@ -121,6 +122,10 @@ const { values, positionals } = parseArgs({
     },
     show: {
       type: 'boolean',
+    },
+    // MCP options
+    client: {
+      type: 'string',
     }
   },
   allowPositionals: true,
@@ -269,6 +274,13 @@ async function main() {
         });
         break;
         
+      case 'mcp': // New case for mcp command
+        await handleMcpCommand(commandArgs, {
+          help: values.help as boolean | undefined,
+          client: values.client as string | undefined
+        });
+        break;
+        
       case undefined:
         // No command specified, show interactive mode
         if (values.help) {
@@ -290,6 +302,7 @@ async function main() {
               { value: 'auth', label: '🔐 Manage authentication' },
               { value: 'remote', label: '🌐 Manage remote servers' },
               { value: 'user', label: '👤 User operations' }, // New option
+              { value: 'mcp', label: '🛠️ Manage MCP' }, // New MCP option
               { value: 'help', label: '❓ Show help' },
               { value: 'exit', label: '👋 Exit' }
             ]
@@ -407,6 +420,23 @@ async function main() {
             
             if (userAction !== null) {
               await handleUserCommand([userAction as string], {});
+            }
+            return;
+          }
+          
+          if (action === 'mcp') {
+            // Show MCP submenu
+            const mcpAction = await p.select({
+              message: 'MCP client integration:',
+              options: [
+                { value: 'install', label: '🔌 Install MCP server' },
+                { value: 'list', label: '� List MCP clients' },
+                { value: 'status', label: '� Check MCP status' }
+              ]
+            });
+            
+            if (mcpAction !== null) {
+              await handleMcpCommand([mcpAction as string], {});
             }
             return;
           }
