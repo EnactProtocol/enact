@@ -31,6 +31,7 @@ ${pc.bold('Usage:')}
 
 ${pc.bold('Commands:')}
   ${pc.green('auth')}       Manage authentication (login, logout, status, token)
+  ${pc.green('env')}        Manage environment variables (set, get, list, delete)
   ${pc.green('exec')}       Execute a tool by fetching and running it
   ${pc.green('init')}       Create a new tool definition
   ${pc.green('publish')}    Publish a tool to the registry
@@ -47,6 +48,7 @@ ${pc.bold('Examples:')}
   ${pc.cyan('enact')}                           ${pc.dim('# Interactive mode')}
   ${pc.cyan('enact')} ${pc.green('search')} ${pc.yellow('--tags')} web,api         ${pc.dim('# Search tools by tags')}
   ${pc.cyan('enact')} ${pc.green('exec')} enact/text/slugify      ${pc.dim('# Execute a tool')}
+  ${pc.cyan('enact')} ${pc.green('env')} set API_KEY --encrypt   ${pc.dim('# Set encrypted env var')}
   ${pc.cyan('enact')} ${pc.green('sign')} verify my-tool.yaml     ${pc.dim('# Verify tool signatures')}
   ${pc.cyan('enact')} ${pc.green('publish')} my-tool.yaml           ${pc.dim('# Publish a tool')}
   ${pc.cyan('enact')} ${pc.green('auth')} login                   ${pc.dim('# Login with OAuth')}
@@ -212,5 +214,41 @@ ${pc.bold('Examples:')}
   ${pc.cyan('enact')} ${pc.green('user')} ${pc.blue('public-key')}
   ${pc.cyan('enact')} ${pc.green('user')} ${pc.blue('public-key')} ${pc.yellow('--format')} json
   ${pc.cyan('enact')} ${pc.green('user')} ${pc.blue('public-key')} ${pc.yellow('--server')} https://api.example.com
+`);
+}
+
+/**
+ * Show help for the env command
+ */
+export function showEnvHelp(): void {
+  console.log(`
+${pc.bold('Usage:')} ${pc.cyan('enact')} ${pc.green('env')} ${pc.blue('<subcommand>')} [options]
+
+${pc.bold('Environment variable management for Enact CLI')}
+
+${pc.bold('Subcommands:')}
+  ${pc.blue('set')} ${pc.magenta('<name>')} [value]      Set an environment variable
+  ${pc.blue('get')} ${pc.magenta('<name>')}              Get an environment variable
+  ${pc.blue('list')}                    List all environment variables
+  ${pc.blue('delete')} ${pc.magenta('<name>')}           Delete an environment variable
+  ${pc.blue('copy')} ${pc.magenta('<from>')} ${pc.magenta('<to>')}        Copy variables between scopes
+  ${pc.blue('export')} [format]         Export variables (env|json|yaml)
+  ${pc.blue('clear')}                   Clear all environment variables
+
+${pc.bold('Options:')}
+  ${pc.yellow('--help, -h')}     Show this help message
+  ${pc.yellow('--global')}       Use global scope (default)
+  ${pc.yellow('--project')}      Use project scope
+  ${pc.yellow('--encrypt')}      Encrypt sensitive values
+  ${pc.yellow('--format')}       Output format (table|json)
+  ${pc.yellow('--show')}         Show actual values (default: hidden)
+
+${pc.bold('Examples:')}
+  ${pc.cyan('enact')} ${pc.green('env')} ${pc.blue('set')} OPENAI_API_KEY ${pc.yellow('--encrypt')}
+  ${pc.cyan('enact')} ${pc.green('env')} ${pc.blue('set')} DATABASE_URL postgres://... ${pc.yellow('--project')}
+  ${pc.cyan('enact')} ${pc.green('env')} ${pc.blue('get')} OPENAI_API_KEY ${pc.yellow('--show')}
+  ${pc.cyan('enact')} ${pc.green('env')} ${pc.blue('list')} ${pc.yellow('--project')} ${pc.yellow('--format')} json
+  ${pc.cyan('enact')} ${pc.green('env')} ${pc.blue('copy')} global project
+  ${pc.cyan('enact')} ${pc.green('env')} ${pc.blue('export')} env > .env
 `);
 }

@@ -11,6 +11,7 @@ import { handleSearchCommand } from './commands/search';
 import { handleUserCommand } from './commands/user';
 import { handleExecCommand } from './commands/exec';
 import { handleSignCommand } from './commands/sign';
+import { handleEnvCommand } from './commands/env';
 
 // Import core-based handlers
 import { 
@@ -107,6 +108,19 @@ const { values, positionals } = parseArgs({
     },
     timeout: {
       type: 'string',
+    },
+    // Environment variable options
+    global: {
+      type: 'boolean',
+    },
+    project: {
+      type: 'boolean',
+    },
+    encrypt: {
+      type: 'boolean',
+    },
+    show: {
+      type: 'boolean',
     }
   },
   allowPositionals: true,
@@ -244,6 +258,17 @@ async function main() {
         });
         break;
         
+      case 'env': // New case for env command
+        await handleEnvCommand(commandArgs, {
+          help: values.help as boolean | undefined,
+          global: values.global as boolean | undefined,
+          project: values.project as boolean | undefined,
+          encrypt: values.encrypt as boolean | undefined,
+          format: values.format as string | undefined,
+          show: values.show as boolean | undefined
+        });
+        break;
+        
       case undefined:
         // No command specified, show interactive mode
         if (values.help) {
@@ -261,6 +286,7 @@ async function main() {
               { value: 'publish', label: '📤 Publish a tool' },
               { value: 'init', label: '📝 Create a new tool definition' },
               { value: 'sign', label: '✍️ Sign & verify tools' },
+              { value: 'env', label: '🌍 Manage environment variables' },
               { value: 'auth', label: '🔐 Manage authentication' },
               { value: 'remote', label: '🌐 Manage remote servers' },
               { value: 'user', label: '👤 User operations' }, // New option
@@ -301,6 +327,27 @@ async function main() {
           
           if (action === 'sign') {
             await handleSignCommand([], {});
+            return;
+          }
+          
+          if (action === 'env') {
+            // Show env submenu
+            const envAction = await p.select({
+              message: 'Environment variables:',
+              options: [
+                { value: 'set', label: '➕ Set variable' },
+                { value: 'get', label: '📋 Get variable' },
+                { value: 'list', label: '📝 List all variables' },
+                { value: 'delete', label: '🗑️ Delete variable' },
+                { value: 'copy', label: '📋 Copy between scopes' },
+                { value: 'export', label: '📤 Export variables' },
+                { value: 'clear', label: '🧹 Clear all variables' }
+              ]
+            });
+            
+            if (envAction !== null) {
+              await handleEnvCommand([envAction as string], {});
+            }
             return;
           }
           

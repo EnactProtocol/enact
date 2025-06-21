@@ -8,6 +8,7 @@ import * as yaml from 'yaml';
 import { enactApi, EnactApiError } from '../api/enact-api';
 import { EnactExecOptions, EnactToolDefinition, VerificationPolicy } from '../api/types';
 import { verifyTool, shouldExecuteTool, VERIFICATION_POLICIES  } from '../security/sign';
+import { resolveToolEnvironmentVariables, validateRequiredEnvironmentVariables } from '../utils/env-loader';
 
 
 /**
@@ -327,14 +328,42 @@ Examples:
   // Build the command
   const command = await buildCommand(toolDefinition.command, params);
   
+  // Resolve environment variables from Enact configuration
+  const { resolved: envVars, missing: missingEnvVars } = await resolveToolEnvironmentVariables(toolDefinition.name, toolDefinition.env);
+  
+  // Validate required environment variables
+  const validation = validateRequiredEnvironmentVariables(toolDefinition.env, envVars);
+  
+  if (!validation.valid) {
+    console.log(pc.red('\n✗ Missing required environment variables:'));
+    validation.missing.forEach(varName => {
+      const config = toolDefinition.env?.[varName];
+      const description = config?.description ? ` - ${config.description}` : '';
+      const source = config?.source ? ` (source: ${config.source})` : '';
+      const required = config?.required ? ' [REQUIRED]' : '';
+      console.log(pc.red(`  ${varName}${required}${description}${source}`));
+    });
+    
+    console.log(pc.yellow('\n💡 You can set environment variables using:'));
+    console.log(pc.cyan('  enact env set <VAR_NAME> <value>'));
+    console.log(pc.cyan('  enact env set <VAR_NAME> --encrypt  # for sensitive values'));
+    console.log(pc.cyan('  enact env set <VAR_NAME> --project  # for project-specific values'));
+    
+    p.outro(pc.red('✗ Execution aborted due to missing environment variables'));
+    return;
+  }
+  
   if (options.dry) {
     console.log(pc.cyan('\n🔍 Command that would be executed:'));
     console.log(pc.white(command));
     console.log(pc.cyan('\nEnvironment variables:'));
-    if (toolDefinition.env) {
-      Object.entries(toolDefinition.env).forEach(([key, config]) => {
-        const value = process.env[key] || config.default || '<not set>';
-        console.log(`  ${key}=${value}`);
+    if (Object.keys(envVars).length > 0) {
+      Object.entries(envVars).forEach(([key, value]) => {
+        const isFromEnact = key in envVars && !(key in process.env);
+        const source = isFromEnact ? ' (from Enact config)' : ' (from system)';
+        const displayValue = (key.includes('KEY') || key.includes('TOKEN') || key.includes('SECRET')) 
+          ? '[hidden]' : value;
+        console.log(`  ${key}=${displayValue}${source}`);
       });
     } else {
       console.log('  (none required)');
@@ -342,18 +371,23 @@ Examples:
     return;
   }
 
-  // Check required environment variables
-  if (toolDefinition.env) {
-    const missingEnvVars = await checkEnvironmentVariables(toolDefinition.env);
-    if (missingEnvVars.length > 0) {
-      p.outro(pc.red(`✗ Missing required environment variables: ${missingEnvVars.join(', ')}`));
-      return;
-    }
+  if (options.verbose && Object.keys(envVars).length > 0) {
+    console.log(pc.cyan('\n🌍 Environment variables loaded:'));
+    Object.entries(envVars).forEach(([key, value]) => {
+      const toolConfig = toolDefinition.env?.[key];
+      const isFromEnact = key in envVars && !(key in process.env);
+      const source = isFromEnact ? ' (from Enact config)' : ' (from system)';
+      const description = toolConfig?.description ? ` - ${toolConfig.description}` : '';
+      const required = toolConfig?.required ? ' [REQUIRED]' : '';
+      const displayValue = (key.includes('KEY') || key.includes('TOKEN') || key.includes('SECRET')) 
+        ? '[hidden]' : value;
+      console.log(`  ${key}=${displayValue}${required}${description}${source}`);
+    });
   }
 
   // Execute the command
   const timeout = options.timeout || toolDefinition.timeout || '30s';
-  await executeCommand(command, timeout, options.verbose);
+  await executeCommand(command, timeout, options.verbose, envVars);
 
   // Log usage (include verification status) - only for remote tools
   if (!isLocalFile) {
@@ -463,24 +497,14 @@ async function buildCommand(template: string, params: Record<string, any>): Prom
 }
 
 /**
- * Check if all required environment variables are available
- */
-async function checkEnvironmentVariables(envConfig: Record<string, any>): Promise<string[]> {
-  const missing: string[] = [];
-  
-  for (const [key, config] of Object.entries(envConfig)) {
-    if (config.required && !process.env[key] && !config.default) {
-      missing.push(key);
-    }
-  }
-  
-  return missing;
-}
-
-/**
  * Execute the command with timeout and proper error handling
  */
-async function executeCommand(command: string, timeout: string, verbose: boolean = false): Promise<void> {
+async function executeCommand(
+  command: string, 
+  timeout: string, 
+  verbose: boolean = false, 
+  envVars: Record<string, string> = {}
+): Promise<void> {
   return new Promise((resolve, reject) => {
     if (verbose) {
       console.log(pc.cyan('\n🚀 Executing command:'));
@@ -493,10 +517,14 @@ async function executeCommand(command: string, timeout: string, verbose: boolean
     // Parse timeout (simple implementation for common formats)
     const timeoutMs = parseTimeout(timeout);
     
+    // Merge environment variables with process environment
+    const mergedEnv = { ...process.env, ...envVars };
+    
     // Execute command using shell (compatible with Bun runtime)
     const child = spawn('sh', ['-c', command], {
       stdio: ['pipe', 'pipe', 'pipe'],
-      timeout: timeoutMs
+      timeout: timeoutMs,
+      env: mergedEnv
     });
     
     let stdout = '';

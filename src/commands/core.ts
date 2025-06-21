@@ -3,6 +3,7 @@ import { EnactCore } from '../core/EnactCore';
 import type { ToolSearchOptions, ToolExecuteOptions } from '../core/EnactCore';
 import pc from 'picocolors';
 import * as p from '@clack/prompts';
+import { resolveToolEnvironmentVariables, validateRequiredEnvironmentVariables } from '../utils/env-loader';
 
 // Create core instance
 const core = new EnactCore();
