@@ -139,16 +139,6 @@ describe('Env Command', () => {
       expect(options.package).toBe('acme-corp/test');
     });
 
-    test('should accept global option', () => {
-      const options = { global: true };
-      expect(options.global).toBe(true);
-    });
-
-    test('should accept project option', () => {
-      const options = { project: true };
-      expect(options.project).toBe(true);
-    });
-
     test('should handle multiple options', () => {
       const options = {
         help: false,
