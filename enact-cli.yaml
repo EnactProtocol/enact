@@ -1,0 +1,100 @@
+enact: "1.0.0"
+name: enact/cli
+description: "Official CLI for the Enact Protocol - package, secure, and discover AI tools with MCP integration"
+command: "npx enact-cli"
+version: "1.0.10"
+tags: ["cli", "enact", "enact-protocol", "ai-tools", "mcp", "model-context-protocol", "tool-discovery", "command-line-tool"]
+license: "MIT"
+timeout: "120s"
+
+author: "EnactProtocol"
+repository: "https://github.com/EnactProtocol/enact-cli"
+homepage: "https://github.com/EnactProtocol/enact-cli#readme"
+
+# The CLI supports various subcommands
+inputSchema:
+  type: object
+  properties:
+    subcommand:
+      type: string
+      enum: ["search", "exec", "get", "verify", "init", "auth", "user", "env", "mcp", "remote", "create", "sign", "publish"]
+      description: "The enact CLI subcommand to execute"
+      default: "search"
+    query:
+      type: string
+      description: "Search query for tools (when using search command)"
+    name:
+      type: string
+      description: "Tool name (when using exec, get, verify commands)"
+    inputs:
+      type: object
+      description: "Input parameters for tool execution (when using exec command)"
+      additionalProperties: true
+    options:
+      type: array
+      items:
+        type: string
+      description: "Additional CLI options and flags"
+  required: ["subcommand"]
+
+outputSchema:
+  type: object
+  properties:
+    success:
+      type: boolean
+      description: "Whether the command executed successfully"
+    output:
+      type: string
+      description: "Command output or results"
+    error:
+      type: string
+      description: "Error message if command failed"
+
+annotations:
+  openWorldHint: true
+  idempotentHint: false
+  destructiveHint: false
+  readOnlyHint: false
+
+# Environment variables for configuration
+env:
+  ENACT_API_URL:
+    description: "Enact API base URL"
+    default: "https://enact.tools"
+    required: false
+  ENACT_AUTH_TOKEN:
+    description: "Authentication token for Enact API"
+    required: false
+  ENACT_VERIFY_POLICY:
+    description: "Verification policy for tool execution"
+    default: "permissive"
+    enum: ["permissive", "enterprise", "paranoid"]
+    required: false
+
+examples:
+  - input:
+      subcommand: "search"
+      query: "bluesky"
+    output:
+      success: true
+      output: "Found 5 tools matching 'bluesky'"
+    description: "Search for Bluesky-related tools"
+  
+  - input:
+      subcommand: "exec"
+      name: "kgroves88/dagger/social/bluesky-poster"
+      inputs:
+        email: "user@example.com"
+        text: "Hello from Enact!"
+    output:
+      success: true
+      output: "Tool executed successfully"
+    description: "Execute a Bluesky posting tool"
+  
+  - input:
+      subcommand: "get"
+      name: "example/tool"
+    output:
+      success: true
+      output: "Tool information retrieved"
+    description: "Get information about a specific tool"

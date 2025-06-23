@@ -56,8 +56,37 @@ export class DirectExecutionProvider extends ExecutionProvider {
       try {
         const proc = spawn(cmd, args, {
           env,
-          stdio: ['pipe', 'pipe', 'pipe']
+          stdio: ['pipe', 'pipe', 'pipe'],
+          // Create a new process group for better cleanup of child processes
+          detached: process.platform !== 'win32'
         });
+
+        // Cleanup function to ensure process and children are properly terminated
+        const cleanup = () => {
+          if (proc && !proc.killed) {
+            try {
+              console.log(`[DEBUG] Cleaning up process PID: ${proc.pid}`);
+              // For Dagger and other tools that may spawn child processes
+              // Kill the process group to ensure all children are terminated
+              if (process.platform === 'win32') {
+                proc.kill('SIGKILL');
+              } else {
+                // Kill the entire process group
+                process.kill(-proc.pid!, 'SIGTERM');
+                // Give it a moment, then force kill if needed
+                setTimeout(() => {
+                  if (!proc.killed) {
+                    console.log(`[DEBUG] Force killing process PID: ${proc.pid}`);
+                    process.kill(-proc.pid!, 'SIGKILL');
+                  }
+                }, 2000);
+              }
+            } catch (killError) {
+              // Process might already be dead, ignore
+              logger.debug(`Process cleanup error (likely harmless): ${killError}`);
+            }
+          }
+        };
         
         // Collect stdout and stream it in real-time
         proc.stdout.on('data', (data: Buffer) => {
@@ -74,18 +103,21 @@ export class DirectExecutionProvider extends ExecutionProvider {
           // Stream stderr to console in real-time
           process.stderr.write(chunk);
         });
-        
-        // Handle process completion
+         // Handle process completion with more robust cleanup
         proc.on('close', (code: number) => {
+          console.log(`[DEBUG] Process closed with code: ${code}, PID: ${proc.pid}`);
+          // Force cleanup any remaining resources
+          cleanup();
           resolve({ 
             stdout: stdout.trim(), 
             stderr: stderr.trim(), 
             exitCode: code || 0 
           });
         });
-        
+
         // Handle process errors
         proc.on('error', (error: Error) => {
+          cleanup();
           reject(new Error(`Command execution error: ${error.message}`));
         });
         
@@ -93,7 +125,7 @@ export class DirectExecutionProvider extends ExecutionProvider {
         if (timeout) {
           const timeoutMs = this.parseTimeout(timeout);
           setTimeout(() => {
-            proc.kill('SIGTERM');
+            cleanup();
             reject(new Error(`Command timed out after ${timeout}`));
           }, timeoutMs);
         }
