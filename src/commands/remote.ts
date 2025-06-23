@@ -1,6 +1,6 @@
 // src/commands/remote.ts
 import { intro, outro, text, select, confirm, spinner, note } from '@clack/prompts';
-import color from 'picocolors';
+import pc from 'picocolors';
 import { existsSync } from 'fs';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
@@ -16,7 +16,7 @@ const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
 
 export async function handleRemoteCommand(args: string[], options: RemoteOptions): Promise<void> {
   if (options.help || !args[0]) {
-    console.log(`
+    console.error(`
 Usage: enact remote <subcommand> [options]
 
 Manages remote server configurations for publishing enact documents.
@@ -39,7 +39,7 @@ Options:
   // Initialize config if it doesn't exist
   await ensureConfig();
 
-  intro(color.bgMagenta(color.black(' Remote Server Management ')));
+  intro(pc.bgMagenta(pc.black(' Remote Server Management ')));
 
   switch (subCommand) {
     case 'add': {
@@ -57,7 +57,7 @@ Options:
         }) as string;
         
         if (name === null) {
-          outro(color.yellow('Operation cancelled'));
+          outro(pc.yellow('Operation cancelled'));
           return;
         }
       }
@@ -73,7 +73,7 @@ Options:
         }) as string;
         
         if (url === null) {
-          outro(color.yellow('Operation cancelled'));
+          outro(pc.yellow('Operation cancelled'));
           return;
         }
       }
@@ -87,7 +87,7 @@ Options:
         });
         
         if (!overwrite) {
-          outro(color.yellow('Operation cancelled'));
+          outro(pc.yellow('Operation cancelled'));
           return;
         }
       }
@@ -100,7 +100,7 @@ Options:
       await writeConfig(config);
       
       s.stop(`Remote "${name}" added`);
-      outro(color.green(`✓ Remote ${color.bold(name)} configured with URL ${color.bold(url)}`));
+      outro(pc.green(`✓ Remote ${pc.bold(name)} configured with URL ${pc.bold(url)}`));
       break;
     }
     
@@ -125,14 +125,14 @@ Options:
         }) as string;
         
         if (name === null) {
-          outro(color.yellow('Operation cancelled'));
+          outro(pc.yellow('Operation cancelled'));
           return;
         }
       }
       
       // Check if remote exists
       if (!config.remotes[name]) {
-        outro(color.red(`✗ Remote "${name}" does not exist`));
+        outro(pc.red(`✗ Remote "${name}" does not exist`));
         return;
       }
       
@@ -142,7 +142,7 @@ Options:
       });
       
       if (!shouldRemove) {
-        outro(color.yellow('Operation cancelled'));
+        outro(pc.yellow('Operation cancelled'));
         return;
       }
       
@@ -154,7 +154,7 @@ Options:
       await writeConfig(config);
       
       s.stop(`Remote "${name}" removed`);
-      outro(color.green(`✓ Remote ${color.bold(name)} has been removed`));
+      outro(pc.green(`✓ Remote ${pc.bold(name)} has been removed`));
       break;
     }
     
@@ -171,7 +171,7 @@ Options:
       
       note(
         remotes.map(([name, data]) => 
-          `${color.bold(name)}: ${(data as { url: string }).url}`
+          `${pc.bold(name)}: ${(data as { url: string }).url}`
         ).join('\n'),
         'Configured Remotes'
       );
@@ -181,7 +181,7 @@ Options:
     }
     
     default:
-      outro(color.red(`✗ Unknown remote subcommand "${subCommand}"`));
+      outro(pc.red(`✗ Unknown remote subcommand "${subCommand}"`));
       return;
   }
 }

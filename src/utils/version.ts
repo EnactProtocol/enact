@@ -1,5 +1,5 @@
 // src/utils/version.ts
-import color from 'picocolors';
+import pc from 'picocolors';
 
 /**
  * Displays the CLI version with nice formatting
@@ -9,8 +9,8 @@ export function showVersion(): void {
   const version = process.env.npm_package_version || '0.0.1-dev';
   const versionText = `v${version}`;
   
-  console.log(`
-${color.bold('Enact CLI')} ${color.cyan(versionText)}
-${color.dim('A tool to create and publish enact documents.')}
+  console.error(`
+${pc.bold('Enact CLI')} ${pc.cyan(versionText)}
+${pc.dim('A tool to create and publish enact documents.')}
 `);
 }

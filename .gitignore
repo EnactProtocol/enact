@@ -41,3 +41,12 @@ src.txt
 enact-cli-*.tgz
 tools/
 keys/
+
+# Archive directory
+archive/
+
+# Loose test files
+test-*
+
+# Loose test files
+test-*

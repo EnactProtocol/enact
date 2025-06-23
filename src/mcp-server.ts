@@ -1,11 +1,23 @@
-#!/usr/bin/env node
-
-// src/mcp-server.ts - Direct MCP server entry point using core library
+// src/mcp-server-modern.ts - Modern MCP server using latest SDK patterns
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { EnactCore } from "./core/EnactCore";
 import logger from './exec/logger';
+import { silentMcpTool, validateSilentEnvironment } from './utils/silent-monitor';
+
+// Set required environment variables for silent operation first
+process.env.CI = process.env.CI || 'true';
+process.env.ENACT_SKIP_INTERACTIVE = process.env.ENACT_SKIP_INTERACTIVE || 'true';
+
+// Only validate and report environment issues when not in test mode
+if (process.env.NODE_ENV !== 'test') {
+  const envValidation = validateSilentEnvironment();
+  if (!envValidation.valid) {
+    // Log to stderr for debugging purposes (only in non-test environments)
+    process.stderr.write(`⚠️ MCP Environment Issues: ${envValidation.issues.join(', ')}\n`);
+  }
+}
 
 // Initialize core library
 const enactCore = new EnactCore({
@@ -27,8 +39,6 @@ const server = new McpServer({
   }
 });
 
-// Set logger to use server logging
-
 // Helper function for safe JSON stringification
 function safeJsonStringify(obj: any, fallback: string = "Unable to stringify object"): string {
   try {
@@ -39,19 +49,22 @@ function safeJsonStringify(obj: any, fallback: string = "Unable to stringify obj
   }
 }
 
-// Execute tool by name using core library directly
-server.tool(
-  "execute-tool-by-name", 
-  "Execute an Enact tool by its name using direct core integration",
-  { 
-    name: z.string(), 
-    inputs: z.record(z.any()).optional(),
-    timeout: z.string().optional(),
-    verifyPolicy: z.enum(['permissive', 'enterprise', 'paranoid']).optional(),
-    skipVerification: z.boolean().optional(),
-    force: z.boolean().optional(),
-    dryRun: z.boolean().optional(),
-    verbose: z.boolean().optional()
+// Execute tool by name - modern API
+server.registerTool(
+  "execute-tool-by-name",
+  {
+    title: "Execute Enact Tool",
+    description: "Execute an Enact tool by its name using direct core integration",
+    inputSchema: {
+      name: z.string().describe("Name of the tool to execute"), 
+      inputs: z.record(z.any()).optional().describe("Input parameters for the tool"),
+      timeout: z.string().optional().describe("Execution timeout"),
+      verifyPolicy: z.enum(['permissive', 'enterprise', 'paranoid']).optional().describe("Verification policy"),
+      skipVerification: z.boolean().optional().describe("Skip signature verification"),
+      force: z.boolean().optional().describe("Force execution"),
+      dryRun: z.boolean().optional().describe("Dry run mode"),
+      verbose: z.boolean().optional().describe("Verbose output")
+    }
   },
   async (params) => {
     const { name, inputs = {}, timeout, verifyPolicy, skipVerification, force, dryRun, verbose } = params;
@@ -72,7 +85,7 @@ server.tool(
         return {
           content: [{ 
             type: "text", 
-            text: `Error executing tool ${name}: ${result.error?.message}` 
+            text: `❌ Error executing tool ${name}: ${result.error?.message}` 
           }],
           isError: true
         };
@@ -81,7 +94,7 @@ server.tool(
       return {
         content: [{ 
           type: "text", 
-          text: `Successfully executed tool ${name}\nOutput: ${safeJsonStringify(result)}` 
+          text: `✅ Successfully executed tool ${name}\nOutput: ${safeJsonStringify(result)}` 
         }]
       };
     } catch (error) {
@@ -97,16 +110,19 @@ server.tool(
   }
 );
 
-// Search tools using core library directly
-server.tool(
+// Search tools - modern API
+server.registerTool(
   "enact-search-tools",
-  "Search tools in the Enact ecosystem using direct core integration",
-  { 
-    query: z.string(),
-    limit: z.number().optional(),
-    tags: z.array(z.string()).optional(),
-    author: z.string().optional(),
-    format: z.enum(['json', 'table', 'list']).optional()
+  {
+    title: "Search Enact Tools",
+    description: "Search tools in the Enact ecosystem using direct core integration",
+    inputSchema: {
+      query: z.string().describe("Search query for tools"),
+      limit: z.number().optional().describe("Maximum number of results"),
+      tags: z.array(z.string()).optional().describe("Filter by tags"),
+      author: z.string().optional().describe("Filter by author"),
+      format: z.enum(['json', 'table', 'list']).optional().describe("Output format")
+    }
   },
   async (params) => {
     const { query, limit, tags, author, format } = params;
@@ -127,7 +143,7 @@ server.tool(
       return {
         content: [{ 
           type: "text", 
-          text: `Found ${tools.length} tools matching query "${query}":\n${safeJsonStringify(tools)}` 
+          text: `🔍 Found ${tools.length} tools matching query "${query}":\n${safeJsonStringify(tools)}` 
         }]
       };
     } catch (error) {
@@ -143,17 +159,19 @@ server.tool(
   }
 );
 
-// Get tool information using core library directly
-server.tool(
+// Get tool information - modern API
+server.registerTool(
   "enact-get-tool-info",
-  "Get detailed information about a specific tool using direct core integration",
-  { 
-    name: z.string(), 
-    version: z.string().optional(),
-    includeSignatureInfo: z.boolean().optional()
+  {
+    title: "Get Tool Info", 
+    description: "Get detailed information about a specific tool using direct core integration",
+    inputSchema: {
+      name: z.string().describe("Name of the tool"), 
+      version: z.string().optional().describe("Version of the tool")
+    }
   },
   async (params) => {
-    const { name, version, includeSignatureInfo } = params;
+    const { name, version } = params;
     
     try {
       logger.info(`Getting tool info via direct core library: ${name}`);
@@ -173,11 +191,11 @@ server.tool(
       return {
         content: [{ 
           type: "text", 
-          text: `Tool information for ${name}:\n${safeJsonStringify(tool)}` 
+          text: `ℹ️ Tool Information for ${name}:\n${safeJsonStringify(tool)}` 
         }]
       };
     } catch (error) {
-      logger.error(`Error getting tool info:`, error);
+      logger.error("Error getting tool info:", error);
       return {
         content: [{ 
           type: "text", 
@@ -190,12 +208,15 @@ server.tool(
 );
 
 // Verify tool signatures using core library directly
-server.tool(
+server.registerTool(
   "enact-verify-tool",
-  "Verify cryptographic signatures of a tool using direct core integration",
-  { 
-    name: z.string(),
-    policy: z.enum(['permissive', 'enterprise', 'paranoid']).optional()
+  {
+    title: "Verify Tool Signatures",
+    description: "Verify cryptographic signatures of a tool using direct core integration",
+    inputSchema: {
+      name: z.string().describe("Name of the tool to verify"),
+      policy: z.enum(['permissive', 'enterprise', 'paranoid']).optional().describe("Verification policy")
+    }
   },
   async ({ name, policy }) => {
     try {
@@ -238,13 +259,16 @@ server.tool(
 );
 
 // Execute raw tool from YAML definition using core library directly
-server.tool(
+server.registerTool(
   "execute-raw-tool",
-  "Execute an Enact tool from raw YAML definition using direct core integration",
-  { 
-    yaml: z.string(),
-    inputs: z.record(z.any()).optional(),
-    options: z.record(z.any()).optional()
+  {
+    title: "Execute Raw Tool",
+    description: "Execute an Enact tool from raw YAML definition using direct core integration",
+    inputSchema: {
+      yaml: z.string().describe("YAML definition of the tool"),
+      inputs: z.record(z.any()).optional().describe("Input parameters for the tool"),
+      options: z.record(z.any()).optional().describe("Execution options")
+    }
   },
   async ({ yaml: toolYaml, inputs = {}, options = {} }) => {
     try {
@@ -282,14 +306,17 @@ server.tool(
 );
 
 // Get all tools using core library directly
-server.tool(
+server.registerTool(
   "enact-get-tools",
-  "Get all tools with optional filters using direct core integration",
-  { 
-    limit: z.number().optional(),
-    offset: z.number().optional(),
-    tags: z.array(z.string()).optional(),
-    author: z.string().optional()
+  {
+    title: "Get All Tools",
+    description: "Get all tools with optional filters using direct core integration",
+    inputSchema: {
+      limit: z.number().optional().describe("Maximum number of results"),
+      offset: z.number().optional().describe("Number of results to skip"),
+      tags: z.array(z.string()).optional().describe("Filter by tags"),
+      author: z.string().optional().describe("Filter by author")
+    }
   },
   async ({ limit, offset, tags, author }) => {
     try {
@@ -317,10 +344,15 @@ server.tool(
 );
 
 // Check tool existence using core library directly
-server.tool(
+server.registerTool(
   "enact-tool-exists",
-  "Check if a tool exists in the registry using direct core integration",
-  { name: z.string() },
+  {
+    title: "Check Tool Existence",
+    description: "Check if a tool exists in the registry using direct core integration",
+    inputSchema: {
+      name: z.string().describe("Name of the tool to check")
+    }
+  },
   async ({ name }) => {
     try {
       logger.info(`Checking tool existence via direct core library: ${name}`);
@@ -330,7 +362,7 @@ server.tool(
       return {
         content: [{ 
           type: "text", 
-          text: `Tool "${name}" ${exists ? 'exists' : 'does not exist'} in the registry.` 
+          text: `✅ Tool "${name}" ${exists ? 'exists' : 'does not exist'} in the registry.` 
         }]
       };
     } catch (error) {
@@ -347,14 +379,17 @@ server.tool(
 );
 
 // Search and register tool using core library directly
-server.tool(
+server.registerTool(
   "enact-search-and-register-tools",
-  "Search tools and register the first result as a tool using direct core integration",
-  { 
-    query: z.string(),
-    limit: z.number().optional(),
-    tags: z.array(z.string()).optional(),
-    author: z.string().optional()
+  {
+    title: "Search and Register Tools",
+    description: "Search tools and register the first result as a tool using direct core integration",
+    inputSchema: {
+      query: z.string().describe("Search query for tools"),
+      limit: z.number().optional().describe("Maximum number of results"),
+      tags: z.array(z.string()).optional().describe("Filter by tags"),
+      author: z.string().optional().describe("Filter by author")
+    }
   },
   async ({ query, limit, tags, author }) => {
     try {
@@ -405,10 +440,13 @@ server.tool(
 );
 
 // Core status and capabilities
-server.tool(
+server.registerTool(
   "enact-core-status",
-  "Get status and capabilities of the direct core integration",
-  {},
+  {
+    title: "Core Status",
+    description: "Get status and capabilities of the direct core integration",
+    inputSchema: {}
+  },
   async () => {
     try {
       const status = await enactCore.getStatus();
@@ -494,10 +532,13 @@ async function registerDynamicTool(tool: any): Promise<void> {
   }
   
   // Register the tool
-  server.tool(
+  server.registerTool(
     toolName,
-    description,
-    inputSchema,
+    {
+      title: tool.name,
+      description: description,
+      inputSchema: inputSchema
+    },
     async (args: any) => {
       try {
         const result = await enactCore.executeToolByName(tool.name, args);
@@ -539,9 +580,9 @@ async function main() {
   try {
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    logger.info("Enact MCP Server with Direct Core Integration started successfully");
+    logger.info("🚀 Enact MCP Server with Direct Core Integration started successfully");
   } catch (error) {
-    console.error("Server connection error:", error);
+    console.error("❌ Server connection error:", error);
     if (error instanceof Error) {
       console.error("Stack trace:", error.stack);
     }
@@ -552,9 +593,184 @@ async function main() {
 // Start the server if this file is run directly
 if (require.main === module) {
   main().catch((error) => {
-    console.error("Failed to start server:", error);
+    console.error("❌ Failed to start server:", error);
     process.exit(1);
   });
 }
 
 export { server, enactCore };
+
+// Get tools by author using core library directly
+server.registerTool(
+  "enact-get-tools-by-author",
+  {
+    title: "Get Tools by Author",
+    description: "Get tools by a specific author using direct core integration",
+    inputSchema: {
+      author: z.string().describe("Author name to filter by"),
+      limit: z.number().default(20).describe("Maximum number of results")
+    }
+  },
+  async ({ author, limit = 20 }) => {
+    try {
+      logger.info(`Getting tools by author via direct core library: ${author}`);
+      
+      const tools = await enactCore.getTools({ author, limit });
+      
+      return {
+        content: [{ 
+          type: "text", 
+          text: `📚 Found ${tools.length} tools by author "${author}":\n${safeJsonStringify(tools)}` 
+        }]
+      };
+    } catch (error) {
+      logger.error(`Error getting tools by author:`, error);
+      return {
+        content: [{ 
+          type: "text", 
+          text: `❌ Error getting tools by author: ${error instanceof Error ? error.message : String(error)}` 
+        }],
+        isError: true
+      };
+    }
+  }
+);
+
+// Get tools by tags using core library directly
+server.registerTool(
+  "enact-get-tools-by-tags",
+  {
+    title: "Get Tools by Tags",
+    description: "Get tools filtered by specific tags using direct core integration",
+    inputSchema: {
+      tags: z.array(z.string()).describe("Tags to filter by"),
+      limit: z.number().default(20).describe("Maximum number of results")
+    }
+  },
+  async ({ tags, limit = 20 }) => {
+    try {
+      logger.info(`Getting tools by tags via direct core library: ${tags.join(', ')}`);
+      
+      const tools = await enactCore.getTools({ tags, limit });
+      
+      return {
+        content: [{ 
+          type: "text", 
+          text: `🏷️ Found ${tools.length} tools with tags [${tags.join(', ')}]:\n${safeJsonStringify(tools)}` 
+        }]
+      };
+    } catch (error) {
+      logger.error(`Error getting tools by tags:`, error);
+      return {
+        content: [{ 
+          type: "text", 
+          text: `❌ Error getting tools by tags: ${error instanceof Error ? error.message : String(error)}` 
+        }],
+        isError: true
+      };
+    }
+  }
+);
+
+// Register tool as an MCP tool
+server.registerTool(
+  "enact-register-tool",
+  {
+    title: "Register Tool",
+    description: "Register a tool as an MCP tool using direct core integration",
+    inputSchema: {
+      name: z.string().describe("Name of the tool to register")
+    }
+  },
+  async ({ name }) => {
+    try {
+      logger.info(`Registering tool via direct core library: ${name}`);
+      
+      // First get the tool info
+      const tool = await enactCore.getToolInfo(name);
+      
+      if (!tool) {
+        return {
+          content: [{ 
+            type: "text", 
+            text: `❌ Tool not found: ${name}` 
+          }],
+          isError: true
+        };
+      }
+      
+      // Register it as a dynamic tool
+      await registerDynamicTool(tool);
+      
+      return {
+        content: [{ 
+          type: "text", 
+          text: `✅ Successfully registered tool: ${name}` 
+        }]
+      };
+    } catch (error) {
+      logger.error(`Error registering tool:`, error);
+      return {
+        content: [{ 
+          type: "text", 
+          text: `❌ Error registering tool: ${error instanceof Error ? error.message : String(error)}` 
+        }],
+        isError: true
+      };
+    }
+  }
+);
+
+// Search for multiple tools by different intents
+server.registerTool(
+  "enact-search-multiple-tools",
+  {
+    title: "Search Multiple Tools",
+    description: "Search for multiple tools by different intents using direct core integration",
+    inputSchema: {
+      intents: z.array(z.string()).describe("Array of search intents/queries")
+    }
+  },
+  async ({ intents }) => {
+    try {
+      logger.info(`Searching multiple tools via direct core library: ${intents.length} intents`);
+      
+      const allResults: any[] = [];
+      
+      for (const intent of intents) {
+        try {
+          const tools = await enactCore.searchTools({ query: intent });
+          allResults.push({
+            intent,
+            tools,
+            count: tools.length
+          });
+        } catch (error) {
+          allResults.push({
+            intent,
+            error: error instanceof Error ? error.message : String(error),
+            count: 0
+          });
+        }
+      }
+      
+      const totalFound = allResults.reduce((sum, result) => sum + (result.count || 0), 0);
+      
+      return {
+        content: [{ 
+          type: "text", 
+          text: `🔍 Search completed for ${intents.length} intents. Total tools found: ${totalFound}\n${safeJsonStringify(allResults)}` 
+        }]
+      };
+    } catch (error) {
+      logger.error(`Error searching multiple tools:`, error);
+      return {
+        content: [{ 
+          type: "text", 
+          text: `❌ Error searching multiple tools: ${error instanceof Error ? error.message : String(error)}` 
+        }],
+        isError: true
+      };
+    }
+  }
+);

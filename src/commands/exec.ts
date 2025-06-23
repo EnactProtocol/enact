@@ -52,12 +52,17 @@ async function loadLocalTool(filePath: string): Promise<EnactToolDefinition> {
  * Check if a tool identifier is a local file path
  */
 function isLocalToolPath(toolIdentifier: string): boolean {
-  // Check if it's a file path (contains / or \, or ends with .yaml/.yml)
-  return toolIdentifier.includes('/') && (
-    toolIdentifier.endsWith('.yaml') || 
-    toolIdentifier.endsWith('.yml') ||
-    existsSync(resolve(toolIdentifier))
-  );
+  // Check if it's a file path - either exists as a file OR looks like a path ending in .yaml/.yml
+  const resolvedPath = resolve(toolIdentifier);
+  
+  // If the file exists, it's definitely a local file
+  if (existsSync(resolvedPath)) {
+    return true;
+  }
+  
+  // If it contains a path separator and ends with .yaml/.yml, treat as local file path
+  return (toolIdentifier.includes('/') || toolIdentifier.includes('\\')) && 
+         (toolIdentifier.endsWith('.yaml') || toolIdentifier.endsWith('.yml'));
 }
 
 
@@ -69,7 +74,7 @@ export async function handleExecCommand(
   options: EnactExecOptions
 ): Promise<void> {
   if (options.help) {
-    console.log(`
+    console.error(`
 Usage: enact exec <tool-name-or-path> [options]
 
 Execute an Enact tool by fetching its definition from the registry or loading from a local file.
@@ -122,7 +127,7 @@ Examples:
         
         // Check if it's a valid tool name format
         if (!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_\/-]+$/.test(trimmed)) {
-          return 'Tool name must follow hierarchical format: org/category/tool-name, or be a path to a YAML file';
+          return 'Tool name must follow hierarchical format: org/package/tool-name, or be a path to a YAML file';
         }
         return undefined;
       }
@@ -172,8 +177,8 @@ Examples:
         || VERIFICATION_POLICIES.PERMISSIVE;
       
       if (options.verbose) {
-        console.log(pc.cyan(`\n🔐 Using verification policy: ${policyName.toLowerCase()}`));
-        if (policy.minimumSignatures) console.log(`  - Minimum signatures: ${policy.minimumSignatures}`);
+        console.error(pc.cyan(`\n🔐 Using verification policy: ${policyName.toLowerCase()}`));
+        if (policy.minimumSignatures) console.error(`  - Minimum signatures: ${policy.minimumSignatures}`);
       }
       
       // Create a tool object for verification
@@ -208,21 +213,21 @@ Examples:
       spinner.stop('Signature verification completed');
       
       if (verification.isValid) {
-        console.log(pc.green(`✅ ${verification.message}`));
+        console.error(pc.green(`✅ ${verification.message}`));
         
         if (options.verbose && verification.verifiedSigners.length > 0) {
-          console.log(pc.cyan('\n🔒 Verified signers:'));
+          console.error(pc.cyan('\n🔒 Verified signers:'));
           verification.verifiedSigners.forEach((signer: any) => {
-            console.log(`  - ${signer.signer}${signer.role ? ` (${signer.role})` : ''} [${signer.keyId}]`);
+            console.error(`  - ${signer.signer}${signer.role ? ` (${signer.role})` : ''} [${signer.keyId}]`);
           });
         }
       } else {
-        console.log(pc.red(`❌ ${verification.message}`));
+        console.error(pc.red(`❌ ${verification.message}`));
         
         if (verification.errors.length > 0) {
-          console.log(pc.red('\nVerification errors:'));
+          console.error(pc.red('\nVerification errors:'));
           verification.errors.forEach((error: any) => {
-            console.log(pc.red(`  - ${error}`));
+            console.error(pc.red(`  - ${error}`));
           });
         }
         
@@ -237,12 +242,12 @@ Examples:
             return;
           }
         } else {
-          console.log(pc.yellow('⚠️  Proceeding due to --force flag'));
+          console.error(pc.yellow('⚠️  Proceeding due to --force flag'));
         }
       }
     } catch (error) {
       spinner.stop('Verification failed');
-      console.log(pc.red(`❌ Signature verification error: ${(error as Error).message}`));
+      console.error(pc.red(`❌ Signature verification error: ${(error as Error).message}`));
       
       if (!options.force) {
         const shouldContinue = await p.confirm({
@@ -257,24 +262,24 @@ Examples:
       }
     }
   } else {
-    console.log(pc.yellow('⚠️  Signature verification skipped - tool may be untrusted'));
+    console.error(pc.yellow('⚠️  Signature verification skipped - tool may be untrusted'));
   }
 
   // Show tool information
   if (options.verbose) {
-    console.log(pc.cyan('\n📋 Tool Information:'));
-    console.log(`Name: ${toolDefinition.name}`);
-    console.log(`Description: ${toolDefinition.description}`);
-    console.log(`Command: ${toolDefinition.command}`);
-    if (toolDefinition.timeout) console.log(`Timeout: ${toolDefinition.timeout}`);
-    if (toolDefinition.tags) console.log(`Tags: ${toolDefinition.tags.join(', ')}`);
+    console.error(pc.cyan('\n📋 Tool Information:'));
+    console.error(`Name: ${toolDefinition.name}`);
+    console.error(`Description: ${toolDefinition.description}`);
+    console.error(`Command: ${toolDefinition.command}`);
+    if (toolDefinition.timeout) console.error(`Timeout: ${toolDefinition.timeout}`);
+    if (toolDefinition.tags) console.error(`Tags: ${toolDefinition.tags.join(', ')}`);
     
     // Show signature count
     if (toolDefinition.signatures) {
       const sigCount = Object.keys(toolDefinition.signatures).length;
-      console.log(`Signatures: ${sigCount} signature(s) found`);
+      console.error(`Signatures: ${sigCount} signature(s) found`);
     } else {
-      console.log(`Signatures: No signatures found`);
+      console.error(`Signatures: No signatures found`);
     }
   }
 
@@ -335,44 +340,44 @@ Examples:
   const validation = validateRequiredEnvironmentVariables(toolDefinition.env, envVars);
   
   if (!validation.valid) {
-    console.log(pc.red('\n✗ Missing required environment variables:'));
+    console.error(pc.red('\n✗ Missing required environment variables:'));
     validation.missing.forEach(varName => {
       const config = toolDefinition.env?.[varName];
       const description = config?.description ? ` - ${config.description}` : '';
       const source = config?.source ? ` (source: ${config.source})` : '';
       const required = config?.required ? ' [REQUIRED]' : '';
-      console.log(pc.red(`  ${varName}${required}${description}${source}`));
+      console.error(pc.red(`  ${varName}${required}${description}${source}`));
     });
     
-    console.log(pc.yellow('\n💡 You can set environment variables using:'));
-    console.log(pc.cyan('  enact env set <VAR_NAME> <value>'));
-    console.log(pc.cyan('  enact env set <VAR_NAME> --encrypt  # for sensitive values'));
-    console.log(pc.cyan('  enact env set <VAR_NAME> --project  # for project-specific values'));
+    console.error(pc.yellow('\n💡 You can set environment variables using:'));
+    console.error(pc.cyan('  enact env set <VAR_NAME> <value>'));
+    console.error(pc.cyan('  enact env set <VAR_NAME> --encrypt  # for sensitive values'));
+    console.error(pc.cyan('  enact env set <VAR_NAME> --project  # for project-specific values'));
     
     p.outro(pc.red('✗ Execution aborted due to missing environment variables'));
     return;
   }
   
   if (options.dry) {
-    console.log(pc.cyan('\n🔍 Command that would be executed:'));
-    console.log(pc.white(command));
-    console.log(pc.cyan('\nEnvironment variables:'));
+    console.error(pc.cyan('\n🔍 Command that would be executed:'));
+    console.error(pc.white(command));
+    console.error(pc.cyan('\nEnvironment variables:'));
     if (Object.keys(envVars).length > 0) {
       Object.entries(envVars).forEach(([key, value]) => {
         const isFromEnact = key in envVars && !(key in process.env);
         const source = isFromEnact ? ' (from Enact config)' : ' (from system)';
         const displayValue = (key.includes('KEY') || key.includes('TOKEN') || key.includes('SECRET')) 
           ? '[hidden]' : value;
-        console.log(`  ${key}=${displayValue}${source}`);
+        console.error(`  ${key}=${displayValue}${source}`);
       });
     } else {
-      console.log('  (none required)');
+      console.error('  (none required)');
     }
     return;
   }
 
   if (options.verbose && Object.keys(envVars).length > 0) {
-    console.log(pc.cyan('\n🌍 Environment variables loaded:'));
+    console.error(pc.cyan('\n🌍 Environment variables loaded:'));
     Object.entries(envVars).forEach(([key, value]) => {
       const toolConfig = toolDefinition.env?.[key];
       const isFromEnact = key in envVars && !(key in process.env);
@@ -381,7 +386,7 @@ Examples:
       const required = toolConfig?.required ? ' [REQUIRED]' : '';
       const displayValue = (key.includes('KEY') || key.includes('TOKEN') || key.includes('SECRET')) 
         ? '[hidden]' : value;
-      console.log(`  ${key}=${displayValue}${required}${description}${source}`);
+      console.error(`  ${key}=${displayValue}${required}${description}${source}`);
     });
   }
 
@@ -404,7 +409,7 @@ Examples:
       });
     } catch (error) {
       if (options.verbose) {
-        console.log(pc.yellow('⚠ Failed to log usage statistics'));
+        console.error(pc.yellow('⚠ Failed to log usage statistics'));
       }
     }
   }
@@ -507,8 +512,8 @@ async function executeCommand(
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     if (verbose) {
-      console.log(pc.cyan('\n🚀 Executing command:'));
-      console.log(pc.white(command));
+      console.error(pc.cyan('\n🚀 Executing command:'));
+      console.error(pc.white(command));
     }
     
     const spinner = p.spinner();
@@ -542,21 +547,21 @@ async function executeCommand(
       spinner.stop('Execution completed');
       
       if (code === 0) {
-        console.log(pc.green('\n✅ Tool executed successfully'));
+        console.error(pc.green('\n✅ Tool executed successfully'));
         if (stdout.trim()) {
-          console.log(pc.cyan('\n📤 Output:'));
-          console.log(stdout.trim());
+          console.error(pc.cyan('\n📤 Output:'));
+          console.error(stdout.trim());
         }
         resolve();
       } else {
-        console.log(pc.red(`\n❌ Tool execution failed (exit code: ${code})`));
+        console.error(pc.red(`\n❌ Tool execution failed (exit code: ${code})`));
         if (stderr.trim()) {
-          console.log(pc.red('\n📤 Error output:'));
-          console.log(stderr.trim());
+          console.error(pc.red('\n📤 Error output:'));
+          console.error(stderr.trim());
         }
         if (stdout.trim()) {
-          console.log(pc.yellow('\n📤 Standard output:'));
-          console.log(stdout.trim());
+          console.error(pc.yellow('\n📤 Standard output:'));
+          console.error(stdout.trim());
         }
         reject(new Error(`Command failed with exit code ${code}`));
       }
@@ -564,7 +569,7 @@ async function executeCommand(
     
     child.on('error', (error) => {
       spinner.stop('Execution failed');
-      console.log(pc.red(`\n❌ Failed to execute command: ${error.message}`));
+      console.error(pc.red(`\n❌ Failed to execute command: ${error.message}`));
       reject(error);
     });
   });

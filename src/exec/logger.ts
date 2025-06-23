@@ -19,10 +19,17 @@ interface Logger {
 
 const createLogger = (): Logger => {
   let mcpServer: McpServer | null = null;
+  
+  // Check if we should suppress console output (test mode or CI)
+  const shouldSuppressConsole = process.env.NODE_ENV === 'test' || 
+                               process.env.CI === 'true' || 
+                               process.env.ENACT_SKIP_INTERACTIVE === 'true';
 
   return {
     info: (message: any, ...args: any[]) => {
-      console.log('[INFO]', message, ...args);
+      if (!shouldSuppressConsole) {
+        console.error('[INFO]', message, ...args);
+      }
       if (mcpServer) {
         try {
           mcpServer.server.sendLoggingMessage({ level: "info", data: message });
@@ -32,7 +39,9 @@ const createLogger = (): Logger => {
       }
     },
     error: (message: any, ...args: any[]) => {
-      console.error('[ERROR]', message, ...args);
+      if (!shouldSuppressConsole) {
+        console.error('[ERROR]', message, ...args);
+      }
       if (mcpServer) {
         try {
           mcpServer.server.sendLoggingMessage({ level: "error", data: message });
@@ -42,7 +51,9 @@ const createLogger = (): Logger => {
       }
     },
     warn: (message: any, ...args: any[]) => {
-      console.warn('[WARN]', message, ...args);
+      if (!shouldSuppressConsole) {
+        console.warn('[WARN]', message, ...args);
+      }
       if (mcpServer) {
         try {
           mcpServer.server.sendLoggingMessage({ level: "warning", data: message });
@@ -52,8 +63,8 @@ const createLogger = (): Logger => {
       }
     },
     debug: (message: any, ...args: any[]) => {
-      if (process.env.DEBUG || process.env.VERBOSE) {
-        console.log('[DEBUG]', message, ...args);
+      if ((process.env.DEBUG || process.env.VERBOSE) && !shouldSuppressConsole) {
+        console.error('[DEBUG]', message, ...args);
       }
       if (mcpServer) {
         try {

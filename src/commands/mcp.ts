@@ -1,6 +1,6 @@
 // src/commands/mcp.ts - MCP client integration commands
 import { intro, outro, text, select, confirm, spinner, note } from '@clack/prompts';
-import color from 'picocolors';
+import pc from 'picocolors';
 import { existsSync } from 'fs';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
@@ -54,7 +54,7 @@ const MCP_CLIENTS = {
 
 export async function handleMcpCommand(args: string[], options: McpOptions): Promise<void> {
   if (options.help || !args[0]) {
-    console.log(`
+    console.error(`
 Usage: enact mcp <subcommand> [options]
 
 Manages MCP (Model Context Protocol) client integrations.
@@ -84,20 +84,20 @@ Options:
       await handleStatusCommand();
       break;
     default:
-      console.error(color.red(`Unknown MCP subcommand: ${subCommand}`));
-      console.log('Run "enact mcp --help" for available commands.');
+      console.error(pc.red(`Unknown MCP subcommand: ${subCommand}`));
+      console.error('Run "enact mcp --help" for available commands.');
       process.exit(1);
   }
 }
 
 async function handleInstallCommand(options: McpOptions): Promise<void> {
-  intro(color.bgBlue(color.white(' MCP Server Installation ')));
+  intro(pc.bgBlue(pc.white(' MCP Server Installation ')));
 
   try {
     const detectedClients = await detectMcpClients();
     
     if (detectedClients.length === 0) {
-      note(color.yellow('No MCP clients detected on this system.\n\nSupported clients:\n• Claude Desktop\n• Claude Code\n• VS Code MCP\n• Goose AI'), 'No clients found');
+      note(pc.yellow('No MCP clients detected on this system.\n\nSupported clients:\n• Claude Desktop\n• Claude Code\n• VS Code MCP\n• Goose AI'), 'No clients found');
       outro('Please install a supported MCP client first.');
       return;
     }
@@ -107,7 +107,7 @@ async function handleInstallCommand(options: McpOptions): Promise<void> {
     if (!targetClient) {
       if (detectedClients.length === 1) {
         targetClient = detectedClients[0].id;
-        note(color.blue(`Auto-detected: ${detectedClients[0].name}`), 'Target client');
+        note(pc.blue(`Auto-detected: ${detectedClients[0].name}`), 'Target client');
       } else {
         targetClient = await select({
           message: 'Which MCP client would you like to configure?',
@@ -126,7 +126,7 @@ async function handleInstallCommand(options: McpOptions): Promise<void> {
 
     const selectedClient = detectedClients.find(c => c.id === targetClient);
     if (!selectedClient) {
-      console.error(color.red(`Client "${targetClient}" not found or not detected.`));
+      console.error(pc.red(`Client "${targetClient}" not found or not detected.`));
       process.exit(1);
     }
 
@@ -151,45 +151,45 @@ async function handleInstallCommand(options: McpOptions): Promise<void> {
     s.stop('✓ Enact MCP server installation process completed');
     
     note(
-      color.green(`✓ Added 'enact' MCP server to ${selectedClient.name}\n`) +
-      color.cyan(`→ Please restart ${selectedClient.name} to enable the Enact MCP server\n`) +
-      color.cyan(`→ Look for the MCP tools icon in the chat interface`),
+      pc.green(`✓ Added 'enact' MCP server to ${selectedClient.name}\n`) +
+      pc.cyan(`→ Please restart ${selectedClient.name} to enable the Enact MCP server\n`) +
+      pc.cyan(`→ Look for the MCP tools icon in the chat interface`),
       'Installation complete'
     );
 
     outro('MCP server installation completed!');
 
   } catch (error) {
-    console.error(color.red(`Installation failed: ${(error as Error).message}`));
+    console.error(pc.red(`Installation failed: ${(error as Error).message}`));
     process.exit(1);
   }
 }
 
 async function handleListCommand(): Promise<void> {
-  intro(color.bgBlue(color.white(' MCP Client Detection ')));
+  intro(pc.bgBlue(pc.white(' MCP Client Detection ')));
 
   const detectedClients = await detectMcpClients();
   
   if (detectedClients.length === 0) {
-    note(color.yellow('No MCP clients detected on this system.'), 'Detection results');
+    note(pc.yellow('No MCP clients detected on this system.'), 'Detection results');
   } else {
     const clientList = detectedClients
       .map(client => `✓ ${client.name}\n  Config: ${client.configPath}`)
       .join('\n\n');
     
-    note(color.green(clientList), 'Detected MCP clients');
+    note(pc.green(clientList), 'Detected MCP clients');
   }
 
   outro('Detection complete.');
 }
 
 async function handleStatusCommand(): Promise<void> {
-  intro(color.bgBlue(color.white(' MCP Integration Status ')));
+  intro(pc.bgBlue(pc.white(' MCP Integration Status ')));
 
   const detectedClients = await detectMcpClients();
   
   if (detectedClients.length === 0) {
-    note(color.yellow('No MCP clients detected.'), 'Status');
+    note(pc.yellow('No MCP clients detected.'), 'Status');
     outro('No integrations to check.');
     return;
   }
@@ -197,8 +197,8 @@ async function handleStatusCommand(): Promise<void> {
   for (const client of detectedClients) {
     const isInstalled = await checkMcpServerInstalled(client);
     const status = isInstalled ? 
-      color.green('✓ Installed') : 
-      color.yellow('○ Not installed');
+      pc.green('✓ Installed') : 
+      pc.yellow('○ Not installed');
     
     note(`${status}\nConfig: ${client.configPath}`, client.name);
   }
@@ -271,7 +271,7 @@ async function installMcpServer(client: {id: string, name: string, configPath: s
           const configContent = await readFile(configPath, 'utf-8');
           config = yaml.parse(configContent) || {};
         } catch (error) {
-          console.warn(color.yellow(`Warning: Could not parse existing Goose config at ${configPath}. Creating new config.`));
+          console.warn(pc.yellow(`Warning: Could not parse existing Goose config at ${configPath}. Creating new config.`));
         }
       }
 
@@ -294,9 +294,9 @@ async function installMcpServer(client: {id: string, name: string, configPath: s
       await writeFile(configPath, yaml.stringify(config), 'utf-8');
       
       note(
-        color.green(`✓ Successfully added 'Enact Tools' extension to Goose configuration\n`) +
-        color.cyan(`→ The extension is now available in your Goose AI sessions\n`) +
-        color.cyan(`→ Restart Goose if it's currently running`),
+        pc.green(`✓ Successfully added 'Enact Tools' extension to Goose configuration\n`) +
+        pc.cyan(`→ The extension is now available in your Goose AI sessions\n`) +
+        pc.cyan(`→ Restart Goose if it's currently running`),
         'Installation complete'
       );
       
@@ -321,7 +321,7 @@ async function installMcpServer(client: {id: string, name: string, configPath: s
       const configContent = await readFile(configPath, 'utf-8');
       config = JSON.parse(configContent);
     } catch (error) {
-      console.warn(color.yellow(`Warning: Could not parse existing config at ${configPath}. Creating new config.`));
+      console.warn(pc.yellow(`Warning: Could not parse existing config at ${configPath}. Creating new config.`));
     }
   }
 

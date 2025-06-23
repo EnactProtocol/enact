@@ -2,14 +2,11 @@
 import { parseArgs } from 'util';
 import pc from 'picocolors';
 import * as p from '@clack/prompts';
-import { handlePublishCommand } from './commands/publish';
 import { handleAuthCommand } from './commands/auth';
 import { showHelp, showVersion } from './utils/help';
 import { handleRemoteCommand } from './commands/remote';
 import { handleInitCommand } from './commands/init';
-import { handleSearchCommand } from './commands/search';
 import { handleUserCommand } from './commands/user';
-import { handleExecCommand } from './commands/exec';
 import { handleSignCommand } from './commands/sign';
 import { handleEnvCommand } from './commands/env';
 import { handleMcpCommand } from './commands/mcp';
@@ -19,7 +16,8 @@ import {
   handleCoreSearchCommand, 
   handleCoreExecCommand, 
   handleCoreGetCommand,
-  handleCoreVerifyCommand 
+  handleCoreVerifyCommand,
+  handleCorePublishCommand 
 } from './commands/core';
 
 // Parse arguments using process.argv (portable)
@@ -101,6 +99,9 @@ const { values, positionals } = parseArgs({
     'use-core': {
       type: 'boolean',
     },
+    'use-core-publish': {
+      type: 'boolean',
+    },
     'skip-verification': {
       type: 'boolean',
     },
@@ -161,32 +162,23 @@ async function main() {
         break;
         
       case 'publish':
-        await handlePublishCommand(commandArgs, {
+        await handleCorePublishCommand(commandArgs, {
           help: values.help as boolean | undefined,
           url: values.url as string | undefined,
-          token: values.token as string | undefined
+          token: values.token as string | undefined,
+          file: values.input as string | undefined,
+          verbose: values.verbose as boolean | undefined
         });
         break;
         
       case 'search':
-        // Use core library if --use-core flag is set or as default
-        if (values['use-core'] !== false) {
-          await handleCoreSearchCommand(commandArgs, {
-            help: values.help as boolean | undefined,
-            limit: values.limit ? parseInt(values.limit as string) : undefined,
-            tags: values.tags ? (values.tags+"").split(',').map(t => t.trim()) : undefined,
-            format: values.json ? 'json' : (values.format as string | undefined),
-            author: values.author as string | undefined
-          });
-        } else {
-          await handleSearchCommand(commandArgs, {
-            help: values.help as boolean | undefined,
-            limit: values.limit ? parseInt(values.limit as string) : undefined,
-            tags: values.tags ? (values.tags+"").split(',').map(t => t.trim()) : undefined,
-            format: values.json ? 'json' : (values.format as string | undefined),
-            author: values.author as string | undefined
-          });
-        }
+        await handleCoreSearchCommand(commandArgs, {
+          help: values.help as boolean | undefined,
+          limit: values.limit ? parseInt(values.limit as string) : undefined,
+          tags: values.tags ? (values.tags+"").split(',').map(t => t.trim()) : undefined,
+          format: values.json ? 'json' : (values.format as string | undefined),
+          author: values.author as string | undefined
+        });
         break;
         
       case 'remote':
@@ -211,30 +203,18 @@ async function main() {
         });
         break;
         
-      case 'exec': // New case for exec command
-        // Use core library if --use-core flag is set or as default
-        if (values['use-core'] !== false) {
-          await handleCoreExecCommand(commandArgs, {
-            help: values.help as boolean | undefined,
-            input: values.input as string | undefined,
-            params: values.params as string | undefined,
-            timeout: values.timeout as string | undefined,
-            dry: values.dry as boolean | undefined,
-            verbose: values.verbose as boolean | undefined,
-            verifyPolicy: values.policy as ('permissive' | 'enterprise' | 'paranoid') | undefined,
-            skipVerification: values['skip-verification'] as boolean | undefined,
-            force: values.force as boolean | undefined
-          });
-        } else {
-          await handleExecCommand(commandArgs, {
-            help: values.help as boolean | undefined,
-            input: values.input as string | undefined,
-            params: values.params as string | undefined,
-            timeout: values.timeout as string | undefined,
-            dry: values.dry as boolean | undefined,
-            verbose: values.verbose as boolean | undefined
-          });
-        }
+      case 'exec': // Execute command - now uses core implementation only
+        await handleCoreExecCommand(commandArgs, {
+          help: values.help as boolean | undefined,
+          input: values.input as string | undefined,
+          params: values.params as string | undefined,
+          timeout: values.timeout as string | undefined,
+          dry: values.dry as boolean | undefined,
+          verbose: values.verbose as boolean | undefined,
+          verifyPolicy: values.policy as ('permissive' | 'enterprise' | 'paranoid') | undefined,
+          skipVerification: values['skip-verification'] as boolean | undefined,
+          force: values.force as boolean | undefined
+        });
         break;
         
       case 'sign': // New case for sign command
@@ -383,7 +363,7 @@ async function main() {
           }
           
           if (action === 'publish') {
-            await handlePublishCommand([], {});
+            await handleCorePublishCommand([], {});
             return;
           }
           

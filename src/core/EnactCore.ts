@@ -4,6 +4,7 @@ import { EnactApiClient } from "../api/enact-api.js";
 import { verifyToolSignature, verifyCommandSafety, sanitizeEnvironmentVariables } from "../security/security.js";
 import { validateToolStructure, validateInputs, validateOutput } from "../exec/validate.js";
 import { DirectExecutionProvider } from "./DirectExecutionProvider.js";
+import { resolveToolEnvironmentVariables } from "../utils/env-loader.js";
 import logger from "../exec/logger.js";
 import yaml from 'yaml';
 
@@ -12,6 +13,7 @@ export interface EnactCoreOptions {
   supabaseUrl?: string;
   executionProvider?: 'direct' | 'docker' | 'cloud';
   authToken?: string;
+  verbose?: boolean;
   defaultTimeout?: string;
   verificationPolicy?: 'permissive' | 'enterprise' | 'paranoid';
 }
@@ -307,8 +309,19 @@ export class EnactCore {
       }
 
       // Setup execution environment
+      // Load package environment variables from .env files
+      const envResult = await resolveToolEnvironmentVariables(tool.name, tool.env);
+      
+      // Log any missing required environment variables
+      if (envResult.missing.length > 0) {
+        logger.warn(`Missing required environment variables: ${envResult.missing.join(', ')}`);
+      }
+      
       const environment: ExecutionEnvironment = {
-        vars: sanitizeEnvironmentVariables(validatedInputs),
+        vars: {
+          ...envResult.resolved,
+          ...sanitizeEnvironmentVariables(validatedInputs)
+        },
         resources: tool.resources,
         namespace: tool.namespace
       };

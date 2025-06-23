@@ -1,12 +1,33 @@
 // src/commands/core.ts - Core-based command handlers
+import { readFileSync, existsSync } from 'fs';
+import { readFile } from 'fs/promises';
+import { resolve, extname } from 'path';
 import { EnactCore } from '../core/EnactCore';
 import type { ToolSearchOptions, ToolExecuteOptions } from '../core/EnactCore';
+import type { EnactTool } from '../types';
+import type { EnactToolDefinition } from '../api/types';
 import pc from 'picocolors';
 import * as p from '@clack/prompts';
+import yaml from 'yaml';
+import { verifyTool, shouldExecuteTool, VERIFICATION_POLICIES, VerificationPolicy } from '../security/sign';
 import { resolveToolEnvironmentVariables, validateRequiredEnvironmentVariables } from '../utils/env-loader';
+import { EnactApiClient, EnactApiError } from '../api/enact-api';
+import { getAuthHeaders } from './auth';
+import { addToHistory } from '../utils/config';
+import stripAnsi from 'strip-ansi';
 
 // Create core instance
 const core = new EnactCore();
+
+/**
+ * Clean output text by removing ANSI escape codes for better readability
+ */
+function cleanOutput(text: string): string {
+  if (typeof text !== 'string') {
+    return text;
+  }
+  return stripAnsi(text);
+}
 
 interface CoreSearchOptions {
   help?: boolean;
@@ -28,259 +49,887 @@ interface CoreExecOptions {
   force?: boolean;
 }
 
+// Core Publish Command Options
+interface CorePublishOptions {
+  help?: boolean;
+  url?: string;
+  token?: string;
+  file?: string;
+  verbose?: boolean;
+}
+
 /**
- * Handle search command using core library
+ * Handle search command using core library - Enhanced with all legacy features
  */
 export async function handleCoreSearchCommand(args: string[], options: CoreSearchOptions) {
   if (options.help) {
-    console.log(`
+    console.error(`
 ${pc.bold('enact search')} - Search for tools
 
 ${pc.bold('USAGE:')}
-  enact search [query]
+  enact search [query] [options]
+
+${pc.bold('ARGUMENTS:')}
+  query               Search query (keywords, tool names, descriptions)
 
 ${pc.bold('OPTIONS:')}
-  -l, --limit <number>    Limit number of results (default: 10)
+  -l, --limit <number>    Maximum number of results (default: 20)
   -t, --tags <tags>       Filter by tags (comma-separated)
   -a, --author <author>   Filter by author
-  -f, --format <format>   Output format (json, table, list)
+  -f, --format <format>   Output format: table, json, list (default: table)
   -h, --help              Show help
 
 ${pc.bold('EXAMPLES:')}
   enact search "text processing"
-  enact search --tags "nlp,ai" --limit 5
-  enact search --author "openai" --format json
+  enact search formatter --tags cli,text
+  enact search --author myorg
+  enact search prettier --limit 5 --format json
     `);
     return;
   }
 
-  try {
-    let query = args[0];
+  // Start the interactive prompt if no query provided and no author filter
+  const isInteractiveMode = args.length === 0 && !options.author;
+  
+  if (isInteractiveMode) {
+    p.intro(pc.bgGreen(pc.white(' Search Enact Tools ')));
+  }
+
+  // Get search query
+  let query = args.join(' ');
+  
+  if (!query && !options.author) {
+    const queryResponse = await p.text({
+      message: 'What are you looking for?',
+      placeholder: 'Enter keywords, tool names, or descriptions...',
+      validate: (value) => {
+        if (!value.trim()) return 'Please enter a search query';
+        return undefined;
+      }
+    });
     
-    // Interactive mode if no query provided
-    if (!query) {
-      const response = await p.text({
-        message: 'Enter search query:',
-        placeholder: 'e.g., "text processing", "file converter"'
+    if (p.isCancel(queryResponse)) {
+      p.outro(pc.yellow('Search cancelled'));
+      return;
+    }
+    
+    query = queryResponse as string;
+  }
+
+  // Interactive options if not provided
+  let limit = options.limit || 20;
+  let tags = options.tags;
+  let format = options.format || 'table';
+  let author = options.author;
+
+  if (isInteractiveMode) {
+    // Ask for additional filters
+    const addFilters = await p.confirm({
+      message: 'Add additional filters?',
+      initialValue: false
+    });
+
+    if (addFilters) {
+      const tagsInput = await p.text({
+        message: 'Filter by tags (comma-separated, optional):',
+        placeholder: 'cli, text, formatter'
+      }) as string;
+
+      if (tagsInput) {
+        tags = tagsInput.split(',').map(t => t.trim()).filter(t => t);
+      }
+
+      const authorInput = await p.text({
+        message: 'Filter by author (optional):',
+        placeholder: 'myorg, username'
+      }) as string;
+
+      if (authorInput) {
+        author = authorInput;
+      }
+
+      const limitInput = await p.text({
+        message: 'Maximum results:',
+        placeholder: '20',
+        initialValue: '20',
+        validate: (value) => {
+          const num = parseInt(value);
+          if (isNaN(num) || num < 1 || num > 100) {
+            return 'Please enter a number between 1 and 100';
+          }
+          return undefined;
+        }
       });
       
-      if (p.isCancel(response)) {
-        p.outro('Search cancelled');
-        return;
+      if (!p.isCancel(limitInput)) {
+        limit = parseInt(limitInput as string);
       }
+
+      const formatResponse = await p.select({
+        message: 'Output format:',
+        options: [
+          { value: 'table', label: 'Table (default)' },
+          { value: 'list', label: 'Simple list' },
+          { value: 'json', label: 'JSON output' }
+        ]
+      });
       
-      query = response;
+      if (!p.isCancel(formatResponse)) {
+        format = formatResponse as string;
+      }
     }
+  }
 
-    p.intro(pc.bgCyan(pc.black(' Searching Enact Tools ')));
+  // Show a spinner during search
+  const spinner = p.spinner();
+  spinner.start('Searching for tools...');
 
-    const spinner = p.spinner();
-    spinner.start('Searching for tools...');
-
+  try {
     const searchOptions: ToolSearchOptions = {
       query,
-      limit: options.limit,
-      tags: options.tags,
-      author: options.author,
-      format: options.format as any
+      limit,
+      tags,
+      author,
+      format: format as any
     };
 
     const results = await core.searchTools(searchOptions);
     
-    spinner.stop('Search completed');
+    spinner.stop(`Found ${results.length} tool${results.length === 1 ? '' : 's'}`);
 
     if (results.length === 0) {
-      p.outro(`No tools found matching: ${pc.yellow(query)}`);
+      p.note('No tools found matching your criteria.', 'No Results');
+      p.note('Try:\n• Broader keywords\n• Removing filters\n• Different spelling', 'Suggestions');
+      if (isInteractiveMode) {
+        p.outro('');
+      }
       return;
     }
 
     // Display results based on format
-    if (options.format === 'json') {
-      console.log(JSON.stringify(results, null, 2));
+    if (format === 'json') {
+      console.error(JSON.stringify(results, null, 2));
+    } else if (format === 'list') {
+      displayResultsList(results);
     } else {
-      console.log(`\nFound ${pc.green(results.length.toString())} tool(s):\n`);
-      
-      for (const tool of results) {
-        console.log(pc.bold(pc.cyan(`📦 ${tool.name}`)));
-        console.log(`   ${tool.description}`);
-        
-        if (tool.tags && tool.tags.length > 0) {
-          console.log(`   ${pc.gray('Tags:')} ${tool.tags.map(tag => pc.blue(`#${tag}`)).join(' ')}`);
+      displayResultsTable(results);
+    }
+
+    // Interactive tool selection for detailed view
+    if (isInteractiveMode && results.length > 1) {
+      const viewDetail = await p.confirm({
+        message: 'View details for a specific tool?',
+        initialValue: false
+      });
+
+      if (viewDetail) {
+        const selectedTool = await p.select({
+          message: 'Select a tool to view details:',
+          options: results.map(tool => ({
+            value: tool.name,
+            label: `${tool.name} - ${tool.description.substring(0, 60)}${tool.description.length > 60 ? '...' : ''}`
+          }))
+        });
+
+        if (!p.isCancel(selectedTool)) {
+          await showToolDetailsFromCore(selectedTool as string);
         }
-        
-        if (tool.authors && tool.authors.length > 0) {
-          console.log(`   ${pc.gray('Author:')} ${tool.authors[0].name}`);
-        }
-        
-        if (tool.license) {
-          console.log(`   ${pc.gray('License:')} ${tool.license}`);
-        }
-        
-        console.log('');
       }
     }
 
-    p.outro(`Search completed! Found ${results.length} tool(s).`);
-  } catch (error) {
-    p.outro(pc.red(`Search failed: ${error instanceof Error ? error.message : String(error)}`));
+    if (isInteractiveMode) {
+      p.outro(pc.green('Search completed'));
+    }
+
+  } catch (error: any) {
+    spinner.stop('Search failed');
+    
+    if (error.message?.includes('ENOTFOUND') || error.message?.includes('ECONNREFUSED')) {
+      p.note('Could not connect to the Enact registry. Check your internet connection.', 'Connection Error');
+    } else {
+      p.note(error instanceof Error ? error.message : String(error), 'Error');
+    }
+    
+    if (isInteractiveMode) {
+      p.outro(pc.red('Search failed'));
+    } else {
+      console.error(pc.red(`Search failed: ${error instanceof Error ? error.message : String(error)}`));
+    }
     process.exit(1);
   }
 }
 
 /**
- * Handle execute command using core library
+ * Load a tool definition from a local YAML file
+ */
+async function loadLocalTool(filePath: string): Promise<EnactToolDefinition> {
+  const resolvedPath = resolve(filePath);
+  
+  if (!existsSync(resolvedPath)) {
+    throw new Error(`Tool file not found: ${resolvedPath}`);
+  }
+  
+  try {
+    const fileContent = readFileSync(resolvedPath, 'utf8');
+    const toolData = yaml.parse(fileContent);
+    
+    // Store the raw content for signature verification
+    const toolDefinition: EnactToolDefinition = {
+      ...toolData,
+      raw_content: fileContent
+    };
+    
+    // Validate required fields
+    if (!toolDefinition.name) {
+      throw new Error('Tool must have a name');
+    }
+    if (!toolDefinition.command) {
+      throw new Error('Tool must have a command');
+    }
+    
+    return toolDefinition;
+  } catch (error) {
+    if (error instanceof yaml.YAMLParseError) {
+      throw new Error(`Invalid YAML in tool file: ${error.message}`);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Check if a tool identifier is a local file path
+ */
+function isLocalToolPath(toolIdentifier: string): boolean {
+  const resolvedPath = resolve(toolIdentifier);
+  
+  if (existsSync(resolvedPath)) {
+    return true;
+  }
+  
+  return (toolIdentifier.includes('/') || toolIdentifier.includes('\\')) && 
+         (toolIdentifier.endsWith('.yaml') || toolIdentifier.endsWith('.yml'));
+}
+
+/**
+ * Collect parameters interactively based on JSON schema
+ */
+async function collectParametersInteractively(inputSchema: any): Promise<Record<string, any>> {
+  const params: Record<string, any> = {};
+  
+  if (inputSchema.properties) {
+    for (const [key, schema] of Object.entries(inputSchema.properties)) {
+      const prop = schema as any;
+      const isRequired = inputSchema.required?.includes(key) || false;
+      
+      let value: any;
+      
+      if (prop.type === 'string') {
+        value = await p.text({
+          message: `Enter ${key}:`,
+          placeholder: prop.description || `Value for ${key}`,
+          validate: isRequired ? (val) => val.trim() ? undefined : `${key} is required` : undefined
+        });
+      } else if (prop.type === 'number' || prop.type === 'integer') {
+        value = await p.text({
+          message: `Enter ${key} (number):`,
+          placeholder: prop.description || `Number value for ${key}`,
+          validate: (val) => {
+            if (!val.trim() && isRequired) return `${key} is required`;
+            if (val.trim() && isNaN(Number(val))) return 'Must be a valid number';
+            return undefined;
+          }
+        });
+        if (value) value = Number(value);
+      } else if (prop.type === 'boolean') {
+        value = await p.confirm({
+          message: `${key}:`,
+          initialValue: false
+        });
+      } else {
+        value = await p.text({
+          message: `Enter ${key} (JSON):`,
+          placeholder: prop.description || `JSON value for ${key}`,
+          validate: (val) => {
+            if (!val.trim() && isRequired) return `${key} is required`;
+            if (val.trim()) {
+              try {
+                JSON.parse(val);
+              } catch {
+                return 'Must be valid JSON';
+              }
+            }
+            return undefined;
+          }
+        });
+        if (value) {
+          try {
+            value = JSON.parse(value);
+          } catch {
+            // Keep as string if JSON parsing fails
+          }
+        }
+      }
+      
+      if (value !== null && value !== undefined && value !== '') {
+        params[key] = value;
+      }
+    }
+  }
+  
+  return params;
+}
+
+/**
+ * Parse timeout string to milliseconds
+ */
+function parseTimeout(timeout: string): number {
+  const match = timeout.match(/^(\d+)([smh])$/);
+  if (!match) return 30000; // Default 30 seconds
+  
+  const [, value, unit] = match;
+  const num = parseInt(value);
+  
+  switch (unit) {
+    case 's': return num * 1000;
+    case 'm': return num * 60 * 1000;
+    case 'h': return num * 60 * 60 * 1000;
+    default: return 30000;
+  }
+}
+
+/**
+ * Enhanced handle execute command using core library with full legacy feature parity
  */
 export async function handleCoreExecCommand(args: string[], options: CoreExecOptions) {
   if (options.help) {
-    console.log(`
-${pc.bold('enact exec')} - Execute a tool
+    console.error(`
+Usage: enact exec <tool-name-or-path> [options]
 
-${pc.bold('USAGE:')}
-  enact exec <tool-name> [options]
+Execute an Enact tool by fetching its definition from the registry or loading from a local file.
 
-${pc.bold('OPTIONS:')}
-  -i, --input <file>      Input file (JSON or YAML)
-  -p, --params <json>     Parameters as JSON string
-  --timeout <duration>    Execution timeout (e.g., "30s", "5m")
-  --dry                   Dry run - validate but don't execute
-  --verify-policy <policy> Verification policy (permissive, enterprise, paranoid)
-  --skip-verification     Skip signature verification
-  --force                 Force execution even if unsafe
-  -v, --verbose           Verbose output
-  -h, --help              Show help
+Arguments:
+  tool-name-or-path   Name of the tool (e.g., "enact/text/slugify") or path to local YAML file
 
-${pc.bold('EXAMPLES:')}
-  enact exec text/analyzer --params '{"text": "Hello world"}'
-  enact exec file/converter --input params.json --timeout 5m
-  enact exec dangerous/tool --force --verify-policy enterprise
+Options:
+  --help, -h          Show this help message
+  --input <data>      Input data as JSON string or stdin
+  --params <params>   Parameters as JSON object
+  --timeout <time>    Override tool timeout (Go duration format: 30s, 5m, 1h)
+  --dry               Show command that would be executed without running it
+  --verbose, -v       Show detailed execution information
+  --skip-verification Skip signature verification (not recommended)
+  --verify-policy     Verification policy: permissive, enterprise, paranoid (default: permissive)
+  --force             Force execution even if signature verification fails
+
+Security Options:
+  permissive          Require 1+ valid signatures from trusted keys (default)
+  enterprise          Require author + reviewer signatures  
+  paranoid            Require author + reviewer + approver signatures
+
+Examples:
+  enact exec enact/text/slugify --input "Hello World"
+  enact exec org/ai/review --params '{"file": "README.md"}' --verify-policy enterprise
+  enact exec ./my-tool.yaml --input "test data"
+  enact exec untrusted/tool --skip-verification  # Not recommended
     `);
     return;
   }
 
-  try {
-    let toolName = args[0];
+  // Get the tool name/path
+  let toolIdentifier = args[0];
+  
+  if (!toolIdentifier) {
+    p.intro(pc.bgMagenta(pc.white(' Execute Enact Tool ')));
     
-    // Interactive mode if no tool name provided
-    if (!toolName) {
-      const response = await p.text({
-        message: 'Enter tool name:',
-        placeholder: 'e.g., "text/analyzer", "file/converter"'
-      });
-      
-      if (p.isCancel(response)) {
-        p.outro('Execution cancelled');
-        return;
-      }
-      
-      toolName = response;
-    }
-
-    // Parse parameters
-    let inputs: Record<string, any> = {};
-    
-    if (options.params) {
-      try {
-        inputs = JSON.parse(options.params);
-      } catch (error) {
-        p.outro(pc.red(`Invalid JSON in --params: ${error instanceof Error ? error.message : String(error)}`));
-        process.exit(1);
-      }
-    }
-    
-    if (options.input) {
-      try {
-        const fs = await import('fs/promises');
-        const inputContent = await fs.readFile(options.input, 'utf-8');
+    toolIdentifier = await p.text({
+      message: 'Enter the tool name or path to execute:',
+      placeholder: 'e.g., enact/text/slugify, ./my-tool.yaml',
+      validate: (value) => {
+        if (!value.trim()) return 'Please enter a tool name or file path';
+        const trimmed = value.trim();
         
-        // Try JSON first, then YAML
-        try {
-          inputs = { ...inputs, ...JSON.parse(inputContent) };
-        } catch {
-          const yaml = await import('yaml');
-          inputs = { ...inputs, ...yaml.parse(inputContent) };
+        if (isLocalToolPath(trimmed)) {
+          return undefined;
         }
-      } catch (error) {
-        p.outro(pc.red(`Failed to read input file: ${error instanceof Error ? error.message : String(error)}`));
-        process.exit(1);
+        
+        if (!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_\/-]+$/.test(trimmed)) {
+          return 'Tool name must follow hierarchical format: org/package/tool-name, or be a path to a YAML file';
+        }
+        return undefined;
       }
+    }) as string;
+    
+    if (!toolIdentifier) {
+      p.outro(pc.yellow('Execution cancelled'));
+      return;
     }
+  }
 
-    // Interactive input if no parameters provided
-    if (Object.keys(inputs).length === 0) {
-      const shouldAddParams = await p.confirm({
-        message: 'No parameters provided. Would you like to add some?'
-      });
+  // Determine if this is a local file or remote tool
+  const isLocalFile = isLocalToolPath(toolIdentifier);
+  
+  // Show a spinner while fetching/loading tool definition
+  const spinner = p.spinner();
+  spinner.start(isLocalFile ? 'Loading local tool definition...' : 'Fetching tool definition...');
+
+  let toolDefinition: EnactToolDefinition;
+  try {
+    if (isLocalFile) {
+      toolDefinition = await loadLocalTool(toolIdentifier);
+      spinner.stop('Local tool definition loaded');
+    } else {
+      // Use the API to get tool
+      const apiClient = new EnactApiClient('https://enact.tools', 'https://xjnhhxwxovjifdxdwzih.supabase.co');
+      toolDefinition = await apiClient.getTool(toolIdentifier);
+      spinner.stop('Tool definition fetched');
+    }
+  } catch (error) {
+    spinner.stop(isLocalFile ? 'Failed to load local tool' : 'Failed to fetch tool definition');
+    
+    if (!isLocalFile && error instanceof EnactApiError && error.statusCode === 404) {
+      p.outro(pc.red(`✗ Tool "${toolIdentifier}" not found`));
+    } else {
+      p.outro(pc.red(`✗ Failed to ${isLocalFile ? 'load' : 'fetch'} tool: ${error instanceof Error ? error.message : 'Unknown error'}`));
+    }
+    return;
+  }
+
+  // Signature verification (unless skipped)
+  if (!options.skipVerification) {
+    spinner.start('Verifying tool signatures...');
+    
+    try {
+      // Determine verification policy
+      const policyName = (options.verifyPolicy || 'permissive').toUpperCase();
+      const policy: VerificationPolicy = VERIFICATION_POLICIES[policyName as keyof typeof VERIFICATION_POLICIES] 
+        || VERIFICATION_POLICIES.PERMISSIVE;
       
-      if (shouldAddParams && !p.isCancel(shouldAddParams)) {
-        const paramsJson = await p.text({
-          message: 'Enter parameters as JSON:',
-          placeholder: '{"key": "value"}'
+      if (options.verbose) {
+        console.error(pc.cyan(`\n🔐 Using verification policy: ${policyName.toLowerCase()}`));
+        if (policy.minimumSignatures) console.error(`  - Minimum signatures: ${policy.minimumSignatures}`);
+      }
+      
+      // Create a tool object for verification
+      let toolForVerification;
+      if (isLocalFile) {
+        toolForVerification = toolDefinition.raw_content;
+      } else if (toolDefinition.raw_content && toolDefinition.signatures) {
+        const originalTool = JSON.parse(toolDefinition.raw_content);
+        
+        if (!originalTool.enact) {
+          originalTool.enact = "1.0.0";
+        }
+        
+        toolForVerification = {
+          ...originalTool,
+          signatures: toolDefinition.signatures
+        };
+      } else {
+        toolForVerification = toolDefinition;
+        
+        if (!toolForVerification.enact) {
+          toolForVerification.enact = "1.0.0";
+        }
+      }
+      
+      const verification = await verifyTool(toolForVerification, policy);
+      spinner.stop('Signature verification completed');
+      
+      if (verification.isValid) {
+        console.error(pc.green(`✅ ${verification.message}`));
+        
+        if (options.verbose && verification.verifiedSigners.length > 0) {
+          console.error(pc.cyan('\n🔒 Verified signers:'));
+          verification.verifiedSigners.forEach((signer: any) => {
+            console.error(`  - ${signer.signer}${signer.role ? ` (${signer.role})` : ''} [${signer.keyId}]`);
+          });
+        }
+      } else {
+        console.error(pc.red(`❌ ${verification.message}`));
+        
+        if (verification.errors.length > 0) {
+          console.error(pc.red('\nVerification errors:'));
+          verification.errors.forEach((error: any) => {
+            console.error(pc.red(`  - ${error}`));
+          });
+        }
+        
+        if (!options.force) {
+          const shouldContinue = await p.confirm({
+            message: 'Tool signature verification failed. Continue anyway?',
+            initialValue: false
+          });
+          
+          if (!shouldContinue) {
+            p.outro(pc.yellow('Execution cancelled for security'));
+            return;
+          }
+        } else {
+          console.error(pc.yellow('⚠️  Proceeding due to --force flag'));
+        }
+      }
+    } catch (error) {
+      spinner.stop('Verification failed');
+      console.error(pc.red(`❌ Signature verification error: ${(error as Error).message}`));
+      
+      if (!options.force) {
+        const shouldContinue = await p.confirm({
+          message: 'Signature verification failed with error. Continue anyway?',
+          initialValue: false
         });
         
-        if (!p.isCancel(paramsJson) && paramsJson) {
-          try {
-            inputs = JSON.parse(paramsJson);
-          } catch (error) {
-            p.outro(pc.red(`Invalid JSON: ${error instanceof Error ? error.message : String(error)}`));
-            process.exit(1);
-          }
+        if (!shouldContinue) {
+          p.outro(pc.yellow('Execution cancelled for security'));
+          return;
         }
       }
     }
+  } else {
+    console.error(pc.yellow('⚠️  Signature verification skipped - tool may be untrusted'));
+  }
 
-    p.intro(pc.bgGreen(pc.black(' Executing Enact Tool ')));
+  // Show tool information
+  if (options.verbose) {
+    console.error(pc.cyan('\n📋 Tool Information:'));
+    console.error(`Name: ${toolDefinition.name}`);
+    console.error(`Description: ${toolDefinition.description}`);
+    console.error(`Command: ${toolDefinition.command}`);
+    if (toolDefinition.timeout) console.error(`Timeout: ${toolDefinition.timeout}`);
+    if (toolDefinition.tags) console.error(`Tags: ${toolDefinition.tags.join(', ')}`);
+    
+    if (toolDefinition.signatures) {
+      const sigCount = Object.keys(toolDefinition.signatures).length;
+      console.error(`Signatures: ${sigCount} signature(s) found`);
+    } else {
+      console.error(`Signatures: No signatures found`);
+    }
+  }
 
-    const spinner = p.spinner();
-    spinner.start(`Executing ${toolName}...`);
+  // Parse input parameters
+  let params: Record<string, any> = {};
+  
+  if (options.params) {
+    try {
+      params = JSON.parse(options.params);
+    } catch (error) {
+      p.outro(pc.red(`✗ Invalid JSON in --params: ${error instanceof Error ? error.message : 'Unknown error'}`));
+      return;
+    }
+  }
 
-    const executeOptions: ToolExecuteOptions = {
-      timeout: options.timeout,
-      verifyPolicy: options.verifyPolicy,
-      skipVerification: options.skipVerification,
-      force: options.force,
-      dryRun: options.dry,
-      verbose: options.verbose
+  // Handle input data
+  if (options.input) {
+    try {
+      const inputData = JSON.parse(options.input);
+      params = { ...params, ...inputData };
+    } catch {
+      params.input = options.input;
+    }
+  }
+
+  // Parse key=value parameters from remaining command line arguments
+  const remainingArgs = args.slice(1);
+  for (const arg of remainingArgs) {
+    if (arg.includes('=')) {
+      const [key, ...valueParts] = arg.split('=');
+      const value = valueParts.join('=');
+      
+      const cleanValue = value.replace(/^["']|["']$/g, '');
+      params[key] = cleanValue;
+    }
+  }
+
+  // Interactive parameter collection if needed
+  if (toolDefinition.inputSchema && Object.keys(params).length === 0) {
+    const needsParams = await p.confirm({
+      message: 'This tool requires parameters. Would you like to provide them interactively?',
+      initialValue: true
+    });
+
+    if (needsParams) {
+      params = await collectParametersInteractively(toolDefinition.inputSchema);
+    }
+  }
+  
+  // Resolve environment variables from Enact configuration
+  const { resolved: envVars, missing: missingEnvVars } = await resolveToolEnvironmentVariables(toolDefinition.name, toolDefinition.env);
+  
+  // Validate required environment variables
+  const validation = validateRequiredEnvironmentVariables(toolDefinition.env, envVars);
+  
+  if (!validation.valid) {
+    console.error(pc.red('\n✗ Missing required environment variables:'));
+    validation.missing.forEach(varName => {
+      const config = toolDefinition.env?.[varName];
+      const description = config?.description ? ` - ${config.description}` : '';
+      const source = config?.source ? ` (source: ${config.source})` : '';
+      const required = config?.required ? ' [REQUIRED]' : '';
+      console.error(pc.red(`  ${varName}${required}${description}${source}`));
+    });
+    
+    console.error(pc.yellow('\n💡 You can set environment variables using:'));
+    console.error(pc.cyan('  enact env set <VAR_NAME> <value> --project  # Simple project .env file'));
+    console.error(pc.cyan('  enact env set <package> <VAR_NAME> <value>  # Package-managed (shared)'));
+    console.error(pc.cyan('  enact env set <package> <VAR_NAME> --encrypt # For sensitive values'));
+    console.error(pc.yellow('\n💡 Or add them directly to your project .env file:'));
+    console.error(pc.cyan('  echo "VAR_NAME=value" >> .env'));
+    
+    p.outro(pc.red('✗ Execution aborted due to missing environment variables'));
+    return;
+  }
+  
+  if (options.dry) {
+    // Perform parameter substitution for dry run display
+    let substitutedCommand = toolDefinition.command;
+    Object.entries(params).forEach(([key, value]) => {
+      substitutedCommand = substitutedCommand.replace(new RegExp(`\\$\\{${key}\\}`, 'g'), String(value));
+    });
+    
+    console.error(pc.cyan('\n🔍 Command that would be executed:'));
+    console.error(pc.white(substitutedCommand));
+    console.error(pc.cyan('\nParameters:'));
+    console.error(JSON.stringify(params, null, 2));
+    console.error(pc.cyan('\nEnvironment variables:'));
+    if (Object.keys(envVars).length > 0) {
+      // Determine sources for dry run output too
+      const systemEnv = process.env;
+      let packageEnv: Record<string, string> = {};
+      
+      // Load package .env to determine sources
+      if (toolDefinition.name) {
+        try {
+          const { extractPackageNamespace } = await import('../utils/env-loader');
+          const packageNamespace = extractPackageNamespace(toolDefinition.name);
+          const packageEnvPath = require('path').join(require('os').homedir(), '.enact', 'env', packageNamespace, '.env');
+          
+          const fs = require('fs');
+          if (fs.existsSync(packageEnvPath)) {
+            const dotenv = require('dotenv');
+            const result = dotenv.config({ path: packageEnvPath });
+            packageEnv = result.parsed || {};
+          }
+        } catch (error) {
+          // Ignore errors
+        }
+      }
+      
+      Object.entries(envVars).forEach(([key, value]) => {
+        // Determine source with correct priority
+        let source = ' (from system)';
+        if (key in packageEnv) {
+          source = ' (from package .env)';
+        }
+        if (key in envVars && !(key in systemEnv) && !(key in packageEnv)) {
+          source = ' (from Enact package config)';
+        }
+        
+        const displayValue = (key.includes('KEY') || key.includes('TOKEN') || key.includes('SECRET')) 
+          ? '[hidden]' : value;
+        console.error(`  ${key}=${displayValue}${source}`);
+      });
+    } else {
+      console.error('  (none required)');
+    }
+    return;
+  }
+
+  if (options.verbose && Object.keys(envVars).length > 0) {
+    console.error(pc.cyan('\n🌍 Environment variables loaded:'));
+    
+    // We need to determine the source of each variable
+    const systemEnv = process.env;
+    let packageEnv: Record<string, string> = {};
+    
+    // Load package .env to determine sources
+    if (toolDefinition.name) {
+      try {
+        const { extractPackageNamespace } = await import('../utils/env-loader');
+        const packageNamespace = extractPackageNamespace(toolDefinition.name);
+        const packageEnvPath = require('path').join(require('os').homedir(), '.enact', 'env', packageNamespace, '.env');
+        
+        const fs = require('fs');
+        if (fs.existsSync(packageEnvPath)) {
+          const dotenv = require('dotenv');
+          const result = dotenv.config({ path: packageEnvPath });
+          packageEnv = result.parsed || {};
+        }
+      } catch (error) {
+        // Ignore errors
+      }
+    }
+    
+    Object.entries(envVars).forEach(([key, value]) => {
+      const toolConfig = toolDefinition.env?.[key];
+      
+      // Determine source with correct priority
+      let source = ' (from system)';
+      if (key in packageEnv) {
+        source = ' (from package .env)';
+      }
+      // Package JSON variables override both system and package .env
+      if (key in envVars && !(key in systemEnv) && !(key in packageEnv)) {
+        source = ' (from Enact package config)';
+      }
+      
+      const description = toolConfig?.description ? ` - ${toolConfig.description}` : '';
+      const required = toolConfig?.required ? ' [REQUIRED]' : '';
+      const displayValue = (key.includes('KEY') || key.includes('TOKEN') || key.includes('SECRET')) 
+        ? '[hidden]' : value;
+      console.error(`  ${key}=${displayValue}${required}${description}${source}`);
+    });
+  }
+
+  // Execute using core library
+  const executeOptions: ToolExecuteOptions = {
+    timeout: options.timeout,
+    verifyPolicy: options.verifyPolicy,
+    skipVerification: options.skipVerification,
+    force: options.force,
+    dryRun: options.dry,
+    verbose: options.verbose
+  };
+
+  try {
+    // Show a more informative start message
+    console.error(pc.cyan(`\n🚀 Executing ${toolIdentifier}...`));
+    
+    if (options.verbose) {
+      console.error(pc.gray(`Command: ${toolDefinition.command}`));
+      if (Object.keys(params).length > 0) {
+        console.error(pc.gray(`Parameters: ${JSON.stringify(params)}`));
+      }
+      spinner.start('Running...');
+    }
+    
+    // Convert tool definition to EnactTool format for core
+    const enactTool: EnactTool = {
+      name: toolDefinition.name,
+      description: toolDefinition.description || '',
+      command: toolDefinition.command,
+      version: toolDefinition.version || '1.0.0',
+      timeout: toolDefinition.timeout,
+      tags: toolDefinition.tags || [],
+      inputSchema: toolDefinition.inputSchema,
+      outputSchema: toolDefinition.outputSchema,
+      env: toolDefinition.env ? Object.fromEntries(
+        Object.entries(toolDefinition.env).map(([key, config]) => [
+          key, { ...config, source: config.source || 'env' }
+        ])
+      ) : undefined,
+      signature: toolDefinition.signature,
+      namespace: toolDefinition.namespace,
+      resources: toolDefinition.resources
     };
 
-    const result = await core.executeToolByName(toolName, inputs, executeOptions);
+    const result = await core.executeTool(enactTool, params, executeOptions);
     
-    spinner.stop('Execution completed');
+    if (options.verbose) {
+      spinner.stop('Execution completed');
+    }
 
     if (result.success) {
-      console.log(`\n${pc.green('✓')} Tool executed successfully`);
+      console.error(pc.green('\n✅ Tool executed successfully'));
       
       if (result.output) {
-        console.log('\n' + pc.bold('Output:'));
-        if (typeof result.output === 'object') {
-          console.log(JSON.stringify(result.output, null, 2));
-        } else {
-          console.log(result.output);
+        // Check if output contains both stdout and stderr
+        if (typeof result.output === 'object' && result.output.stdout !== undefined) {
+          if (result.output.stdout && result.output.stdout.trim()) {
+            console.error(pc.cyan('\n📤 Output:'));
+            console.error(cleanOutput(result.output.stdout));
+          }
+          if (result.output.stderr && result.output.stderr.trim()) {
+            console.error(pc.yellow('\n⚠ Stderr:'));
+            console.error(pc.gray(cleanOutput(result.output.stderr)));
+          }
+        } else if (result.output) {
+          console.error(pc.cyan('\n📤 Output:'));
+          if (typeof result.output === 'object') {
+            console.error(JSON.stringify(result.output, null, 2));
+          } else {
+            console.error(cleanOutput(result.output));
+          }
         }
+      } else {
+        console.error(pc.gray('\n(No output returned)'));
       }
       
       if (options.verbose && result.metadata) {
-        console.log('\n' + pc.bold('Metadata:'));
-        console.log(JSON.stringify(result.metadata, null, 2));
+        console.error(pc.cyan('\n📋 Metadata:'));
+        console.error(JSON.stringify(result.metadata, null, 2));
+      }
+      
+      // Log usage (include verification status) - only for remote tools
+      if (!isLocalFile) {
+        try {
+          const apiClient = new EnactApiClient('https://enact.tools', 'https://xjnhhxwxovjifdxdwzih.supabase.co');
+          await apiClient.logToolUsage(toolIdentifier, {
+            action: 'execute',
+            metadata: {
+              hasParams: Object.keys(params).length > 0,
+              timeout: options.timeout || toolDefinition.timeout || '30s',
+              verificationSkipped: options.skipVerification || false,
+              verificationPolicy: options.verifyPolicy || 'permissive',
+              timestamp: new Date().toISOString()
+            }
+          });
+        } catch (error) {
+          if (options.verbose) {
+            console.error(pc.yellow('⚠ Failed to log usage statistics'));
+          }
+        }
       }
       
       p.outro('Execution successful!');
     } else {
-      console.log(`\n${pc.red('✗')} Tool execution failed`);
+      console.error(pc.red('\n❌ Tool execution failed'));
       
       if (result.error) {
-        console.log(`\n${pc.bold('Error:')} ${result.error.message}`);
+        console.error(pc.red(`\nError: ${result.error.message}`));
         
-        if (options.verbose && result.error.details) {
-          console.log('\n' + pc.bold('Details:'));
-          console.log(JSON.stringify(result.error.details, null, 2));
+        if (result.error.details) {
+          // Always show key details, not just in verbose mode
+          if (result.error.details.stderr && result.error.details.stderr.trim()) {
+            console.error(pc.red('\nStderr output:'));
+            console.error(pc.gray(cleanOutput(result.error.details.stderr.trim())));
+          }
+          
+          if (result.error.details.stdout && result.error.details.stdout.trim()) {
+            console.error(pc.yellow('\nStdout output:'));
+            console.error(pc.gray(cleanOutput(result.error.details.stdout.trim())));
+          }
+          
+          if (result.error.details.exitCode !== undefined) {
+            console.error(pc.red(`\nExit code: ${result.error.details.exitCode}`));
+          }
+          
+          if (result.error.details.command) {
+            console.error(pc.cyan(`\nCommand executed: ${result.error.details.command}`));
+          }
+          
+          if (options.verbose) {
+            console.error(pc.red('\nFull error details:'));
+            console.error(JSON.stringify(result.error.details, null, 2));
+          }
         }
       }
       
-      p.outro(pc.red('Execution failed!'));
+      if (options.verbose && result.metadata) {
+        console.error(pc.cyan('\nMetadata:'));
+        console.error(JSON.stringify(result.metadata, null, 2));
+      }
+      
+      p.outro(pc.red('Execution failed'));
       process.exit(1);
     }
   } catch (error) {
-    p.outro(pc.red(`Execution failed: ${error instanceof Error ? error.message : String(error)}`));
+    spinner.stop('Execution failed');
+    console.error(pc.red(`\n❌ Error executing tool: ${error instanceof Error ? error.message : String(error)}`));
+    
+    if (options.verbose) {
+      console.error('Full error:', error);
+    }
+    
+    p.outro(pc.red('Execution failed'));
     process.exit(1);
   }
 }
@@ -290,7 +939,7 @@ ${pc.bold('EXAMPLES:')}
  */
 export async function handleCoreGetCommand(args: string[], options: { help?: boolean; format?: string }) {
   if (options.help) {
-    console.log(`
+    console.error(`
 ${pc.bold('enact get')} - Get tool information
 
 ${pc.bold('USAGE:')}
@@ -339,58 +988,58 @@ ${pc.bold('EXAMPLES:')}
     }
 
     if (options.format === 'json') {
-      console.log(JSON.stringify(tool, null, 2));
+      console.error(JSON.stringify(tool, null, 2));
     } else if (options.format === 'yaml') {
       const yaml = await import('yaml');
-      console.log(yaml.stringify(tool));
+      console.error(yaml.stringify(tool));
     } else {
       // Human-readable format
-      console.log(`\n${pc.bold(pc.cyan(`📦 ${tool.name}`))}`);
-      console.log(`${tool.description}\n`);
+      console.error(`\n${pc.bold(pc.cyan(`📦 ${tool.name}`))}`);
+      console.error(`${tool.description}\n`);
       
       if (tool.command) {
-        console.log(`${pc.bold('Command:')} ${pc.gray(tool.command)}`);
+        console.error(`${pc.bold('Command:')} ${pc.gray(tool.command)}`);
       }
       
       if (tool.tags && tool.tags.length > 0) {
-        console.log(`${pc.bold('Tags:')} ${tool.tags.map(tag => pc.blue(`#${tag}`)).join(' ')}`);
+        console.error(`${pc.bold('Tags:')} ${tool.tags.map(tag => pc.blue(`#${tag}`)).join(' ')}`);
       }
       
       if (tool.authors && tool.authors.length > 0) {
-        console.log(`${pc.bold('Authors:')} ${tool.authors.map(a => a.name).join(', ')}`);
+        console.error(`${pc.bold('Authors:')} ${tool.authors.map(a => a.name).join(', ')}`);
       }
       
       if (tool.license) {
-        console.log(`${pc.bold('License:')} ${tool.license}`);
+        console.error(`${pc.bold('License:')} ${tool.license}`);
       }
       
       if (tool.version) {
-        console.log(`${pc.bold('Version:')} ${tool.version}`);
+        console.error(`${pc.bold('Version:')} ${tool.version}`);
       }
       
       if (tool.timeout) {
-        console.log(`${pc.bold('Timeout:')} ${tool.timeout}`);
+        console.error(`${pc.bold('Timeout:')} ${tool.timeout}`);
       }
       
       if (tool.signature || tool.signatures) {
-        console.log(`${pc.bold('Signed:')} ${pc.green('✓')}`);
+        console.error(`${pc.bold('Signed:')} ${pc.green('✓')}`);
       }
       
       if (tool.inputSchema && tool.inputSchema.properties) {
-        console.log(`\n${pc.bold('Input Parameters:')}`);
+        console.error(`\n${pc.bold('Input Parameters:')}`);
         for (const [key, schema] of Object.entries(tool.inputSchema.properties)) {
           const required = tool.inputSchema.required?.includes(key) ? pc.red('*') : '';
-          console.log(`  ${key}${required}: ${(schema as any).type || 'any'} - ${(schema as any).description || 'No description'}`);
+          console.error(`  ${key}${required}: ${(schema as any).type || 'any'} - ${(schema as any).description || 'No description'}`);
         }
       }
       
       if (tool.examples && tool.examples.length > 0) {
-        console.log(`\n${pc.bold('Examples:')}`);
+        console.error(`\n${pc.bold('Examples:')}`);
         tool.examples.forEach((example, i) => {
-          console.log(`  ${i + 1}. ${example.description || 'Example'}`);
-          console.log(`     Input: ${JSON.stringify(example.input)}`);
+          console.error(`  ${i + 1}. ${example.description || 'Example'}`);
+          console.error(`     Input: ${JSON.stringify(example.input)}`);
           if (example.output) {
-            console.log(`     Output: ${JSON.stringify(example.output)}`);
+            console.error(`     Output: ${JSON.stringify(example.output)}`);
           }
         });
       }
@@ -412,7 +1061,7 @@ export async function handleCoreVerifyCommand(args: string[], options: {
   verbose?: boolean 
 }) {
   if (options.help) {
-    console.log(`
+    console.error(`
 ${pc.bold('enact verify')} - Verify tool signatures
 
 ${pc.bold('USAGE:')}
@@ -463,29 +1112,29 @@ ${pc.bold('EXAMPLES:')}
     spinner.stop('Verification completed');
 
     if (result.verified) {
-      console.log(`\n${pc.green('✓')} Tool signature verification passed`);
+      console.error(`\n${pc.green('✓')} Tool signature verification passed`);
     } else {
-      console.log(`\n${pc.red('✗')} Tool signature verification failed`);
+      console.error(`\n${pc.red('✗')} Tool signature verification failed`);
     }
     
-    console.log(`${pc.bold('Policy:')} ${policy}`);
-    console.log(`${pc.bold('Signatures found:')} ${result.signatures.length}`);
+    console.error(`${pc.bold('Policy:')} ${policy}`);
+    console.error(`${pc.bold('Signatures found:')} ${result.signatures.length}`);
     
     if (options.verbose && result.signatures.length > 0) {
-      console.log('\n' + pc.bold('Signature Details:'));
+      console.error('\n' + pc.bold('Signature Details:'));
       result.signatures.forEach((sig, i) => {
-        console.log(`  ${i + 1}. ${sig.type} by ${sig.signer}`);
-        console.log(`     Algorithm: ${sig.algorithm}`);
-        console.log(`     Created: ${sig.created}`);
+        console.error(`  ${i + 1}. ${sig.type} by ${sig.signer}`);
+        console.error(`     Algorithm: ${sig.algorithm}`);
+        console.error(`     Created: ${sig.created}`);
         if (sig.role) {
-          console.log(`     Role: ${sig.role}`);
+          console.error(`     Role: ${sig.role}`);
         }
       });
     }
     
     if (result.errors && result.errors.length > 0) {
-      console.log('\n' + pc.bold(pc.red('Errors:')));
-      result.errors.forEach(error => console.log(`  • ${error}`));
+      console.error('\n' + pc.bold(pc.red('Errors:')));
+      result.errors.forEach(error => console.error(`  • ${error}`));
     }
 
     if (result.verified) {
@@ -498,6 +1147,451 @@ ${pc.bold('EXAMPLES:')}
     p.outro(pc.red(`Verification failed: ${error instanceof Error ? error.message : String(error)}`));
     process.exit(1);
   }
+}
+
+/**
+ * Display results in a formatted table
+ */
+function displayResultsTable(results: EnactTool[]): void {
+  console.error('\n' + pc.bold('Search Results:'));
+  console.error('═'.repeat(100));
+  
+  // Header
+  const nameWidth = 25;
+  const descWidth = 50;
+  const tagsWidth = 20;
+  
+  console.error(
+    pc.bold(pc.cyan('NAME'.padEnd(nameWidth))) + ' │ ' +
+    pc.bold(pc.cyan('DESCRIPTION'.padEnd(descWidth))) + ' │ ' +
+    pc.bold(pc.cyan('TAGS'.padEnd(tagsWidth)))
+  );
+  console.error('─'.repeat(nameWidth) + '─┼─' + '─'.repeat(descWidth) + '─┼─' + '─'.repeat(tagsWidth));
+  
+  // Rows
+  results.forEach(tool => {
+    const name = tool.name.length > nameWidth ? tool.name.substring(0, nameWidth - 3) + '...' : tool.name.padEnd(nameWidth);
+    const desc = tool.description.length > descWidth ? tool.description.substring(0, descWidth - 3) + '...' : tool.description.padEnd(descWidth);
+    const tags = (tool.tags || []).join(', ');
+    const tagsDisplay = tags.length > tagsWidth ? tags.substring(0, tagsWidth - 3) + '...' : tags.padEnd(tagsWidth);
+    
+    console.error(
+      pc.green(name) + ' │ ' +
+      pc.dim(desc) + ' │ ' +
+      pc.yellow(tagsDisplay)
+    );
+  });
+  
+  console.error('═'.repeat(100));
+  console.error(pc.dim(`Total: ${results.length} tool${results.length === 1 ? '' : 's'}`));
+}
+
+/**
+ * Display results in a simple list format
+ */
+function displayResultsList(results: EnactTool[]): void {
+  console.error('\n' + pc.bold('Search Results:'));
+  console.error('');
+  
+  results.forEach((tool, index) => {
+    console.error(`${pc.cyan(`${index + 1}.`)} ${pc.bold(pc.green(tool.name))}`);
+    console.error(`   ${pc.dim(tool.description)}`);
+    if (tool.tags && tool.tags.length > 0) {
+      console.error(`   ${pc.yellow('Tags:')} ${tool.tags.join(', ')}`);
+    }
+    console.error('');
+  });
+  
+  console.error(pc.dim(`Total: ${results.length} tool${results.length === 1 ? '' : 's'}`));
+}
+
+/**
+ * Show detailed information for a specific tool using the core library
+ */
+async function showToolDetailsFromCore(toolName: string): Promise<void> {
+  const spinner = p.spinner();
+  spinner.start(`Loading details for ${toolName}...`);
+
+  try {
+    const tool = await core.getToolByName(toolName);
+    
+    if (!tool) {
+      spinner.stop('Tool not found');
+      p.note(`Tool not found: ${toolName}`, 'Error');
+      return;
+    }
+    
+    spinner.stop('Tool details loaded');
+
+    console.error('\n' + pc.bold(pc.bgBlue(pc.white(` ${tool.name} `))));
+    console.error('');
+    console.error(pc.bold('Description:'));
+    console.error(tool.description);
+    console.error('');
+    
+    if (tool.command) {
+      console.error(pc.bold('Command:'));
+      console.error(pc.cyan(tool.command));
+      console.error('');
+    }
+    
+    if (tool.tags && tool.tags.length > 0) {
+      console.error(pc.bold('Tags:'));
+      console.error(tool.tags.map((tag: string) => pc.yellow(tag)).join(', '));
+      console.error('');
+    }
+    
+    if (tool.timeout) {
+      console.error(pc.bold('Timeout:'));
+      console.error(tool.timeout);
+      console.error('');
+    }
+
+    if (tool.version) {
+      console.error(pc.bold('Version:'));
+      console.error(tool.version);
+      console.error('');
+    }
+
+    if (tool.license) {
+      console.error(pc.bold('License:'));
+      console.error(tool.license);
+      console.error('');
+    }
+
+    if (tool.authors && tool.authors.length > 0) {
+      console.error(pc.bold('Authors:'));
+      console.error(tool.authors.map(a => a.name).join(', '));
+      console.error('');
+    }
+    
+    if (tool.inputSchema) {
+      console.error(pc.bold('Input Schema:'));
+      console.error(JSON.stringify(tool.inputSchema, null, 2));
+      console.error('');
+    }
+    
+    if (tool.examples && tool.examples.length > 0) {
+      console.error(pc.bold('Examples:'));
+      tool.examples.forEach((example: any, index: any) => {
+        console.error(pc.cyan(`Example ${index + 1}:`));
+        if (example.description) {
+          console.error(`  Description: ${example.description}`);
+        }
+        console.error(`  Input: ${JSON.stringify(example.input)}`);
+        if (example.output) {
+          console.error(`  Output: ${example.output}`);
+        }
+        console.error('');
+      });
+    }
+    
+    if (tool.env && Object.keys(tool.env).length > 0) {
+      console.error(pc.bold('Environment Variables:'));
+      Object.entries(tool.env).forEach(([key, config]: any) => {
+        console.error(`  ${pc.yellow(key)}: ${config.description || 'No description'}`);
+        if (config.required) {
+          console.error(`    Required: ${pc.red('Yes')}`);
+        } else {
+          console.error(`    Required: ${pc.green('No')}`);
+          if (config.default) {
+            console.error(`    Default: ${config.default}`);
+          }
+        }
+      });
+      console.error('');
+    }
+    
+    if (tool.signature || tool.signatures) {
+      console.error(pc.bold('Security:'));
+      console.error(`  Signed: ${pc.green('✓ Yes')}`);
+      if (tool.signatures) {
+        const sigCount = Object.keys(tool.signatures).length;
+        console.error(`  Signatures: ${sigCount}`);
+      }
+      console.error('');
+    } else {
+      console.error(pc.bold('Security:'));
+      console.error(`  Signed: ${pc.red('✗ No')}`);
+      console.error('');
+    }
+
+  } catch (error) {
+    spinner.stop('Failed to load tool details');
+    p.note(`Failed to load details: ${error instanceof Error ? error.message : String(error)}`, 'Error');
+  }
+}
+
+/**
+ * Handle publish command using core library - Enhanced with all legacy features
+ */
+export async function handleCorePublishCommand(args: string[], options: CorePublishOptions) {
+  if (options.help) {
+    console.error(`
+Usage: enact publish [file] [options]
+
+Publish an Enact tool to the registry
+
+Arguments:
+  file                   Path to the tool manifest (.yaml or .yml)
+
+Options:
+  --url <url>           Registry URL to publish to
+  --token <token>       Authentication token
+  --verbose             Show detailed output
+  --help, -h            Show this help message
+
+Examples:
+  enact publish my-tool.yaml
+  enact publish --url https://api.enact.dev
+  enact publish my-tool.yaml --token your-api-token
+`);
+    return;
+  }
+
+  p.intro(pc.bgBlue(pc.white(' Publish Enact Tool ')));
+
+  try {
+    // Get file path from args or prompt
+    let filePath: string;
+    if (args.length > 0) {
+      filePath = args[0];
+    } else if (options.file) {
+      filePath = options.file;
+    } else {
+      // Interactive file selection
+      filePath = await p.text({
+        message: 'Enter the path to the tool manifest (.yaml or .yml):',
+        validate: (value) => {
+          if (!value) return 'File path is required';
+          if (!existsSync(value)) return 'File does not exist';
+          const ext = extname(value).toLowerCase();
+          if (ext !== '.yaml' && ext !== '.yml') return 'File must be a YAML file (.yaml or .yml)';
+          return undefined;
+        }
+      }) as string;
+    }
+
+    if (p.isCancel(filePath)) {
+      p.cancel('Operation cancelled');
+      return;
+    }
+
+    // Validate file exists
+    if (!existsSync(filePath)) {
+      p.cancel(`File not found: ${filePath}`);
+      return;
+    }
+
+    // Get authentication token
+    let authToken: string;
+    if (options.token) {
+      authToken = options.token;
+    } else {
+      // Try to get from auth headers
+      try {
+        const authHeaders = await getAuthHeaders();
+        authToken = authHeaders['X-API-Key'];
+      } catch {
+        // Prompt for token
+        authToken = await p.password({
+          message: 'Enter your API token:',
+          validate: (value) => value ? undefined : 'API token is required'
+        }) as string;
+
+        if (p.isCancel(authToken)) {
+          p.cancel('Operation cancelled');
+          return;
+        }
+      }
+    }
+
+    // Load and parse the tool
+    const s = p.spinner();
+    s.start('Loading tool manifest...');
+
+    let tool: EnactTool;
+    try {
+      const fileContent = await readFile(filePath, 'utf8');
+      tool = yaml.parse(fileContent) as EnactTool;
+    } catch (error) {
+      s.stop('Failed to parse tool manifest');
+      p.cancel(`Error parsing ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
+      return;
+    }
+
+    s.stop('Tool manifest loaded');
+
+    // Validate required fields
+    if (!tool.name) {
+      p.cancel('Tool manifest must have a "name" field');
+      return;
+    }
+
+    if (!tool.version) {
+      p.cancel('Tool manifest must have a "version" field');
+      return;
+    }
+
+    // Display tool info for confirmation
+    p.note(`
+Name: ${tool.name}
+Version: ${tool.version}
+Description: ${tool.description || 'No description'}
+File: ${filePath}
+`, 'Tool Information');
+
+    const shouldContinue = await p.confirm({
+      message: 'Publish this tool to the registry?'
+    });
+
+    if (!shouldContinue || p.isCancel(shouldContinue)) {
+      p.cancel('Publish cancelled');
+      return;
+    }
+
+    // Initialize core with auth token
+    const core = new EnactCore({
+      authToken,
+      supabaseUrl: options.url,
+      verbose: options.verbose
+    });
+
+    // Publish the tool
+    s.start('Publishing tool...');
+
+    try {
+      const result = await core.publishTool(tool);
+      
+      if (result.success) {
+        s.stop('Tool published successfully!');
+        p.note(`Tool "${tool.name}@${tool.version}" has been published to the registry.`, 'Success');
+        
+        // Add to history for future use
+        try {
+          await addToHistory(filePath);
+        } catch (error) {
+          if (options.verbose) {
+            console.warn(`Warning: Could not save to history: ${error}`);
+          }
+        }
+      } else {
+        s.stop('Publish failed');
+        p.cancel(`Failed to publish: ${result.message}`);
+      }
+    } catch (error) {
+      s.stop('Publish failed');
+      
+      if (error instanceof EnactApiError) {
+        if (error.statusCode === 401) {
+          p.cancel('Authentication failed. Please check your API token.');
+        } else if (error.statusCode === 409) {
+          p.cancel(`Tool "${tool.name}@${tool.version}" already exists. Consider updating the version.`);
+        } else {
+          p.cancel(`Publish failed: ${error.message}`);
+        }
+      } else {
+        p.cancel(`Publish failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
+  } catch (error) {
+    p.cancel(`Unexpected error: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  p.outro('Thanks for using Enact!');
+}
+
+/**
+ * Interactive file path selection (same logic as legacy)
+ */
+async function getFilePathInteractively(): Promise<string | null> {
+  try {
+    const { getHistory } = await import('../utils/config');
+    const history = await getHistory();
+    
+    if (history.length > 0) {
+      // User has publish history, offer to reuse
+      const action = await p.select({
+        message: 'Select a tool manifest to publish:',
+        options: [
+          { value: 'select', label: 'Choose from recent files' },
+          { value: 'new', label: 'Specify a new file' }
+        ]
+      });
+      
+      if (p.isCancel(action)) return null;
+      
+      if (action === 'select') {
+        const fileOptions = history
+          .filter(file => existsSync(file) && isEnactFile(file))
+          .map(file => ({
+            value: file,
+            label: file
+          }));
+        
+        if (fileOptions.length > 0) {
+          const selectedFile = await p.select({
+            message: 'Select a tool manifest:',
+            options: fileOptions
+          });
+          
+          return p.isCancel(selectedFile) ? null : selectedFile as string;
+        } else {
+          p.note('No recent Enact tool manifests found.', 'History');
+          const filePath = await p.text({
+            message: 'Enter the path to the tool manifest (.yaml or .yml):',
+            validate: validateEnactFile
+          });
+          
+          return p.isCancel(filePath) ? null : filePath as string;
+        }
+      } else {
+        const filePath = await p.text({
+          message: 'Enter the path to the tool manifest (.yaml or .yml):',
+          validate: validateEnactFile
+        });
+        
+        return p.isCancel(filePath) ? null : filePath as string;
+      }
+    } else {
+      // No history, just ask for a file
+      const filePath = await p.text({
+        message: 'Enter the path to the tool manifest (.yaml or .yml):',
+        validate: validateEnactFile
+      });
+      
+      return p.isCancel(filePath) ? null : filePath as string;
+    }
+  } catch (error) {
+    console.warn('Failed to load history:', error);
+    
+    // Fallback to simple prompt
+    const filePath = await p.text({
+      message: 'Enter the path to the tool manifest (.yaml or .yml):',
+      validate: validateEnactFile
+    });
+    
+    return p.isCancel(filePath) ? null : filePath as string;
+  }
+}
+
+/**
+ * Check if a file is an Enact manifest based on extension
+ */
+function isEnactFile(filePath: string): boolean {
+  const ext = filePath.toLowerCase().split('.').pop();
+  return ext === 'yaml' || ext === 'yml';
+}
+
+/**
+ * Validate that a file exists and is an Enact manifest
+ */
+function validateEnactFile(value: string): string | undefined {
+  if (!value) return 'File path is required';
+  if (!existsSync(value)) return 'File does not exist';
+  if (!isEnactFile(value)) return 'File must be a YAML file (.yaml or .yml)';
+  return undefined;
 }
 
 export { core };

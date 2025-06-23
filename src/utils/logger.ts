@@ -1,5 +1,5 @@
 // src/utils/logger.ts
-import color from 'picocolors';
+import pc from 'picocolors';
 
 export enum LogLevel {
   DEBUG = 0,
@@ -24,7 +24,7 @@ export function setLogLevel(level: LogLevel): void {
  */
 export function debug(message: string): void {
   if (currentLogLevel <= LogLevel.DEBUG) {
-    console.log(color.dim(`🔍 ${message}`));
+    console.error(pc.dim(`🔍 ${message}`));
   }
 }
 
@@ -33,7 +33,7 @@ export function debug(message: string): void {
  */
 export function info(message: string): void {
   if (currentLogLevel <= LogLevel.INFO) {
-    console.log(color.blue(`ℹ️ ${message}`));
+    console.error(pc.blue(`ℹ️ ${message}`));
   }
 }
 
@@ -42,7 +42,7 @@ export function info(message: string): void {
  */
 export function success(message: string): void {
   if (currentLogLevel <= LogLevel.SUCCESS) {
-    console.log(color.green(`✓ ${message}`));
+    console.error(pc.green(`✓ ${message}`));
   }
 }
 
@@ -51,7 +51,7 @@ export function success(message: string): void {
  */
 export function warn(message: string): void {
   if (currentLogLevel <= LogLevel.WARN) {
-    console.log(color.yellow(`⚠️ ${message}`));
+    console.error(pc.yellow(`⚠️ ${message}`));
   }
 }
 
@@ -60,11 +60,11 @@ export function warn(message: string): void {
  */
 export function error(message: string, details?: any): void {
   if (currentLogLevel <= LogLevel.ERROR) {
-    console.log(color.red(`✗ Error: ${message}`));
+    console.error(pc.red(`✗ Error: ${message}`));
     
     if (details && currentLogLevel === LogLevel.DEBUG) {
-      console.log(color.dim('Details:'));
-      console.log(details);
+      console.error(pc.dim('Details:'));
+      console.error(details);
     }
   }
 }

@@ -1,6 +1,6 @@
 // src/commands/auth.ts - Refactored to use the consolidated API client
 import { intro, outro, text, select, confirm, spinner, note } from '@clack/prompts';
-import color from 'picocolors';
+import pc from 'picocolors';
 import { existsSync } from 'fs';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
@@ -27,7 +27,7 @@ const DEFAULT_SERVER = 'https://enact.tools';
 
 export async function handleAuthCommand(args: string[], options: AuthOptions): Promise<void> {
   if (options.help || !args[0]) {
-    console.log(`
+    console.error(`
 Usage: enact auth <subcommand> [options]
 
 Manages authentication for enact CLI.
@@ -53,7 +53,7 @@ Options:
   // Initialize auth config if it doesn't exist
   await ensureAuthConfig();
 
-  intro(color.bgBlue(color.white(' Enact Authentication ')));
+  intro(pc.bgBlue(pc.white(' Enact Authentication ')));
 
   switch (subCommand) {
     case 'login': {
@@ -77,7 +77,7 @@ Options:
     }
     
     default:
-      outro(color.red(`✗ Unknown auth subcommand "${subCommand}"`));
+      outro(pc.red(`✗ Unknown auth subcommand "${subCommand}"`));
       return;
   }
 }
@@ -92,7 +92,7 @@ async function handleLogin(serverUrl: string, callbackPort: number): Promise<voi
       });
       
       if (!useExisting) {
-        outro(color.yellow('Login cancelled'));
+        outro(pc.yellow('Login cancelled'));
         return;
       }
     }
@@ -167,7 +167,7 @@ async function handleLogin(serverUrl: string, callbackPort: number): Promise<voi
       });
 
       if (typeof authCode === 'symbol') {
-        outro(color.yellow('Login cancelled'));
+        outro(pc.yellow('Login cancelled'));
         return;
       }
 
@@ -175,9 +175,9 @@ async function handleLogin(serverUrl: string, callbackPort: number): Promise<voi
       await exchangeCodeForToken(authCode, redirectUri, codeVerifier, serverUrl);
     }
 
-    outro(color.green('✓ Successfully authenticated with Enact!'));
+    outro(pc.green('✓ Successfully authenticated with Enact!'));
   } catch (error) {
-    outro(color.red(`✗ Login failed: ${(error as Error).message}`));
+    outro(pc.red(`✗ Login failed: ${(error as Error).message}`));
   } finally {
     process.exit(0)
   }
@@ -297,7 +297,7 @@ async function startCallbackServerWithFallback(
     });
 
     server.listen(port, 'localhost', () => {
-      console.log(`OAuth callback server listening on http://localhost:${port}`);
+      console.error(`OAuth callback server listening on http://localhost:${port}`);
       resolve(server);
     });
 
@@ -317,8 +317,8 @@ async function exchangeCodeForToken(
   codeVerifier: string, 
   serverUrl: string
 ): Promise<void> {
-  console.log(`Exchanging code for token...`);
-  console.log('Exchange params:', { 
+  console.error(`Exchanging code for token...`);
+  console.error('Exchange params:', { 
     code: code.substring(0, 8) + '...', 
     redirectUri, 
     codeVerifier: codeVerifier.substring(0, 8) + '...' 
@@ -344,7 +344,7 @@ async function exchangeCodeForToken(
       server: serverUrl // Store which server this token is associated with
     });
 
-    console.log('✓ Token stored successfully');
+    console.error('✓ Token stored successfully');
     
   } catch (error: unknown) {
     if (error instanceof EnactApiError) {
@@ -368,7 +368,7 @@ async function handleLogout(): Promise<void> {
   });
 
   if (!shouldLogout) {
-    outro(color.yellow('Logout cancelled'));
+    outro(pc.yellow('Logout cancelled'));
     return;
   }
 
@@ -379,7 +379,7 @@ async function handleLogout(): Promise<void> {
   await writeAuthConfig({});
 
   s.stop('Logged out successfully');
-  outro(color.green('✓ You have been logged out'));
+  outro(pc.green('✓ You have been logged out'));
 }
 
 async function handleStatus(): Promise<void> {
@@ -387,7 +387,7 @@ async function handleStatus(): Promise<void> {
   
   if (!currentAuth.token) {
     note('Not authenticated', 'Status');
-    outro(color.yellow('Run "enact auth login" to authenticate'));
+    outro(pc.yellow('Run "enact auth login" to authenticate'));
     return;
   }
 
@@ -395,7 +395,7 @@ async function handleStatus(): Promise<void> {
   
   if (isExpired) {
     note('Token has expired', 'Status');
-    outro(color.yellow('Run "enact auth login" to re-authenticate'));
+    outro(pc.yellow('Run "enact auth login" to re-authenticate'));
     return;
   }
 
@@ -407,7 +407,7 @@ async function handleStatus(): Promise<void> {
     `Authenticated\nExpires: ${currentAuth.expiresAt || 'unknown'}\nExpires in: ${expiresIn} hours`,
     'Status'
   );
-  outro(color.green('✓ Authentication valid'));
+  outro(pc.green('✓ Authentication valid'));
 }
 
 async function handleShowToken(): Promise<void> {
@@ -415,7 +415,7 @@ async function handleShowToken(): Promise<void> {
   
   if (!currentAuth.token) {
     note('Not authenticated', 'Status');
-    outro(color.yellow('Run "enact auth login" to authenticate'));
+    outro(pc.yellow('Run "enact auth login" to authenticate'));
     return;
   }
 
@@ -423,7 +423,7 @@ async function handleShowToken(): Promise<void> {
   
   if (isExpired) {
     note('Token has expired', 'Status');
-    outro(color.yellow('Run "enact auth login" to re-authenticate'));
+    outro(pc.yellow('Run "enact auth login" to re-authenticate'));
     return;
   }
 

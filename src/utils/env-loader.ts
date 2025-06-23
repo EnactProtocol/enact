@@ -3,6 +3,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { existsSync } from 'fs';
 import { readFile } from 'fs/promises';
+import { config as loadDotenv } from 'dotenv';
 
 interface EnvVariable {
   value: string;
@@ -20,26 +21,32 @@ interface PackageEnvConfig {
 
 // Configuration paths
 const CONFIG_DIR = join(homedir(), '.enact');
-const ENV_BASE_DIR = join(CONFIG_DIR, 'env');
 
 /**
- * Extract package namespace from tool name
- * e.g., "acme-corp/discord/bot-maker" -> "acme-corp/discord"
+ * Extract package namespace from tool name (excluding tool name)
+ * e.g., "kgroves88/dagger/social/bluesky-poster" -> "kgroves88/dagger/social"
  */
 function extractPackageNamespace(toolName: string): string {
   const parts = toolName.split('/');
   if (parts.length < 2) {
-    throw new Error('Tool name must be in format "org/category" or "org/category/tool"');
+    throw new Error('Tool name must be in format "org/package" or "org/package/tool"');
   }
-  // Use org/category as the namespace (ignore tool name for shared env vars)
-  return parts.slice(0, 2).join('/');
+  
+  // Use all path parts except the last one (tool name)
+  // For tools like "kgroves88/dagger/social/bluesky-poster", 
+  // we want the package path "kgroves88/dagger/social"
+  if (parts.length >= 2) {
+    return parts.slice(0, -1).join('/');
+  }
+  
+  return parts[0]; // fallback for edge cases
 }
 
 /**
  * Get the environment file path for a package namespace
  */
 function getPackageEnvPath(packageNamespace: string): string {
-  return join(ENV_BASE_DIR, packageNamespace, '.env');
+  return join(CONFIG_DIR, 'env', packageNamespace, '.env');
 }
 
 /**
@@ -65,9 +72,20 @@ async function readPackageEnvConfig(packageNamespace: string): Promise<PackageEn
   
   try {
     const data = await readFile(envFile, 'utf8');
-    return JSON.parse(data) as PackageEnvConfig;
+    
+    // Check if it's a simple .env file (KEY=value format) or JSON
+    if (data.trim().startsWith('{')) {
+      // It's JSON format (legacy package-managed variables)
+      return JSON.parse(data) as PackageEnvConfig;
+    } else {
+      // It's simple .env format (project mode), return empty since these are handled separately
+      return { variables: {} };
+    }
   } catch (error) {
-    console.warn(`Failed to read env config from ${envFile}: ${(error as Error).message}`);
+    // Only warn if it's not a simple .env file parsing issue
+    if (!(error as Error).message.includes('Unexpected token')) {
+      console.warn(`Failed to read env config from ${envFile}: ${(error as Error).message}`);
+    }
     return { variables: {} };
   }
 }
@@ -89,6 +107,31 @@ export async function loadPackageEnvironmentVariables(packageNamespace: string):
 }
 
 /**
+ * Load environment variables from a package-based .env file
+ */
+function loadPackageEnvFile(toolName: string): Record<string, string> {
+  if (!toolName) {
+    return {};
+  }
+  
+  try {
+    const packageNamespace = extractPackageNamespace(toolName);
+    const packageEnvPath = getPackageEnvPath(packageNamespace);
+    
+    if (!existsSync(packageEnvPath)) {
+      return {};
+    }
+    
+    // Load .env file and return the parsed variables
+    const result = loadDotenv({ path: packageEnvPath });
+    return result.parsed || {};
+  } catch (error) {
+    console.warn(`Warning: Failed to load package .env file: ${(error as Error).message}`);
+    return {};
+  }
+}
+
+/**
  * Resolve environment variables for a tool definition with package namespace support
  * Combines system environment, Enact package configuration, and tool-specific requirements
  * Following the Enact protocol format:
@@ -106,14 +149,18 @@ export async function resolveToolEnvironmentVariables(
   // Start with system environment variables
   const resolved: Record<string, string> = { ...process.env } as Record<string, string>;
   
-  // Load package-specific environment variables if we have a tool name
+  // Load package .env file (if it exists) - priority 2
+  const packageEnvVars = loadPackageEnvFile(toolName);
+  Object.assign(resolved, packageEnvVars);
+  
+  // Load package-specific environment variables if we have a tool name - priority 3 (highest)
   if (toolName) {
     try {
       const packageNamespace = extractPackageNamespace(toolName);
-      const packageEnvVars = await loadPackageEnvironmentVariables(packageNamespace);
+      const packageJsonEnvVars = await loadPackageEnvironmentVariables(packageNamespace);
       
-      // Override with package-managed variables
-      Object.assign(resolved, packageEnvVars);
+      // Override with package-managed JSON variables (highest priority)
+      Object.assign(resolved, packageJsonEnvVars);
     } catch (error) {
       // If we can't extract package namespace, continue without package env vars
       console.warn(`Warning: Could not load package environment variables: ${(error as Error).message}`);
@@ -238,3 +285,6 @@ export function validateRequiredEnvironmentVariables(
 
 // Export the package namespace extraction function for use in other modules
 export { extractPackageNamespace };
+
+// Load .env file if it exists
+loadDotenv();

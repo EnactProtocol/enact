@@ -1,6 +1,6 @@
 // src/commands/create.ts
 import { intro, outro, text, select, confirm, spinner } from '@clack/prompts';
-import color from 'picocolors';
+import pc from 'picocolors';
 import { writeFile } from 'fs/promises';
 
 interface CreateOptions {
@@ -10,7 +10,7 @@ interface CreateOptions {
 
 export async function handleCreateCommand(args: string[], options: CreateOptions): Promise<void> {
   if (options.help) {
-    console.log(`
+    console.error(`
 Usage: enact create [targetPath] [options]
 
 Creates a new enact document in the specified path or current repository.
@@ -28,7 +28,7 @@ Options:
   let targetPath = args[0] || '.'; // Default to current directory
 
   // Pretty intro
-  intro(color.bgCyan(color.black(' Create a new Enact document ')));
+  intro(pc.bgCyan(pc.black(' Create a new Enact document ')));
 
   // Interactive path confirmation if not explicitly provided
   if (args.length === 0) {
@@ -43,7 +43,7 @@ Options:
     });
     
     if (targetPathResponse === null) {
-      outro(color.yellow('Operation cancelled'));
+      outro(pc.yellow('Operation cancelled'));
       return;
     }
     
@@ -61,7 +61,7 @@ Options:
   });
   
   if (templateChoice === null) {
-    outro(color.yellow('Operation cancelled'));
+    outro(pc.yellow('Operation cancelled'));
     return;
   }
 
@@ -76,7 +76,7 @@ Options:
   });
   
   if (titleResponse === null) {
-    outro(color.yellow('Operation cancelled'));
+    outro(pc.yellow('Operation cancelled'));
     return;
   }
   
@@ -88,7 +88,7 @@ Options:
   });
   
   if (!shouldProceed) {
-    outro(color.yellow('Operation cancelled'));
+    outro(pc.yellow('Operation cancelled'));
     return;
   }
 
@@ -109,10 +109,10 @@ Options:
     await writeFile(fullPath, content, 'utf8');
     
     loadingSpinner.stop('Document created successfully');
-    outro(color.green(`✓ Created ${color.bold(fullPath)}`));
+    outro(pc.green(`✓ Created ${pc.bold(fullPath)}`));
   } catch (error) {
     loadingSpinner.stop('Failed to create document');
-    outro(color.red(`✗ Error: ${(error as Error).message}`));
+    outro(pc.red(`✗ Error: ${(error as Error).message}`));
   }
 }
 

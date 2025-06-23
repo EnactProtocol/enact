@@ -90,7 +90,7 @@ export function validateToolStructure(tool: EnactTool): void {
   
   // Validate name format - supports hierarchical names with forward slashes
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*(?:\/[a-zA-Z0-9][a-zA-Z0-9_-]*)*$/.test(tool.name)) {
-    throw new Error(`Invalid tool name: ${tool.name}. Must follow hierarchical format like "tool-name" or "org/category/tool-name".`);
+    throw new Error(`Invalid tool name: ${tool.name}. Must follow hierarchical format like "tool-name" or "org/package/tool-name".`);
   }
   
   // Validate command is not empty

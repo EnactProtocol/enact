@@ -18,7 +18,7 @@ export async function handleInitCommand(
   options: InitOptions
 ): Promise<void> {
   if (options.help) {
-    console.log(`
+    console.error(`
 Usage: enact init [name] [options]
 
 Creates a new Enact tool definition with interactive prompts.

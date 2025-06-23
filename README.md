@@ -64,8 +64,8 @@ enact exec author/tool-name --input '{"key": "value"}'
 # Start the comprehensive MCP server
 enact-mcp-server
 
-# Start the lightweight MCP server  
-enact-mcp-direct
+# Start the MCP server  
+enact-mcp
 ```
 
 ### Library Usage
@@ -85,9 +85,7 @@ This package provides multiple MCP server options:
 
 | Command | Description | Best For |
 |---------|-------------|----------|
-| `enact-mcp-server` | Full-featured (10 tools) | Production use |
-| `enact-mcp-direct` | Lightweight (4 core tools) | Simple integrations |
-| `enact-mcp` | Entry point wrapper | Development |
+| `enact-mcp` | Modern MCP server | All integrations |
 
 ## Development
 

@@ -78,7 +78,7 @@ async function handlePublicKeyCommand(args: string[], options: UserCommandOption
   let apiUrl = options.server;
   if (!apiUrl) {
     const defaultUrl = await getDefaultUrl();
-    console.log('defaultUrl', defaultUrl);
+    console.error('defaultUrl', defaultUrl);
     if (defaultUrl) {
       // Use the default URL but adapt it for the user endpoint
     } else {
@@ -100,9 +100,9 @@ async function handlePublicKeyCommand(args: string[], options: UserCommandOption
 
     // Format output based on format option
     if (options.format === 'json') {
-      console.log(JSON.stringify(data, null, 2));
+      console.error(JSON.stringify(data, null, 2));
     } else if (options.format === 'raw' && data.publicKey) {
-      console.log(data.publicKey);
+      console.error(data.publicKey);
     } else {
       // Default formatted output
       p.note(`User ID: ${pc.cyan(userId)}\nPublic Key: ${pc.yellow(data.publicKey || 'Not available')}\nKey Type: ${pc.blue(data.keyType || 'Unknown')}\nCreated: ${pc.gray(data.createdAt ? new Date(data.createdAt).toLocaleString() : 'Unknown')}`, 'Public Key Information');
@@ -138,7 +138,7 @@ async function handlePublicKeyCommand(args: string[], options: UserCommandOption
 }
 
 function showUserHelp() {
-  console.log(`
+  console.error(`
 ${pc.bold('USAGE')}
   enact user <subcommand> [options]
 

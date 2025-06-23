@@ -35,6 +35,9 @@ export interface EnactToolDefinition {
     value: string;
     role?: string;
   };
+  signatures?: Record<string, any>;
+  raw_content?: string;
+  namespace?: string;
   enact?: string;
   [key: string]: any;
 }

@@ -196,11 +196,11 @@ export async function signTool(
   // Use EXACT same canonical JSON creation as webapp
   const canonicalJson = createCanonicalToolJson(toolForSigning);
   
-  console.log('=== SIGNING DEBUG (WEBAPP COMPATIBLE) ===');
-  console.log('Tool for signing:', JSON.stringify(toolForSigning, null, 2));
-  console.log('Canonical JSON (webapp format):', canonicalJson);
-  console.log('Canonical JSON length:', canonicalJson.length);
-  console.log('==========================================');
+  console.error('=== SIGNING DEBUG (WEBAPP COMPATIBLE) ===');
+  console.error('Tool for signing:', JSON.stringify(toolForSigning, null, 2));
+  console.error('Canonical JSON (webapp format):', canonicalJson);
+  console.error('Canonical JSON length:', canonicalJson.length);
+  console.error('==========================================');
   
   // Create tool hash exactly like webapp (SHA-256 hash of canonical JSON)
   const toolHashBytes = await hashTool(toolForSigning);
@@ -233,8 +233,8 @@ export async function signTool(
   const signature = new Uint8Array(signatureArrayBuffer);
   const signatureB64 = Buffer.from(signature).toString('base64');
   
-  console.log('Generated signature (Web Crypto API):', signatureB64);
-  console.log('Signature length:', signature.length, 'bytes (should be 64 for P-256)');
+  console.error('Generated signature (Web Crypto API):', signatureB64);
+  console.error('Signature length:', signature.length, 'bytes (should be 64 for P-256)');
   
   // Convert public key to base64 for map key
   const publicKeyBase64 = pemToBase64(publicKeyPem);
@@ -278,8 +278,8 @@ async function hashTool(tool: Record<string, unknown>): Promise<Uint8Array> {
   // Create deterministic JSON with sorted keys
   const canonicalJson = JSON.stringify(toolForSigning, Object.keys(toolForSigning).sort());
   
-  console.log('🔍 Canonical JSON for hashing:', canonicalJson);
-  console.log('🔍 Canonical JSON length:', canonicalJson.length);
+  console.error('🔍 Canonical JSON for hashing:', canonicalJson);
+  console.error('🔍 Canonical JSON length:', canonicalJson.length);
   
   // Hash the canonical JSON
   const encoder = new TextEncoder();
@@ -290,7 +290,7 @@ async function hashTool(tool: Record<string, unknown>): Promise<Uint8Array> {
   const hashBuffer = await webcrypto.subtle.digest('SHA-256', data);
   
   const hashBytes = new Uint8Array(hashBuffer);
-  console.log('🔍 SHA-256 hash length:', hashBytes.length, 'bytes (should be 32)');
+  console.error('🔍 SHA-256 hash length:', hashBytes.length, 'bytes (should be 32)');
   
   return hashBytes;
 }
@@ -313,8 +313,8 @@ export async function verifyToolSignature(
       atob(signatureB64).split('').map(char => char.charCodeAt(0))
     );
     
-    console.log('🔍 Tool hash byte length:', toolHash.length, '(should be 32 for SHA-256)');
-    console.log('🔍 Signature bytes length:', signatureBytes.length, '(should be 64 for P-256)');
+    console.error('🔍 Tool hash byte length:', toolHash.length, '(should be 32 for SHA-256)');
+    console.error('🔍 Signature bytes length:', signatureBytes.length, '(should be 64 for P-256)');
     
     // Use Web Crypto API for verification (matches webapp exactly)
     const { webcrypto } = await import('node:crypto');
@@ -325,7 +325,7 @@ export async function verifyToolSignature(
       toolHash
     );
     
-    console.log('🎯 Web Crypto API verification result:', isValid);
+    console.error('🎯 Web Crypto API verification result:', isValid);
     return isValid;
   } catch (error) {
     console.error('❌ Verification error:', error);
@@ -366,9 +366,9 @@ export async function verifyTool(
     }
     
     if (process.env.DEBUG) {
-      console.log('Trusted keys available:');
+      console.error('Trusted keys available:');
       for (const [key, pem] of trustedKeys.entries()) {
-        console.log(`  Key: ${key.substring(0, 20)}...`);
+        console.error(`  Key: ${key.substring(0, 20)}...`);
       }
     }
     
@@ -398,12 +398,12 @@ export async function verifyTool(
     
     // Debug output for verification
     if (process.env.NODE_ENV === 'development' || process.env.DEBUG) {
-      console.log('=== VERIFICATION DEBUG (WEBAPP COMPATIBLE) ===');
-      console.log('Original tool signature field:', Object.keys(tool.signatures || {}));
-      console.log('Tool before removing signatures:', JSON.stringify(tool, null, 2));
-      console.log('Tool for verification:', JSON.stringify(toolForVerification, null, 2));
-      console.log('Tool hash bytes length:', toolHashBytes.length, '(should be 32 for SHA-256)');
-      console.log('==============================================');
+      console.error('=== VERIFICATION DEBUG (WEBAPP COMPATIBLE) ===');
+      console.error('Original tool signature field:', Object.keys(tool.signatures || {}));
+      console.error('Tool before removing signatures:', JSON.stringify(tool, null, 2));
+      console.error('Tool for verification:', JSON.stringify(toolForVerification, null, 2));
+      console.error('Tool hash bytes length:', toolHashBytes.length, '(should be 32 for SHA-256)');
+      console.error('==============================================');
     }
     
     // Verify each signature
@@ -435,8 +435,8 @@ export async function verifyTool(
         }
         
         if (process.env.DEBUG) {
-          console.log('Looking for public key:', publicKeyBase64);
-          console.log('Key found in trusted keys:', !!publicKeyPem);
+          console.error('Looking for public key:', publicKeyBase64);
+          console.error('Key found in trusted keys:', !!publicKeyPem);
         }
         
         // Verify the signature using Web Crypto API (webapp compatible)
@@ -445,9 +445,9 @@ export async function verifyTool(
           const publicKeyToUse = publicKeyPem || base64ToPem(publicKeyBase64);
           
           if (process.env.DEBUG) {
-            console.log('Signature base64:', signatureData.value);
-            console.log('Signature buffer length (should be 64):', Buffer.from(signatureData.value, 'base64').length);
-            console.log('Public key base64:', publicKeyBase64);
+            console.error('Signature base64:', signatureData.value);
+            console.error('Signature buffer length (should be 64):', Buffer.from(signatureData.value, 'base64').length);
+            console.error('Public key base64:', publicKeyBase64);
           }
           
           if (signatureData.type === 'ecdsa-p256') {
@@ -473,7 +473,7 @@ export async function verifyTool(
             isValid = await verifyToolSignature(toolForVerification, signatureData.value, publicKeyObj);
             
             if (process.env.DEBUG) {
-              console.log('Web Crypto API verification result (webapp compatible):', isValid);
+              console.error('Web Crypto API verification result (webapp compatible):', isValid);
             }
           } else {
             // Fallback for other signature types

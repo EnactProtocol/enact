@@ -22,7 +22,7 @@ export async function handleSignCommand(
   options: SignOptions
 ): Promise<void> {
   if (options.help) {
-    console.log(`
+    console.error(`
 Usage: enact sign <subcommand> [options]
 
 Manage tool signatures and verification.
@@ -113,7 +113,7 @@ Examples:
       
     default:
       console.error(pc.red(`Unknown subcommand: ${subcommand}`));
-      console.log(pc.yellow('Use "enact sign --help" for available commands'));
+      console.error(pc.yellow('Use "enact sign --help" for available commands'));
       process.exit(1);
   }
 }
@@ -157,11 +157,11 @@ async function handleVerifyCommand(args: string[], options: SignOptions): Promis
   const policy = VERIFICATION_POLICIES[policyKey] || VERIFICATION_POLICIES.PERMISSIVE;
   
   if (options.verbose) {
-    console.log(pc.cyan('\n📋 Verification Details:'));
-    console.log(`Tool: ${toolPath}`);
-    console.log(`Policy: ${policyName}`);
-    if (policy.minimumSignatures) console.log(`Minimum signatures: ${policy.minimumSignatures}`);
-    if (policy.requireRoles) console.log(`Required roles: ${policy.requireRoles.join(', ')}`);
+    console.error(pc.cyan('\n📋 Verification Details:'));
+    console.error(`Tool: ${toolPath}`);
+    console.error(`Policy: ${policyName}`);
+    if (policy.minimumSignatures) console.error(`Minimum signatures: ${policy.minimumSignatures}`);
+    if (policy.requireRoles) console.error(`Required roles: ${policy.requireRoles.join(', ')}`);
   }
   
   try {
@@ -175,26 +175,26 @@ async function handleVerifyCommand(args: string[], options: SignOptions): Promis
     
     // Display results
     if (result.isValid) {
-      console.log(pc.green(`\n✅ VERIFICATION PASSED`));
-      console.log(pc.green(`${result.message}`));
+      console.error(pc.green(`\n✅ VERIFICATION PASSED`));
+      console.error(pc.green(`${result.message}`));
     } else {
-      console.log(pc.red(`\n❌ VERIFICATION FAILED`));
-      console.log(pc.red(`${result.message}`));
+      console.error(pc.red(`\n❌ VERIFICATION FAILED`));
+      console.error(pc.red(`${result.message}`));
     }
     
-    console.log(pc.cyan(`\n📊 Signature Summary:`));
-    console.log(`Valid signatures: ${result.validSignatures}/${result.totalSignatures}`);
+    console.error(pc.cyan(`\n📊 Signature Summary:`));
+    console.error(`Valid signatures: ${result.validSignatures}/${result.totalSignatures}`);
     
     if (result.verifiedSigners.length > 0) {
-      console.log(pc.cyan('\n🔒 Verified signers:'));
+      console.error(pc.cyan('\n🔒 Verified signers:'));
       result.verifiedSigners.forEach(signer => {
-        console.log(`  - ${signer.signer}${signer.role ? ` (${signer.role})` : ''} [${signer.keyId}]`);
+        console.error(`  - ${signer.signer}${signer.role ? ` (${signer.role})` : ''} [${signer.keyId}]`);
       });
     }
     
     if (result.errors.length > 0) {
-      console.log(pc.yellow('\n⚠️ Issues found:'));
-      result.errors.forEach(error => console.log(`  - ${error}`));
+      console.error(pc.yellow('\n⚠️ Issues found:'));
+      result.errors.forEach(error => console.error(`  - ${error}`));
     }
     
     if (!result.isValid) {
@@ -220,36 +220,36 @@ async function handleListKeysCommand(args: string[], options: SignOptions): Prom
     const trustedKeys = getTrustedPublicKeysMap();
     
     if (trustedKeys.size === 0) {
-      console.log(pc.yellow('\n📭 No trusted keys found'));
-      console.log(pc.dim('Add trusted keys to: ~/.enact/trusted-keys/'));
+      console.error(pc.yellow('\n📭 No trusted keys found'));
+      console.error(pc.dim('Add trusted keys to: ~/.enact/trusted-keys/'));
       return;
     }
     
-    console.log(pc.cyan(`\n🔑 Found ${trustedKeys.size} trusted key(s):\n`));
+    console.error(pc.cyan(`\n🔑 Found ${trustedKeys.size} trusted key(s):\n`));
     
     let keyIndex = 1;
     for (const [base64Key, pemContent] of trustedKeys.entries()) {
       const keyId = base64Key.substring(0, 16); // First 16 chars as key ID
       const shortKey = base64Key.substring(0, 32) + '...';
       
-      console.log(`${keyIndex}. Key ID: ${pc.green(keyId)}`);
-      console.log(`   Preview: ${pc.dim(shortKey)}`);
+      console.error(`${keyIndex}. Key ID: ${pc.green(keyId)}`);
+      console.error(`   Preview: ${pc.dim(shortKey)}`);
       
       if (options.verbose) {
-        console.log(`   Full PEM:\n${pc.dim(pemContent)}`);
+        console.error(`   Full PEM:\n${pc.dim(pemContent)}`);
       }
       
-      console.log(''); // Empty line for spacing
+      console.error(''); // Empty line for spacing
       keyIndex++;
     }
     
     if (!options.verbose) {
-      console.log(pc.dim('Use --verbose to see full PEM content'));
+      console.error(pc.dim('Use --verbose to see full PEM content'));
     }
     
     // Show trusted keys directory
     const trustedKeysDir = path.join(process.env.HOME || '.', '.enact', 'trusted-keys');
-    console.log(pc.cyan(`📁 Trusted keys directory: ${trustedKeysDir}`));
+    console.error(pc.cyan(`📁 Trusted keys directory: ${trustedKeysDir}`));
     
     p.outro(pc.green(`Listed ${trustedKeys.size} trusted keys`));
     
@@ -311,7 +311,7 @@ async function handleSignToolCommand(args: string[], options: SignOptions): Prom
   
   if (!fs.existsSync(publicKeyPath)) {
     console.error(pc.red(`\n❌ Public key not found at: ${publicKeyPath}`));
-    console.log(pc.yellow('Expected public key file alongside private key'));
+    console.error(pc.yellow('Expected public key file alongside private key'));
     return;
   }
   
@@ -357,19 +357,19 @@ async function handleSignToolCommand(args: string[], options: SignOptions): Prom
     
     spinner.stop('Tool signed successfully');
     
-    console.log(pc.green('\n✅ Tool signed successfully!'));
-    console.log(pc.cyan('\n📋 Signature Details:'));
-    console.log(`Tool: ${toolPath}`);
-    console.log(`Signer: ${signerName}`);
-    console.log(`Role: ${role}`);
-    console.log(`Private key: ${expandedPrivateKeyPath}`);
-    console.log(`Public key: ${publicKeyPath}`);
+    console.error(pc.green('\n✅ Tool signed successfully!'));
+    console.error(pc.cyan('\n📋 Signature Details:'));
+    console.error(`Tool: ${toolPath}`);
+    console.error(`Signer: ${signerName}`);
+    console.error(`Role: ${role}`);
+    console.error(`Private key: ${expandedPrivateKeyPath}`);
+    console.error(`Public key: ${publicKeyPath}`);
     
     if (options.verbose) {
-      console.log(pc.cyan('\n📄 Signed YAML preview:'));
+      console.error(pc.cyan('\n📄 Signed YAML preview:'));
       const lines = signedYaml.split('\n');
       const previewLines = lines.slice(0, 10).join('\n');
-      console.log(pc.dim(previewLines + (lines.length > 10 ? '\n...' : '')));
+      console.error(pc.dim(previewLines + (lines.length > 10 ? '\n...' : '')));
     }
     
     p.outro(pc.green('Tool signature added to YAML file'));

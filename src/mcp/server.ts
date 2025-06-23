@@ -40,7 +40,7 @@ server.tool(
   },
   async ({ name, inputs = {}, timeout, verifyPolicy, skipVerification, force, dryRun }) => {
     try {
-      console.log(`Executing tool ${name} via core library`);
+      console.error(`Executing tool ${name} via core library`);
       
       const result = await mcpCoreService.executeToolByName(name, inputs, {
         timeout,
@@ -91,11 +91,11 @@ server.tool(
   },
   async ({ query, limit, tags, author }) => {
     try {
-      console.log(`Searching tools via core library: "${query}"`);
+      console.error(`Searching tools via core library: "${query}"`);
       
       const tools = await mcpCoreService.searchTools(query, { limit, tags, author });
       
-      console.log(`Found ${tools.length} tools matching query "${query}"`);
+      console.error(`Found ${tools.length} tools matching query "${query}"`);
       
       return {
         content: [{ 
@@ -128,11 +128,11 @@ server.tool(
   },
   async ({ query, limit, tags, author }) => {
     try {
-      console.log(`Searching tools via core library for registration: "${query}"`);
+      console.error(`Searching tools via core library for registration: "${query}"`);
       
       const tools = await mcpCoreService.searchTools(query, { limit, tags, author });
       
-      console.log(`Found ${tools.length} tools matching query "${query}"`); 
+      console.error(`Found ${tools.length} tools matching query "${query}"`); 
       
       // Register the first tool if found
       let newlyRegistered = 0;
@@ -143,7 +143,7 @@ server.tool(
             // Since we're using core library, we can directly register tools
             // For now, just mark as successful - full registration would need MCP server integration
             newlyRegistered = 1;
-            console.log(`Successfully registered tool: ${firstTool.name}`);
+            console.error(`Successfully registered tool: ${firstTool.name}`);
           } catch (err) {
             console.error(`Failed to register tool ${firstTool.name}: ${err instanceof Error ? err.message : String(err)}`);
           }
@@ -180,7 +180,7 @@ server.tool(
   },
   async ({ yaml: toolYaml, inputs = {}, options = {} }) => {
     try {
-      console.log(`Executing raw tool via core library`);
+      console.error(`Executing raw tool via core library`);
       
       const result = await mcpCoreService.executeRawTool(toolYaml, inputs, {
         timeout: options.timeout,
@@ -227,7 +227,7 @@ server.tool(
   },
   async ({ name, includeSignatureInfo }) => {
     try {
-      console.log(`Getting tool info via core library: ${name}`);
+      console.error(`Getting tool info via core library: ${name}`);
       
       const tool = await mcpCoreService.getToolInfo(name);
       
@@ -282,7 +282,7 @@ server.tool(
   },
   async ({ limit, offset, tags, author }) => {
     try {
-      console.log(`Getting tools via core library with filters`);
+      console.error(`Getting tools via core library with filters`);
       
       const tools = await mcpCoreService.getTools({ limit, offset, tags, author });
       
@@ -315,7 +315,7 @@ server.tool(
   },
   async ({ name, policy }) => {
     try {
-      console.log(`Verifying tool signatures via core library: ${name} with policy ${policy || 'permissive'}`);
+      console.error(`Verifying tool signatures via core library: ${name} with policy ${policy || 'permissive'}`);
       
       const verificationResult = await mcpCoreService.verifyTool(name, policy);
       
@@ -360,7 +360,7 @@ server.tool(
   { name: z.string() },
   async ({ name }) => {
     try {
-      console.log(`Checking tool existence via core library: ${name}`);
+      console.error(`Checking tool existence via core library: ${name}`);
       
       const exists = await mcpCoreService.toolExists(name);
       
@@ -393,7 +393,7 @@ server.tool(
   },
   async ({ tags, limit }) => {
     try {
-      console.log(`Getting tools by tags via core library: [${tags.join(', ')}]`);
+      console.error(`Getting tools by tags via core library: [${tags.join(', ')}]`);
       
       const tools = await mcpCoreService.getToolsByTags(tags, limit);
       
@@ -426,7 +426,7 @@ server.tool(
   },
   async ({ author, limit }) => {
     try {
-      console.log(`Getting tools by author via core library: ${author}`);
+      console.error(`Getting tools by author via core library: ${author}`);
       
       const tools = await mcpCoreService.getToolsByAuthor(author, limit);
       
@@ -508,7 +508,7 @@ async function startServer() {
   try {
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.log("Enact MCP Server with Core Library integration started successfully");
+    console.error("Enact MCP Server with Core Library integration started successfully");
   } catch (error) {
     console.error("Server connection error:", error);
     if (error instanceof Error) {

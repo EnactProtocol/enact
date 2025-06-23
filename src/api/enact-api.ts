@@ -53,7 +53,7 @@ export class EnactApiClient {
     
     // Debug logging to help identify response structure issues
     if (process.env.NODE_ENV === 'development' || process.env.DEBUG) {
-      console.log(`API Response for ${endpoint}:`, responseData);
+      console.error(`API Response for ${endpoint}:`, responseData);
     }
 
     return responseData as T;
@@ -416,7 +416,7 @@ export class EnactApiClient {
     if (!tool.name || typeof tool.name !== 'string') {
       errors.push('Tool name is required and must be a string');
     } else if (!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_\/-]+$/.test(tool.name)) {
-      errors.push('Tool name must follow hierarchical format: org/category/tool-name');
+      errors.push('Tool name must follow hierarchical format: org/package/tool-name');
     }
 
     if (!tool.description || typeof tool.description !== 'string') {

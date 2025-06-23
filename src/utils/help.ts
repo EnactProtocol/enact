@@ -22,7 +22,7 @@ function getVersion(): string {
  */
 export function showHelp(): void {
   const version = getVersion();
-  console.log(`
+  console.error(`
 ${pc.bold('Enact CLI')} ${pc.dim(`v${version}`)}
 ${pc.dim('A CLI tool for managing and publishing Enact tools')}
 
@@ -67,14 +67,14 @@ ${pc.bold('More Help:')}
  */
 export function showVersion(): void {
   const version = getVersion();
-  console.log(`enact-cli v${version}`);
+  console.error(`enact-cli v${version}`);
 }
 
 /**
  * Show help for the auth command
  */
 export function showAuthHelp(): void {
-  console.log(`
+  console.error(`
 ${pc.bold('Usage:')} ${pc.cyan('enact')} ${pc.green('auth')} ${pc.blue('<subcommand>')} [options]
 
 ${pc.bold('Manage authentication for Enact registry')}
@@ -101,7 +101,7 @@ ${pc.bold('Examples:')}
  * Show help for the init command
  */
 export function showInitHelp(): void {
-  console.log(`
+  console.error(`
 ${pc.bold('Usage:')} ${pc.cyan('enact')} ${pc.green('init')} [options] [name]
 
 ${pc.bold('Create a new tool definition file')}
@@ -124,7 +124,7 @@ ${pc.bold('Examples:')}
  * Show help for the publish command
  */
 export function showPublishHelp(): void {
-  console.log(`
+  console.error(`
 ${pc.bold('Usage:')} ${pc.cyan('enact')} ${pc.green('publish')} [options] [file]
 
 ${pc.bold('Publish a tool to the Enact registry')}
@@ -148,7 +148,7 @@ ${pc.bold('Examples:')}
  * Show help for the search command
  */
 export function showSearchHelp(): void {
-  console.log(`
+  console.error(`
 ${pc.bold('Usage:')} ${pc.cyan('enact')} ${pc.green('search')} [options] [query]
 
 ${pc.bold('Search for tools in the Enact registry')}
@@ -175,7 +175,7 @@ ${pc.bold('Examples:')}
  * Show help for the remote command
  */
 export function showRemoteHelp(): void {
-  console.log(`
+  console.error(`
 ${pc.bold('Usage:')} ${pc.cyan('enact')} ${pc.green('remote')} ${pc.blue('<subcommand>')} [options]
 
 ${pc.bold('Manage remote Enact registry servers')}
@@ -199,7 +199,7 @@ ${pc.bold('Examples:')}
  * Show help for the user command
  */
 export function showUserHelp(): void {
-  console.log(`
+  console.error(`
 ${pc.bold('Usage:')} ${pc.cyan('enact')} ${pc.green('user')} ${pc.blue('<subcommand>')} [options]
 
 ${pc.bold('User operations for Enact registry')}
@@ -224,7 +224,7 @@ ${pc.bold('Examples:')}
  * Show help for the env command
  */
 export function showEnvHelp(): void {
-  console.log(`
+  console.error(`
 ${pc.bold('Usage:')} ${pc.cyan('enact')} ${pc.green('env')} ${pc.blue('<subcommand>')} [options]
 
 ${pc.bold('Environment variable management for Enact CLI')}

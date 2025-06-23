@@ -1,6 +1,6 @@
 // src/commands/env.ts - Environment variable management for Enact CLI with package namespace support
 import { intro, outro, text, select, confirm, spinner, note, password } from '@clack/prompts';
-import color from 'picocolors';
+import pc from 'picocolors';
 import { existsSync } from 'fs';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { join, dirname } from 'path';
@@ -9,25 +9,8 @@ import { homedir } from 'os';
 interface EnvOptions {
   help?: boolean;
   package?: string;
-  encrypt?: boolean;
   format?: string;
   show?: boolean;
-  global?: boolean;
-  project?: boolean;
-}
-
-interface EnvVariable {
-  value: string;
-  description?: string;
-  source?: string;
-  required?: boolean;
-  encrypted?: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface PackageEnvConfig {
-  variables: Record<string, EnvVariable>;
 }
 
 // Configuration paths
@@ -35,17 +18,18 @@ const CONFIG_DIR = join(homedir(), '.enact');
 const ENV_BASE_DIR = join(CONFIG_DIR, 'env');
 
 /**
- * Get the environment file path for a package namespace
+ * Get the environment file path for a package namespace (excluding tool name)
  */
 function getPackageEnvPath(packageName: string): string {
-  // Parse package name like "acme-corp/discord/bot-maker" 
+  // Parse package name like "kgroves88/dagger/social/bluesky-poster"
   const parts = packageName.split('/');
   if (parts.length < 2) {
-    throw new Error('Package name must be in format "org/category" or "org/category/tool"');
+    throw new Error('Package name must be in format "org/package" or "org/package/tool"');
   }
   
-  // Use org/category as the namespace (ignore tool name for shared env vars)
-  const namespace = parts.slice(0, 2).join('/');
+  // Use all parts except the last one (tool name) for the directory structure
+  // e.g., "kgroves88/dagger/social/bluesky-poster" -> "kgroves88/dagger/social"
+  const namespace = parts.slice(0, -1).join('/');
   return join(ENV_BASE_DIR, namespace, '.env');
 }
 
@@ -61,33 +45,79 @@ async function ensurePackageEnvDir(packageName: string): Promise<void> {
   }
   
   if (!existsSync(envFile)) {
-    await writeFile(envFile, JSON.stringify({ variables: {} }, null, 2));
+    await writeFile(envFile, '');
   }
 }
 
 /**
- * Read package environment configuration
+ * Parse simple .env file format (KEY=value)
  */
-async function readPackageEnvConfig(packageName: string): Promise<PackageEnvConfig> {
+function parseDotEnv(content: string): Record<string, string> {
+  const vars: Record<string, string> = {};
+  const lines = content.split('\n');
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) {
+      continue; // Skip empty lines and comments
+    }
+    
+    const equalIndex = trimmed.indexOf('=');
+    if (equalIndex === -1) {
+      continue; // Skip lines without '='
+    }
+    
+    const key = trimmed.slice(0, equalIndex).trim();
+    let value = trimmed.slice(equalIndex + 1).trim();
+    
+    // Remove quotes if present
+    if ((value.startsWith('"') && value.endsWith('"')) || 
+        (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    
+    if (key) {
+      vars[key] = value;
+    }
+  }
+  
+  return vars;
+}
+
+/**
+ * Read environment variables from .env file
+ */
+async function readEnvVars(packageName: string): Promise<Record<string, string>> {
   await ensurePackageEnvDir(packageName);
   const envFile = getPackageEnvPath(packageName);
   
   try {
-    const data = await readFile(envFile, 'utf8');
-    return JSON.parse(data) as PackageEnvConfig;
+    const content = await readFile(envFile, 'utf8');
+    return parseDotEnv(content);
   } catch (error) {
-    console.error(`Failed to read env config for ${packageName}: ${(error as Error).message}`);
-    return { variables: {} };
+    console.error(`Failed to read env file for ${packageName}: ${(error as Error).message}`);
+    return {};
   }
 }
 
 /**
- * Write package environment configuration
+ * Write environment variables to .env file
  */
-async function writePackageEnvConfig(packageName: string, config: PackageEnvConfig): Promise<void> {
+async function writeEnvVars(packageName: string, vars: Record<string, string>): Promise<void> {
   await ensurePackageEnvDir(packageName);
   const envFile = getPackageEnvPath(packageName);
-  await writeFile(envFile, JSON.stringify(config, null, 2));
+  
+  const envContent = Object.entries(vars)
+    .sort(([a], [b]) => a.localeCompare(b)) // Sort keys alphabetically
+    .map(([key, value]) => {
+      // Quote values that contain spaces or special characters
+      const needsQuotes = /[\s#"'\\]/.test(value);
+      const quotedValue = needsQuotes ? `"${value.replace(/"/g, '\\"')}"` : value;
+      return `${key}=${quotedValue}`;
+    })
+    .join('\n');
+  
+  await writeFile(envFile, envContent + '\n');
 }
 
 /**
@@ -101,143 +131,86 @@ async function listPackageNamespaces(): Promise<string[]> {
   const packages: string[] = [];
   try {
     const fs = require('fs');
-    const orgs = fs.readdirSync(ENV_BASE_DIR);
     
-    for (const org of orgs) {
-      const orgPath = join(ENV_BASE_DIR, org);
-      if (fs.statSync(orgPath).isDirectory()) {
-        const categories = fs.readdirSync(orgPath);
-        for (const category of categories) {
-          const categoryPath = join(orgPath, category);
-          if (fs.statSync(categoryPath).isDirectory()) {
-            packages.push(`${org}/${category}`);
-          }
+    function scanDirectory(dir: string, prefix: string = ''): void {
+      const items = fs.readdirSync(dir);
+      
+      for (const item of items) {
+        const itemPath = join(dir, item);
+        const stat = fs.statSync(itemPath);
+        
+        if (stat.isDirectory()) {
+          const currentPath = prefix ? `${prefix}/${item}` : item;
+          scanDirectory(itemPath, currentPath);
+        } else if (item === '.env' && prefix) {
+          packages.push(prefix);
         }
       }
     }
+    
+    scanDirectory(ENV_BASE_DIR);
   } catch (error) {
     // Directory doesn't exist or can't be read
   }
   
-  return packages;
-}
-
-/**
- * Simple encryption/decryption for sensitive values
- */
-function encryptValue(value: string): string {
-  return Buffer.from(value, 'utf8').toString('base64');
-}
-
-function decryptValue(encryptedValue: string): string {
-  try {
-    return Buffer.from(encryptedValue, 'base64').toString('utf8');
-  } catch {
-    return encryptedValue;
-  }
+  return packages.sort();
 }
 
 /**
  * Set an environment variable for a package
  */
-async function setEnvVar(
-  packageName: string,
-  name: string, 
-  value: string, 
-  options: {
-    description?: string;
-    source?: string;
-    required?: boolean;
-    encrypt?: boolean;
-  } = {}
-): Promise<void> {
-  const config = await readPackageEnvConfig(packageName);
-  const now = new Date().toISOString();
+async function setEnvVar(packageName: string, name: string, value: string): Promise<void> {
+  const vars = await readEnvVars(packageName);
+  vars[name] = value;
+  await writeEnvVars(packageName, vars);
   
-  const envVar: EnvVariable = {
-    value: options.encrypt ? encryptValue(value) : value,
-    description: options.description,
-    source: options.source,
-    required: options.required,
-    encrypted: options.encrypt,
-    createdAt: config.variables[name]?.createdAt || now,
-    updatedAt: now
-  };
-  
-  config.variables[name] = envVar;
-  await writePackageEnvConfig(packageName, config);
-  
-  const encrypted = options.encrypt ? ' (encrypted)' : '';
-  console.log(color.green(`✓ Set environment variable for ${color.bold(packageName)}: ${color.bold(name)}${encrypted}`));
+  console.error(pc.green(`✓ Set environment variable for ${pc.bold(packageName)}: ${pc.bold(name)}`));
 }
 
 /**
  * Get an environment variable for a package
  */
 async function getEnvVar(packageName: string, name: string, showValue: boolean = false): Promise<void> {
-  const config = await readPackageEnvConfig(packageName);
-  const envVar = config.variables[name];
+  const vars = await readEnvVars(packageName);
+  const value = vars[name];
   
-  if (!envVar) {
-    console.log(color.red(`✗ Environment variable ${color.bold(name)} not found for package ${color.bold(packageName)}`));
+  if (value === undefined) {
+    console.error(pc.red(`✗ Environment variable ${pc.bold(name)} not found for package ${pc.bold(packageName)}`));
     return;
   }
   
-  const value = envVar.encrypted ? decryptValue(envVar.value) : envVar.value;
-  const displayValue = showValue ? value : (envVar.encrypted ? '[encrypted]' : '[hidden]');
+  const displayValue = showValue ? value : '[hidden]';
   
-  console.log(color.cyan(`Environment variable: ${color.bold(name)} (${packageName})`));
-  console.log(`  Value: ${displayValue}`);
-  if (envVar.description) console.log(`  Description: ${envVar.description}`);
-  if (envVar.source) console.log(`  Source: ${envVar.source}`);
-  if (envVar.required !== undefined) console.log(`  Required: ${envVar.required}`);
-  console.log(`  Encrypted: ${envVar.encrypted || false}`);
-  console.log(`  Created: ${envVar.createdAt}`);
-  console.log(`  Updated: ${envVar.updatedAt}`);
+  console.error(pc.cyan(`Environment variable: ${pc.bold(name)} (${packageName})`));
+  console.error(`  Value: ${displayValue}`);
 }
 
 /**
  * List all environment variables for a package
  */
 async function listEnvVars(packageName: string, format: string = 'table', showValues: boolean = false): Promise<void> {
-  const config = await readPackageEnvConfig(packageName);
-  const vars = Object.entries(config.variables);
+  const vars = await readEnvVars(packageName);
+  const entries = Object.entries(vars);
   
-  if (vars.length === 0) {
-    console.log(color.yellow(`No environment variables found for package ${color.bold(packageName)}`));
+  if (entries.length === 0) {
+    console.error(pc.yellow(`No environment variables found for package ${pc.bold(packageName)}`));
     return;
   }
   
-  console.log(color.cyan(`Environment variables for ${color.bold(packageName)}:`));
+  console.error(pc.cyan(`Environment variables for ${pc.bold(packageName)}:`));
   
   if (format === 'json') {
-    const output = vars.reduce((acc, [name, envVar]) => {
-      acc[name] = {
-        value: showValues ? (envVar.encrypted ? decryptValue(envVar.value) : envVar.value) : '[hidden]',
-        description: envVar.description,
-        source: envVar.source,
-        required: envVar.required,
-        encrypted: envVar.encrypted || false,
-        createdAt: envVar.createdAt,
-        updatedAt: envVar.updatedAt
-      };
+    const output = entries.reduce((acc, [name, value]) => {
+      acc[name] = showValues ? value : '[hidden]';
       return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, string>);
     
-    console.log(JSON.stringify(output, null, 2));
+    console.error(JSON.stringify(output, null, 2));
   } else {
-    vars.forEach(([name, envVar]) => {
-      const value = showValues ? 
-        (envVar.encrypted ? decryptValue(envVar.value) : envVar.value) : 
-        (envVar.encrypted ? '[encrypted]' : '[hidden]');
-      
-      console.log(`\n  ${color.bold(name)}`);
-      console.log(`    Value: ${value}`);
-      if (envVar.description) console.log(`    Description: ${envVar.description}`);
-      if (envVar.source) console.log(`    Source: ${envVar.source}`);
-      if (envVar.required !== undefined) console.log(`    Required: ${envVar.required}`);
-      console.log(`    Encrypted: ${envVar.encrypted || false}`);
-      console.log(`    Updated: ${envVar.updatedAt}`);
+    entries.forEach(([name, value]) => {
+      const displayValue = showValues ? value : '[hidden]';
+      console.error(`\n  ${pc.bold(name)}`);
+      console.error(`    Value: ${displayValue}`);
     });
   }
 }
@@ -246,50 +219,46 @@ async function listEnvVars(packageName: string, format: string = 'table', showVa
  * Delete an environment variable for a package
  */
 async function deleteEnvVar(packageName: string, name: string): Promise<void> {
-  const config = await readPackageEnvConfig(packageName);
+  const vars = await readEnvVars(packageName);
   
-  if (!config.variables[name]) {
-    console.log(color.red(`✗ Environment variable ${color.bold(name)} not found for package ${color.bold(packageName)}`));
+  if (vars[name] === undefined) {
+    console.error(pc.red(`✗ Environment variable ${pc.bold(name)} not found for package ${pc.bold(packageName)}`));
     return;
   }
   
-  delete config.variables[name];
-  await writePackageEnvConfig(packageName, config);
+  delete vars[name];
+  await writeEnvVars(packageName, vars);
   
-  console.log(color.green(`✓ Deleted environment variable for ${color.bold(packageName)}: ${color.bold(name)}`));
+  console.error(pc.green(`✓ Deleted environment variable for ${pc.bold(packageName)}: ${pc.bold(name)}`));
 }
 
 /**
  * Export environment variables for a package
  */
 async function exportEnvVars(packageName: string, format: 'env' | 'json' | 'yaml' = 'env'): Promise<void> {
-  const config = await readPackageEnvConfig(packageName);
-  const vars = Object.entries(config.variables);
+  const vars = await readEnvVars(packageName);
+  const entries = Object.entries(vars);
   
-  if (vars.length === 0) {
-    console.log(color.yellow(`No environment variables to export for package ${packageName}`));
+  if (entries.length === 0) {
+    console.error(pc.yellow(`No environment variables to export for package ${packageName}`));
     return;
   }
   
   switch (format) {
     case 'env':
-      vars.forEach(([name, envVar]) => {
-        const value = envVar.encrypted ? decryptValue(envVar.value) : envVar.value;
-        console.log(`${name}="${value}"`);
+      entries.forEach(([name, value]) => {
+        const needsQuotes = /[\s#"'\\]/.test(value);
+        const quotedValue = needsQuotes ? `"${value.replace(/"/g, '\\"')}"` : value;
+        console.log(`${name}=${quotedValue}`);
       });
       break;
       
     case 'json':
-      const jsonOutput = vars.reduce((acc, [name, envVar]) => {
-        acc[name] = envVar.encrypted ? decryptValue(envVar.value) : envVar.value;
-        return acc;
-      }, {} as Record<string, string>);
-      console.log(JSON.stringify(jsonOutput, null, 2));
+      console.log(JSON.stringify(vars, null, 2));
       break;
       
     case 'yaml':
-      vars.forEach(([name, envVar]) => {
-        const value = envVar.encrypted ? decryptValue(envVar.value) : envVar.value;
+      entries.forEach(([name, value]) => {
         console.log(`${name}: "${value}"`);
       });
       break;
@@ -301,12 +270,12 @@ async function exportEnvVars(packageName: string, format: 'env' | 'json' | 'yaml
  */
 export async function handleEnvCommand(args: string[], options: EnvOptions): Promise<void> {
   if (options.help || !args[0]) {
-    console.log(`
-${color.bold('Usage:')} enact env <subcommand> [options]
+    console.error(`
+${pc.bold('Usage:')} enact env <subcommand> [options]
 
-${color.bold('Environment variable management for Enact CLI with package namespaces.')}
+${pc.bold('Environment variable management for Enact CLI with package namespaces.')}
 
-${color.bold('Subcommands:')}
+${pc.bold('Subcommands:')}
   set <package> <name> [value]    Set an environment variable for a package
   get <package> <name>            Get an environment variable for a package
   list [package]                  List environment variables for a package
@@ -315,21 +284,19 @@ ${color.bold('Subcommands:')}
   export <package> [format]       Export variables (env|json|yaml)
   clear <package>                 Clear all environment variables for a package
 
-${color.bold('Options:')}
+${pc.bold('Options:')}
   --help, -h              Show this help message
-  --package <name>        Package namespace (org/category format)
-  --encrypt               Encrypt sensitive values
+  --package <name>        Package namespace (org/package format)
   --format <fmt>          Output format (table|json)
   --show                  Show actual values (default: hidden)
 
-${color.bold('Package Namespace Format:')}
-  Package names follow the format: org/category/tool
-  Environment variables are shared at the org/category level
+${pc.bold('Package Namespace Format:')}
+  Package names follow the format: org/package/tool
+  Environment variables are shared at the org/package level
   Examples: acme-corp/discord/bot-maker → stored under acme-corp/discord/
 
-${color.bold('Examples:')}
-  enact env set acme-corp/discord API_KEY sk-123... --encrypt
-  enact env set acme-corp/ai OPENAI_API_KEY --encrypt
+${pc.bold('Examples:')}
+  enact env set acme-corp/discord API_KEY sk-123...
   enact env get acme-corp/discord API_KEY --show
   enact env list acme-corp/discord --format json
   enact env packages
@@ -348,55 +315,27 @@ ${color.bold('Examples:')}
         let value = args[3];
         
         if (!packageName) {
-          console.log(color.red('✗ Package name is required (format: org/category)'));
+          console.error(pc.red('✗ Package name is required (format: org/package/tool)'));
           return;
         }
         
         if (!name) {
-          console.log(color.red('✗ Variable name is required'));
+          console.error(pc.red('✗ Variable name is required'));
           return;
         }
         
         if (!value) {
           // Prompt for value
-          const promptValue = options.encrypt ? 
-            await password({ message: `Enter value for ${name}:` }) :
-            await text({ message: `Enter value for ${name}:` });
+          const promptValue = await text({ message: `Enter value for ${name}:` });
           
           if (!promptValue || typeof promptValue === 'symbol') {
-            console.log(color.yellow('Operation cancelled'));
+            console.error(pc.yellow('Operation cancelled'));
             return;
           }
           value = promptValue;
         }
         
-        // Optional prompts for metadata (following Enact protocol format)
-        const description = await text({ 
-          message: 'Description (required for Enact protocol):', 
-          placeholder: 'What this variable is for'
-        });
-        
-        const source = await text({ 
-          message: 'Source (required for Enact protocol):', 
-          placeholder: 'Where to obtain this value'
-        });
-        
-        const required = await confirm({ 
-          message: 'Is this variable required?',
-          initialValue: true
-        });
-        
-        if (typeof description === 'symbol' || typeof source === 'symbol' || typeof required === 'symbol') {
-          console.log(color.yellow('Operation cancelled'));
-          return;
-        }
-        
-        await setEnvVar(packageName, name, value, {
-          description: description || undefined,
-          source: source || undefined,
-          required,
-          encrypt: options.encrypt
-        });
+        await setEnvVar(packageName, name, value);
         break;
       }
       
@@ -405,12 +344,12 @@ ${color.bold('Examples:')}
         const name = args[2];
         
         if (!packageName) {
-          console.log(color.red('✗ Package name is required (format: org/category)'));
+          console.error(pc.red('✗ Package name is required (format: org/package)'));
           return;
         }
         
         if (!name) {
-          console.log(color.red('✗ Variable name is required'));
+          console.error(pc.red('✗ Variable name is required'));
           return;
         }
         
@@ -424,13 +363,13 @@ ${color.bold('Examples:')}
         if (!packageName) {
           const packages = await listPackageNamespaces();
           if (packages.length === 0) {
-            console.log(color.yellow('No package namespaces found. Use "enact env set <package> <name> <value>" to create variables.'));
+            console.error(pc.yellow('No package namespaces found. Use "enact env set <package> <name> <value>" to create variables.'));
             return;
           }
           
-          console.log(color.cyan('Available package namespaces:'));
-          packages.forEach(pkg => console.log(`  ${pkg}`));
-          console.log(color.dim('\nUse "enact env list <package>" to see variables for a specific package.'));
+          console.error(pc.cyan('Available package namespaces:'));
+          packages.forEach(pkg => console.error(`  ${pkg}`));
+          console.error(pc.dim('\nUse "enact env list <package>" to see variables for a specific package.'));
           return;
         }
         
@@ -443,22 +382,22 @@ ${color.bold('Examples:')}
         const name = args[2];
         
         if (!packageName) {
-          console.log(color.red('✗ Package name is required (format: org/category)'));
+          console.error(pc.red('✗ Package name is required (format: org/package)'));
           return;
         }
         
         if (!name) {
-          console.log(color.red('✗ Variable name is required'));
+          console.error(pc.red('✗ Variable name is required'));
           return;
         }
         
         const confirmed = await confirm({
-          message: `Delete environment variable ${color.bold(name)} from ${color.bold(packageName)}?`,
+          message: `Delete environment variable ${pc.bold(name)} from ${pc.bold(packageName)}?`,
           initialValue: false
         });
         
         if (typeof confirmed === 'symbol' || !confirmed) {
-          console.log(color.yellow('Operation cancelled'));
+          console.error(pc.yellow('Operation cancelled'));
           return;
         }
         
@@ -469,12 +408,12 @@ ${color.bold('Examples:')}
       case 'packages': {
         const packages = await listPackageNamespaces();
         if (packages.length === 0) {
-          console.log(color.yellow('No package namespaces found.'));
+          console.error(pc.yellow('No package namespaces found.'));
           return;
         }
         
-        console.log(color.cyan('Available package namespaces:'));
-        packages.forEach(pkg => console.log(`  ${pkg}`));
+        console.error(pc.cyan('Available package namespaces:'));
+        packages.forEach(pkg => console.error(`  ${pkg}`));
         break;
       }
       
@@ -483,12 +422,12 @@ ${color.bold('Examples:')}
         const format = (args[2] as 'env' | 'json' | 'yaml') || 'env';
         
         if (!packageName) {
-          console.log(color.red('✗ Package name is required (format: org/category)'));
+          console.error(pc.red('✗ Package name is required (format: org/package)'));
           return;
         }
         
         if (!['env', 'json', 'yaml'].includes(format)) {
-          console.log(color.red('✗ Supported formats: env, json, yaml'));
+          console.error(pc.red('✗ Supported formats: env, json, yaml'));
           return;
         }
         
@@ -500,31 +439,31 @@ ${color.bold('Examples:')}
         const packageName = args[1];
         
         if (!packageName) {
-          console.log(color.red('✗ Package name is required (format: org/category)'));
+          console.error(pc.red('✗ Package name is required (format: org/package)'));
           return;
         }
         
         const confirmed = await confirm({
-          message: `Clear all environment variables for ${color.bold(packageName)}?`,
+          message: `Clear all environment variables for ${pc.bold(packageName)}?`,
           initialValue: false
         });
         
         if (typeof confirmed === 'symbol' || !confirmed) {
-          console.log(color.yellow('Operation cancelled'));
+          console.error(pc.yellow('Operation cancelled'));
           return;
         }
         
-        await writePackageEnvConfig(packageName, { variables: {} });
-        console.log(color.green(`✓ Cleared all environment variables for ${color.bold(packageName)}`));
+        await writeEnvVars(packageName, {});
+        console.error(pc.green(`✓ Cleared all environment variables for ${pc.bold(packageName)}`));
         break;
       }
       
       default:
-        console.log(color.red(`✗ Unknown subcommand: ${subCommand}`));
-        console.log('Run "enact env --help" for usage information');
+        console.error(pc.red(`✗ Unknown subcommand: ${subCommand}`));
+        console.error('Run "enact env --help" for usage information');
     }
   } catch (error) {
-    console.error(color.red(`Error: ${(error as Error).message}`));
+    console.error(pc.red(`Error: ${(error as Error).message}`));
     process.exit(1);
   }
 }
