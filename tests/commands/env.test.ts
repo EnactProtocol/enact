@@ -189,7 +189,7 @@ describe('Env Command', () => {
       
       expect(validators.containsUsage(helpOutput)).toBe(true);
       expect(helpOutput).toContain('--package');
-      expect(helpOutput).toContain('--encrypt');
+      expect(helpOutput).toContain('--show');
       expect(helpOutput.length).toBeGreaterThan(0);
     });
   });
