@@ -10,11 +10,12 @@
   },
   "files": [
     "dist/**/*",
+    "src/web/static/**/*",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target node && bun build ./src/mcp-server.ts --outdir ./dist --target node && sed -i.bak '1{/^#!/d;}' ./dist/index.js && sed -i.bak '1{/^#!/d;}' ./dist/mcp-server.js && echo '#!/usr/bin/env node' | cat - ./dist/index.js > temp && mv temp ./dist/index.js && chmod +x ./dist/index.js && echo '#!/usr/bin/env node' | cat - ./dist/mcp-server.js > temp2 && mv temp2 ./dist/mcp-server.js && chmod +x ./dist/mcp-server.js",
+    "build": "bun build ./src/index.ts --outdir ./dist --target node && bun build ./src/mcp-server.ts --outdir ./dist --target node && mkdir -p ./dist/web && cp -r ./src/web/static ./dist/web/ && sed -i.bak '1{/^#!/d;}' ./dist/index.js && sed -i.bak '1{/^#!/d;}' ./dist/mcp-server.js && echo '#!/usr/bin/env node' | cat - ./dist/index.js > temp && mv temp ./dist/index.js && chmod +x ./dist/index.js && echo '#!/usr/bin/env node' | cat - ./dist/mcp-server.js > temp2 && mv temp2 ./dist/mcp-server.js && chmod +x ./dist/mcp-server.js",
     "build:mcp": "bun build ./src/mcp-server.ts --outdir ./dist --target node",
     "start:mcp": "node ./dist/mcp-server.js",
     "dev:mcp": "bun run --watch src/mcp-server.ts",

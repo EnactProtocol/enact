@@ -8,7 +8,9 @@ import * as yaml from 'yaml';
 import { enactApi, EnactApiError } from '../api/enact-api';
 import { EnactExecOptions, EnactToolDefinition, VerificationPolicy } from '../api/types';
 import { verifyTool, shouldExecuteTool, VERIFICATION_POLICIES  } from '../security/sign';
-import { resolveToolEnvironmentVariables, validateRequiredEnvironmentVariables } from '../utils/env-loader';
+import { resolveToolEnvironmentVariables, validateRequiredEnvironmentVariables, generateConfigLink } from '../utils/env-loader';
+import { parseTimeout } from '../utils/timeout';
+import { DirectExecutionProvider } from '../core/DirectExecutionProvider';
 
 
 /**
@@ -349,10 +351,18 @@ Examples:
       console.error(pc.red(`  ${varName}${required}${description}${source}`));
     });
     
+    // Generate a configuration link for the web interface
+    const configLink = generateConfigLink(validation.missing, toolDefinition.name);
+    
     console.error(pc.yellow('\n💡 You can set environment variables using:'));
-    console.error(pc.cyan('  enact env set <VAR_NAME> <value>'));
-    console.error(pc.cyan('  enact env set <VAR_NAME> --encrypt  # for sensitive values'));
-    console.error(pc.cyan('  enact env set <VAR_NAME> --project  # for project-specific values'));
+    console.error(pc.cyan('  enact env set <package> <VAR_NAME> <value>  # Package-managed (shared)'));
+    console.error(pc.cyan('  enact env set <package> <VAR_NAME> --encrypt # For sensitive values'));
+    console.error(pc.cyan('  enact env set <VAR_NAME> <value> --project   # Project-specific (.env file)'));
+    
+    if (configLink) {
+      console.error(pc.yellow('\n🌐 Or use the web interface to configure all missing variables:'));
+      console.error(pc.blue(`  ${configLink}`));
+    }
     
     p.outro(pc.red('✗ Execution aborted due to missing environment variables'));
     return;
@@ -376,17 +386,21 @@ Examples:
     return;
   }
 
-  if (options.verbose && Object.keys(envVars).length > 0) {
-    console.error(pc.cyan('\n🌍 Environment variables loaded:'));
-    Object.entries(envVars).forEach(([key, value]) => {
-      const toolConfig = toolDefinition.env?.[key];
+  if (options.verbose && toolDefinition.env && Object.keys(toolDefinition.env).length > 0) {
+    console.error(pc.cyan('\n🌍 Tool-specific environment variables:'));
+    Object.entries(toolDefinition.env).forEach(([key, config]) => {
+      const value = envVars[key];
+      const isSet = value !== undefined;
       const isFromEnact = key in envVars && !(key in process.env);
       const source = isFromEnact ? ' (from Enact config)' : ' (from system)';
-      const description = toolConfig?.description ? ` - ${toolConfig.description}` : '';
-      const required = toolConfig?.required ? ' [REQUIRED]' : '';
-      const displayValue = (key.includes('KEY') || key.includes('TOKEN') || key.includes('SECRET')) 
-        ? '[hidden]' : value;
-      console.error(`  ${key}=${displayValue}${required}${description}${source}`);
+      const description = config?.description ? ` - ${config.description}` : '';
+      const required = config?.required ? ' [REQUIRED]' : '';
+      const displayValue = isSet 
+        ? ((key.includes('KEY') || key.includes('TOKEN') || key.includes('SECRET')) 
+           ? '[hidden]' : value)
+        : '[not set]';
+      const status = isSet ? '✓' : (required ? '✗' : '○');
+      console.error(`  ${status} ${key}=${displayValue}${required}${description}${source}`);
     });
   }
 
@@ -503,6 +517,7 @@ async function buildCommand(template: string, params: Record<string, any>): Prom
 
 /**
  * Execute the command with timeout and proper error handling
+ * Now using the DirectExecutionProvider for consistency
  */
 async function executeCommand(
   command: string, 
@@ -510,85 +525,8 @@ async function executeCommand(
   verbose: boolean = false, 
   envVars: Record<string, string> = {}
 ): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (verbose) {
-      console.error(pc.cyan('\n🚀 Executing command:'));
-      console.error(pc.white(command));
-    }
-    
-    const spinner = p.spinner();
-    spinner.start('Executing tool...');
-    
-    // Parse timeout (simple implementation for common formats)
-    const timeoutMs = parseTimeout(timeout);
-    
-    // Merge environment variables with process environment
-    const mergedEnv = { ...process.env, ...envVars };
-    
-    // Execute command using shell (compatible with Bun runtime)
-    const child = spawn('sh', ['-c', command], {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      timeout: timeoutMs,
-      env: mergedEnv
-    });
-    
-    let stdout = '';
-    let stderr = '';
-    
-    child.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
-    
-    child.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-    
-    child.on('close', (code) => {
-      spinner.stop('Execution completed');
-      
-      if (code === 0) {
-        console.error(pc.green('\n✅ Tool executed successfully'));
-        if (stdout.trim()) {
-          console.error(pc.cyan('\n📤 Output:'));
-          console.error(stdout.trim());
-        }
-        resolve();
-      } else {
-        console.error(pc.red(`\n❌ Tool execution failed (exit code: ${code})`));
-        if (stderr.trim()) {
-          console.error(pc.red('\n📤 Error output:'));
-          console.error(stderr.trim());
-        }
-        if (stdout.trim()) {
-          console.error(pc.yellow('\n📤 Standard output:'));
-          console.error(stdout.trim());
-        }
-        reject(new Error(`Command failed with exit code ${code}`));
-      }
-    });
-    
-    child.on('error', (error) => {
-      spinner.stop('Execution failed');
-      console.error(pc.red(`\n❌ Failed to execute command: ${error.message}`));
-      reject(error);
-    });
-  });
+  return executionProvider.executeCommandExecStyle(command, timeout, verbose, envVars);
 }
 
-/**
- * Parse timeout string to milliseconds
- */
-function parseTimeout(timeout: string): number {
-  const match = timeout.match(/^(\d+)([smh])$/);
-  if (!match) return 30000; // Default 30 seconds
-  
-  const [, value, unit] = match;
-  const num = parseInt(value);
-  
-  switch (unit) {
-    case 's': return num * 1000;
-    case 'm': return num * 60 * 1000;
-    case 'h': return num * 60 * 60 * 1000;
-    default: return 30000;
-  }
-}
+// Add a factory function to create a DirectExecutionProvider instance
+const executionProvider = new DirectExecutionProvider();

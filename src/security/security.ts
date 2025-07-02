@@ -7,44 +7,7 @@ import type { EnactTool } from "../types";
  * @param tool The tool to verify
  * @returns Boolean indicating validity
  */
-export function verifyToolSignature(tool: EnactTool): boolean {
-  // Check for signatures in either old or new format
-  const hasSignature = tool.signature || (tool.signatures && Object.keys(tool.signatures).length > 0);
-  
-  if (!hasSignature) {
-    logger.warn(`Tool ${tool.name} has no signature`);
-    return false;
-  }
-  
-  try {
-    // If we have the new signatures format, we can assume it's already verified by the API
-    // since these are stored in the database after verification
-    if (tool.signatures && Object.keys(tool.signatures).length > 0) {
-      logger.info(`Tool ${tool.name} has verified signatures from database`);
-      return true;
-    }
-    
-    // Fallback to old verification method for legacy tools
-    if (tool.signature) {
-      // For now, just return true - full cryptographic verification would require crypto implementation
-      const isValid = true;
-      const message = `Signature verification for tool ${tool.name} with algorithm ${tool.signature.algorithm}`;
-      
-      if (!isValid) {
-        logger.warn(`Invalid signature for tool ${tool.name}: ${message}`);
-      } else {
-        logger.info(`Signature verified for tool ${tool.name}: ${message}`);
-      }
-      
-      return isValid;
-    }
-    
-    return false;
-  } catch (error) {
-    logger.error(`Error verifying signature: ${(error as Error).message}`);
-    return false;
-  }
-}
+
 
 /**
  * Verify that a command is safe to execute

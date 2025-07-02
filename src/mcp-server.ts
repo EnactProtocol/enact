@@ -4,6 +4,9 @@ import { z } from "zod";
 import { EnactCore } from "./core/EnactCore";
 import logger from './exec/logger';
 import { silentMcpTool, validateSilentEnvironment } from './utils/silent-monitor';
+import { startEnvManagerServer } from './web/env-manager-server';
+import { resolveToolEnvironmentVariables, validateRequiredEnvironmentVariables, generateConfigLink } from './utils/env-loader';
+import { verifyTool, VERIFICATION_POLICIES, type VerificationPolicy } from './security/sign';
 
 // Set required environment variables for silent operation first
 process.env.CI = process.env.CI || 'true';
@@ -52,6 +55,9 @@ const runningOperations = new Map<string, {
   errorFetched?: boolean;
 }>();
 
+// Store web server port for MCP tools
+let webServerPort: number | null = null;
+
 // Helper function for safe JSON stringification
 function safeJsonStringify(obj: any, fallback: string = "Unable to stringify object"): string {
   try {
@@ -59,6 +65,63 @@ function safeJsonStringify(obj: any, fallback: string = "Unable to stringify obj
   } catch (error) {
     logger.error(`JSON stringify failed: ${error instanceof Error ? error.message : String(error)}`);
     return fallback;
+  }
+}
+
+// Helper function to validate environment variables for MCP tools
+async function validateMcpToolEnvironmentVariables(toolName: string, toolEnv?: Record<string, any>): Promise<{
+  valid: boolean;
+  errorMessage?: string;
+}> {
+  if (!toolEnv || Object.keys(toolEnv).length === 0) {
+    return { valid: true }; // No env vars required
+  }
+
+  try {
+    // Resolve environment variables from Enact configuration
+    const { resolved: envVars } = await resolveToolEnvironmentVariables(toolName, toolEnv);
+    
+    // Validate required environment variables
+    const validation = validateRequiredEnvironmentVariables(toolEnv, envVars);
+    
+    if (!validation.valid) {
+      let errorMessage = '❌ Missing required environment variables:\n\n';
+      
+      validation.missing.forEach(varName => {
+        const config = toolEnv[varName];
+        const description = config?.description ? ` - ${config.description}` : '';
+        const source = config?.source ? ` (source: ${config.source})` : '';
+        const required = config?.required ? ' [REQUIRED]' : '';
+        errorMessage += `  • ${varName}${required}${description}${source}\n`;
+      });
+      
+      errorMessage += '\n💡 You can set environment variables using:\n';
+      errorMessage += '  • enact env set <package> <VAR_NAME> <value>  # Package-managed (shared)\n';
+      errorMessage += '  • enact env set <package> <VAR_NAME> --encrypt # For sensitive values\n';
+      errorMessage += '  • enact env set <VAR_NAME> <value> --project   # Project-specific (.env file)\n';
+      
+      // Generate a configuration link for the web interface
+      const configLink = generateConfigLink(validation.missing, toolName);
+      if (configLink) {
+        errorMessage += '\n🌐 Or use the web interface to configure all missing variables:\n';
+        errorMessage += `  ${configLink}\n`;
+      }
+      
+      errorMessage += '\n⚠️ Execution aborted due to missing environment variables.';
+      
+      return {
+        valid: false,
+        errorMessage
+      };
+    }
+    
+    return { valid: true };
+  } catch (error) {
+    logger.error('Failed to validate environment variables:', error);
+    return {
+      valid: false,
+      errorMessage: `❌ Failed to validate environment variables: ${error instanceof Error ? error.message : String(error)}`
+    };
   }
 }
 
@@ -85,6 +148,41 @@ server.registerTool(
     
     try {
       logger.info(`Executing tool ${name} via direct core library`);
+      
+      // Get tool definition first to validate environment variables
+      let tool;
+      try {
+        tool = await enactCore.getToolByName(name);
+        if (!tool) {
+          return {
+            content: [{ 
+              type: "text", 
+              text: `❌ Tool not found: ${name}` 
+            }],
+            isError: true
+          };
+        }
+      } catch (error) {
+        return {
+          content: [{ 
+            type: "text", 
+            text: `❌ Tool not found: ${name}\n\nError: ${error instanceof Error ? error.message : String(error)}` 
+          }],
+          isError: true
+        };
+      }
+      
+      // Validate environment variables before execution
+      const envValidation = await validateMcpToolEnvironmentVariables(name, tool.env);
+      if (!envValidation.valid) {
+        return {
+          content: [{ 
+            type: "text", 
+            text: envValidation.errorMessage || 'Environment validation failed' 
+          }],
+          isError: true
+        };
+      }
       
       // Check if this is a known long-running tool or if async is explicitly requested
       const isLongRunningTool = name.includes('dagger') || name.includes('docker') || name.includes('build') || async;
@@ -355,6 +453,41 @@ server.registerTool(
     try {
       logger.info(`Executing tool ${name} via direct core library`);
       
+      // Get tool definition first to validate environment variables
+      let tool;
+      try {
+        tool = await enactCore.getToolByName(name);
+        if (!tool) {
+          return {
+            content: [{ 
+              type: "text", 
+              text: `❌ Tool not found: ${name}` 
+            }],
+            isError: true
+          };
+        }
+      } catch (error) {
+        return {
+          content: [{ 
+            type: "text", 
+            text: `❌ Tool not found: ${name}\n\nError: ${error instanceof Error ? error.message : String(error)}` 
+          }],
+          isError: true
+        };
+      }
+      
+      // Validate environment variables before execution
+      const envValidation = await validateMcpToolEnvironmentVariables(name, tool.env);
+      if (!envValidation.valid) {
+        return {
+          content: [{ 
+            type: "text", 
+            text: envValidation.errorMessage || 'Environment validation failed' 
+          }],
+          isError: true
+        };
+      }
+      
       // For potentially long-running operations, provide immediate feedback
       const isLongRunningTool = name.includes('dagger') || name.includes('docker') || name.includes('build');
       if (isLongRunningTool) {
@@ -559,52 +692,52 @@ server.registerTool(
   }
 );
 
-// Execute raw tool from YAML definition using core library directly
-server.registerTool(
-  "execute-raw-tool",
-  {
-    title: "Execute Raw Tool",
-    description: "Execute an Enact tool from raw YAML definition using direct core integration",
-    inputSchema: {
-      yaml: z.string().describe("YAML definition of the tool"),
-      inputs: z.record(z.any()).optional().describe("Input parameters for the tool"),
-      options: z.record(z.any()).optional().describe("Execution options")
-    }
-  },
-  async ({ yaml: toolYaml, inputs = {}, options = {} }) => {
-    try {
-      logger.info("Executing raw tool via direct core library");
+// // Execute raw tool from YAML definition using core library directly
+// server.registerTool(
+//   "execute-raw-tool",
+//   {
+//     title: "Execute Raw Tool",
+//     description: "Execute an Enact tool from raw YAML definition using direct core integration",
+//     inputSchema: {
+//       yaml: z.string().describe("YAML definition of the tool"),
+//       inputs: z.record(z.any()).optional().describe("Input parameters for the tool"),
+//       options: z.record(z.any()).optional().describe("Execution options")
+//     }
+//   },
+//   async ({ yaml: toolYaml, inputs = {}, options = {} }) => {
+//     try {
+//       logger.info("Executing raw tool via direct core library");
       
-      const result = await enactCore.executeRawTool(toolYaml, inputs, options);
+//       const result = await enactCore.executeRawTool(toolYaml, inputs, options);
       
-      if (!result.success) {
-        return {
-          content: [{ 
-            type: "text", 
-            text: `Error executing raw tool: ${result.error?.message}` 
-          }],
-          isError: true
-        };
-      }
+//       if (!result.success) {
+//         return {
+//           content: [{ 
+//             type: "text", 
+//             text: `Error executing raw tool: ${result.error?.message}` 
+//           }],
+//           isError: true
+//         };
+//       }
       
-      return {
-        content: [{ 
-          type: "text", 
-          text: `Successfully executed raw tool\nOutput: ${safeJsonStringify(result)}` 
-        }]
-      };
-    } catch (error) {
-      logger.error(`Error executing raw tool:`, error);
-      return {
-        content: [{ 
-          type: "text", 
-          text: `Internal error executing raw tool: ${error instanceof Error ? error.message : String(error)}` 
-        }],
-        isError: true
-      };
-    }
-  }
-);
+//       return {
+//         content: [{ 
+//           type: "text", 
+//           text: `Successfully executed raw tool\nOutput: ${safeJsonStringify(result)}` 
+//         }]
+//       };
+//     } catch (error) {
+//       logger.error(`Error executing raw tool:`, error);
+//       return {
+//         content: [{ 
+//           type: "text", 
+//           text: `Internal error executing raw tool: ${error instanceof Error ? error.message : String(error)}` 
+//         }],
+//         isError: true
+//       };
+//     }
+//   }
+// );
 
 // Get all tools using core library directly
 server.registerTool(
@@ -684,17 +817,18 @@ server.registerTool(
   "enact-search-and-register-tools",
   {
     title: "Search and Register Tools",
-    description: "Search tools and register the first result as a tool using direct core integration",
+    description: "Search tools and register the first result as a tool using direct core integration with signature verification",
     inputSchema: {
       query: z.string().describe("Search query for tools"),
       limit: z.number().optional().describe("Maximum number of results"),
       tags: z.array(z.string()).optional().describe("Filter by tags"),
-      author: z.string().optional().describe("Filter by author")
+      author: z.string().optional().describe("Filter by author"),
+      verifyPolicy: z.enum(['permissive', 'enterprise', 'paranoid']).optional().describe("Verification policy for signature checking")
     }
   },
-  async ({ query, limit, tags, author }) => {
+  async ({ query, limit, tags, author, verifyPolicy = 'permissive' }) => {
     try {
-      logger.info(`Searching and registering tools via direct core library: "${query}"`);
+      logger.info(`Searching and registering tools via direct core library: "${query}" with policy: ${verifyPolicy}`);
       
       const tools = await enactCore.searchTools({
         query,
@@ -711,8 +845,35 @@ server.registerTool(
         const firstTool = tools[0];
         if (firstTool.name) {
           try {
-            // Add the tool as a dynamic MCP tool
-            await registerDynamicTool(firstTool);
+            // Verify the tool's signature before registration
+            logger.info(`Verifying tool signatures for: ${firstTool.name} with policy: ${verifyPolicy}`);
+            
+            // Determine verification policy
+            const policyKey = verifyPolicy.toUpperCase() as keyof typeof VERIFICATION_POLICIES;
+            const policy: VerificationPolicy = VERIFICATION_POLICIES[policyKey] || VERIFICATION_POLICIES.PERMISSIVE;
+            
+            // Verify the tool
+            const verificationResult = await verifyTool(firstTool, policy);
+            
+            if (!verificationResult.isValid) {
+              logger.error(`Tool "${firstTool.name}" signature verification failed: ${verificationResult.message}`);
+              return {
+                content: [{ 
+                  type: "text", 
+                  text: `❌ Tool "${firstTool.name}" signature verification failed.\n\nPolicy: ${verifyPolicy}\nValid signatures: ${verificationResult.validSignatures}/${verificationResult.totalSignatures}\n\nErrors:\n${verificationResult.errors.map(e => `  • ${e}`).join('\n')}\n\n💡 Use 'enact-register-tool' with a different verification policy or ensure the tool has valid signatures.` 
+                }],
+                isError: true
+              };
+            }
+            
+            logger.info(`✅ Tool "${firstTool.name}" signature verification passed: ${verificationResult.message}`);
+            
+            // Add the tool as a dynamic MCP tool with verification info
+            await registerDynamicTool(firstTool, {
+              isValid: verificationResult.isValid,
+              message: verificationResult.message,
+              policy: verifyPolicy
+            });
             newlyRegistered = 1;
             logger.info(`Successfully registered tool: ${firstTool.name}`);
           } catch (err) {
@@ -768,7 +929,8 @@ server.registerTool(
       statusText += `• ✅ Environment variable management\n`;
       statusText += `• ✅ Raw YAML tool execution\n`;
       statusText += `• ✅ Command safety verification\n`;
-      statusText += `• ✅ Output schema validation\n\n`;
+      statusText += `• ✅ Output schema validation\n`;
+      statusText += `• 🌐 Web-based environment manager\n\n`;
       
       statusText += `Performance Benefits:\n`;
       statusText += `• ⚡ No CLI process spawning overhead\n`;
@@ -796,10 +958,157 @@ server.registerTool(
   }
 );
 
+// Get environment manager URL
+server.registerTool(
+  "get-env-manager-url",
+  {
+    title: "Get Environment Manager URL",
+    description: "Get the URL for the web-based environment variable manager",
+    inputSchema: {}
+  },
+  async () => {
+    try {
+      // Use the actual web server port if available
+      const port = webServerPort || 5555;
+      
+      return {
+        content: [{ 
+          type: "text", 
+          text: `🌐 Environment Manager Web Interface\n\nURL: http://localhost:${port}\n\nThe environment manager allows you to:\n• View all package namespaces and their environment variables\n• Add, edit, and delete environment variables\n• Create new package namespaces\n• Manage variables following the Enact package structure\n\nEnvironment variables are stored in ~/.enact/env/ organized by package namespace.` 
+        }]
+      };
+    } catch (error) {
+      logger.error(`Error getting env manager URL:`, error);
+      return {
+        content: [{ 
+          type: "text", 
+          text: `Error getting environment manager URL: ${error instanceof Error ? error.message : String(error)}` 
+        }],
+        isError: true
+      };
+    }
+  }
+);
+
+// List package environment variables
+server.registerTool(
+  "list-package-env-vars",
+  {
+    title: "List Package Environment Variables",
+    description: "List environment variables for a specific package namespace",
+    inputSchema: {
+      namespace: z.string().describe("Package namespace (e.g., 'org/package')")
+    }
+  },
+  async ({ namespace }) => {
+    try {
+      const { getPackageEnvironmentVariables } = await import('./utils/env-loader');
+      const { package: packageVars } = await getPackageEnvironmentVariables(namespace);
+      
+      if (Object.keys(packageVars).length === 0) {
+        return {
+          content: [{ 
+            type: "text", 
+            text: `📦 No environment variables found for package namespace: ${namespace}\n\nUse the web interface at http://localhost:5555 to add variables.` 
+          }]
+        };
+      }
+      
+      let result = `📦 Environment Variables for ${namespace}\n`;
+      result += `${'='.repeat(50)}\n\n`;
+      
+      for (const [key, info] of Object.entries(packageVars)) {
+        result += `🔑 ${key}\n`;
+        result += `   Value: ${info.encrypted ? '[encrypted]' : '[hidden]'}\n`;
+        if (info.description) {
+          result += `   Description: ${info.description}\n`;
+        }
+        result += `\n`;
+      }
+      
+      result += `\n💡 Use the web interface at http://localhost:5555 to view and edit these variables.`;
+      
+      return {
+        content: [{ 
+          type: "text", 
+          text: result
+        }]
+      };
+    } catch (error) {
+      logger.error(`Error listing package env vars:`, error);
+      return {
+        content: [{ 
+          type: "text", 
+          text: `Error listing environment variables: ${error instanceof Error ? error.message : String(error)}` 
+        }],
+        isError: true
+      };
+    }
+  }
+);
+
+// List all package namespaces
+server.registerTool(
+  "list-all-package-namespaces",
+  {
+    title: "List All Package Namespaces",
+    description: "List all available package namespaces with environment variables",
+    inputSchema: {}
+  },
+  async () => {
+    try {
+      const { getAllPackageNamespaces } = await import('./web/env-manager-server');
+      const packages = await getAllPackageNamespaces();
+      
+      if (packages.length === 0) {
+        return {
+          content: [{ 
+            type: "text", 
+            text: `📦 No package namespaces found\n\nUse the web interface at http://localhost:5555 to create and manage packages.` 
+          }]
+        };
+      }
+      
+      let result = `📦 Available Package Namespaces\n`;
+      result += `${'='.repeat(40)}\n\n`;
+      
+      for (const pkg of packages) {
+        const varCount = Object.keys(pkg.variables).length;
+        result += `🏷️ ${pkg.namespace}\n`;
+        result += `   Variables: ${varCount}\n`;
+        result += `   Path: ${pkg.path}\n\n`;
+      }
+      
+      result += `\n💡 Use the web interface at http://localhost:5555 to manage these packages.`;
+      
+      return {
+        content: [{ 
+          type: "text", 
+          text: result
+        }]
+      };
+    } catch (error) {
+      logger.error(`Error listing package namespaces:`, error);
+      return {
+        content: [{ 
+          type: "text", 
+          text: `Error listing package namespaces: ${error instanceof Error ? error.message : String(error)}` 
+        }],
+        isError: true
+      };
+    }
+  }
+);
+
 // Helper function to register a tool dynamically
-async function registerDynamicTool(tool: any): Promise<void> {
+async function registerDynamicTool(tool: any, verificationInfo: { isValid: boolean; message: string; policy: string }): Promise<void> {
   const toolName = `enact-${tool.name.replace(/[^a-zA-Z0-9-_]/g, '-')}`;
-  const description = tool.description || `Execute ${tool.name} tool`;
+  
+  // Build description with signature verification info
+  let description = tool.description || `Execute ${tool.name} tool`;
+  const status = verificationInfo.isValid ? '✅' : '❌';
+  description += `\n\n🔐 Signature Status: ${status} ${verificationInfo.message}`;
+  description += `\n📋 Policy: ${verificationInfo.policy}`;
   
   // Build input schema from tool definition
   const inputSchema: Record<string, any> = {};
@@ -953,14 +1262,15 @@ server.registerTool(
   "enact-register-tool",
   {
     title: "Register Tool",
-    description: "Register a tool as an MCP tool using direct core integration",
+    description: "Register a tool as an MCP tool using direct core integration with mandatory signature verification",
     inputSchema: {
-      name: z.string().describe("Name of the tool to register")
+      name: z.string().describe("Name of the tool to register"),
+      verifyPolicy: z.enum(['permissive', 'enterprise', 'paranoid']).optional().describe("Verification policy for signature checking")
     }
   },
-  async ({ name }) => {
+  async ({ name, verifyPolicy = 'permissive' }) => {
     try {
-      logger.info(`Registering tool via direct core library: ${name}`);
+      logger.info(`Registering tool via direct core library: ${name} with policy: ${verifyPolicy}`);
       
       // First get the tool info
       const tool = await enactCore.getToolInfo(name);
@@ -975,13 +1285,55 @@ server.registerTool(
         };
       }
       
-      // Register it as a dynamic tool
-      await registerDynamicTool(tool);
+      // Verify the tool's signature (mandatory)
+      logger.info(`Verifying tool signatures for: ${name} with policy: ${verifyPolicy}`);
+      
+      // Determine verification policy
+      const policyKey = verifyPolicy.toUpperCase() as keyof typeof VERIFICATION_POLICIES;
+      const policy: VerificationPolicy = VERIFICATION_POLICIES[policyKey] || VERIFICATION_POLICIES.PERMISSIVE;
+      
+      // Verify the tool
+      const verificationResult = await verifyTool(tool, policy);
+      
+      if (!verificationResult.isValid) {
+        let errorMessage = `❌ Tool "${name}" signature verification failed.\n\n`;
+        errorMessage += `Policy: ${verifyPolicy}\n`;
+        errorMessage += `Valid signatures: ${verificationResult.validSignatures}/${verificationResult.totalSignatures}\n`;
+        
+        if (verificationResult.errors.length > 0) {
+          errorMessage += `\nErrors:\n`;
+          verificationResult.errors.forEach(error => {
+            errorMessage += `  • ${error}\n`;
+          });
+        }
+        
+        errorMessage += `\n💡 You can:\n`;
+        errorMessage += `  • Use a different verification policy (permissive/enterprise/paranoid)\n`;
+        errorMessage += `  • Verify the tool's signatures manually using 'enact sign verify'\n`;
+        errorMessage += `  • Ensure the tool has valid cryptographic signatures before registration\n`;
+        
+        return {
+          content: [{ 
+            type: "text", 
+            text: errorMessage
+          }],
+          isError: true
+        };
+      }
+      
+      logger.info(`✅ Tool "${name}" signature verification passed: ${verificationResult.message}`);
+      
+      // Register it as a dynamic tool with verification info
+      await registerDynamicTool(tool, {
+        isValid: verificationResult.isValid,
+        message: verificationResult.message,
+        policy: verifyPolicy
+      });
       
       return {
         content: [{ 
           type: "text", 
-          text: `✅ Successfully registered tool: ${name}` 
+          text: `✅ Successfully registered tool: ${name} (signature verified with ${verifyPolicy} policy)` 
         }]
       };
     } catch (error) {
@@ -1054,6 +1406,31 @@ server.registerTool(
 // Start the server
 async function main() {
   try {
+    // Start the web server for environment management
+    try {
+      const configuredPort = process.env.ENACT_WEB_PORT ? parseInt(process.env.ENACT_WEB_PORT) : 5555;
+      const { server: webServer, port } = await startEnvManagerServer(configuredPort);
+      webServerPort = port; // Store the actual port for MCP tools
+      logger.info(`🌐 Environment Manager available at http://localhost:${port}`);
+      
+      // Store web server reference for cleanup
+      process.on('SIGINT', () => {
+        logger.info('Shutting down web server...');
+        webServer.close();
+        process.exit(0);
+      });
+      
+      process.on('SIGTERM', () => {
+        logger.info('Shutting down web server...');
+        webServer.close();
+        process.exit(0);
+      });
+      
+    } catch (webError) {
+      logger.warn('Failed to start web server for environment management:', webError);
+      logger.info('MCP server will continue without web interface');
+    }
+    
     const transport = new StdioServerTransport();
     await server.connect(transport);
     logger.info("🚀 Enact MCP Server with Direct Core Integration started successfully");

@@ -280,11 +280,12 @@ async function installMcpServer(client: {id: string, name: string, configPath: s
         config.extensions = {};
       }
 
+
       // Add Enact extension configuration following Goose's config.yaml format
       config.extensions.enact = {
-        name: "Enact Tools",
+        name: "enact",
         cmd: "npx",
-        args: ["-y", "enact-cli", "enact-mcp"],
+        args: ["-y","-p" ,"enact-cli", "enact-mcp"],
         enabled: true,
         type: "stdio",
         timeout: 300
@@ -327,7 +328,15 @@ async function installMcpServer(client: {id: string, name: string, configPath: s
 
   // Prepare MCP server configuration
   const mcpServerConfig = {
-    command: "enact-mcp"
+       "enact": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "-p",
+        "enact-cli",
+        "enact-mcp"
+      ]
+    }
   };
 
   // Handle different client configuration formats

@@ -1,12 +1,15 @@
 // src/core/EnactCore.ts - Core library for both CLI and MCP usage
 import type { EnactTool, ExecutionResult, ExecutionEnvironment } from "../types.js";
 import { EnactApiClient } from "../api/enact-api.js";
-import { verifyToolSignature, verifyCommandSafety, sanitizeEnvironmentVariables } from "../security/security.js";
+import { verifyCommandSafety, sanitizeEnvironmentVariables } from "../security/security.js";
 import { validateToolStructure, validateInputs, validateOutput } from "../exec/validate.js";
 import { DirectExecutionProvider } from "./DirectExecutionProvider.js";
 import { resolveToolEnvironmentVariables } from "../utils/env-loader.js";
 import logger from "../exec/logger.js";
 import yaml from 'yaml';
+import { verifyTool as verifyToolSignatureWithPolicy, VERIFICATION_POLICIES } from "../security/sign.js";
+import fs from 'fs';
+import path from 'path';
 
 export interface EnactCoreOptions {
   apiUrl?: string;
@@ -57,7 +60,6 @@ export class EnactCore {
 
     this.executionProvider = new DirectExecutionProvider();
   }
-
   /**
    * Set authentication token for API operations
    */
@@ -99,7 +101,74 @@ export class EnactCore {
       return tools;
     } catch (error) {
       logger.error('Error searching tools:', error);
+      
+      // If it's a 502 error (API server issue), try fallback to local filtering
+      if (error instanceof Error && error.message.includes('502')) {
+        logger.info('Search API unavailable, trying fallback to local filtering...');
+        return this.searchToolsFallback(options);
+      }
+      
       throw new Error(`Search failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Fallback search method that gets all tools and filters locally
+   */
+  private async searchToolsFallback(options: ToolSearchOptions): Promise<EnactTool[]> {
+    try {
+      logger.info('Using fallback search method...');
+      
+      // Get all tools (limited to avoid overwhelming the API)
+      const allTools = await this.apiClient.getTools({ 
+        limit: options.limit || 100 
+      });
+      
+      // Filter tools locally based on search criteria
+      const filteredTools: EnactTool[] = [];
+      const query = options.query.toLowerCase();
+      
+      for (const result of allTools) {
+        if (result.name) {
+          try {
+            const tool = await this.getToolByName(result.name);
+            if (tool) {
+              // Check if tool matches search criteria
+              const matchesQuery = 
+                tool.name.toLowerCase().includes(query) ||
+                (tool.description && tool.description.toLowerCase().includes(query)) ||
+                (tool.tags && tool.tags.some(tag => tag.toLowerCase().includes(query)));
+              
+              const matchesTags = !options.tags || !options.tags.length || 
+                (tool.tags && options.tags.some(searchTag => 
+                  tool.tags!.some(toolTag => toolTag.toLowerCase().includes(searchTag.toLowerCase()))
+                ));
+              
+              const matchesAuthor = !options.author || 
+                (tool.authors && tool.authors.some(author => 
+                  author.name && author.name.toLowerCase().includes(options.author!.toLowerCase())
+                ));
+              
+              if (matchesQuery && matchesTags && matchesAuthor) {
+                filteredTools.push(tool);
+                
+                // Apply limit if specified
+                if (options.limit && filteredTools.length >= options.limit) {
+                  break;
+                }
+              }
+            }
+          } catch (error) {
+            logger.warn(`Failed to fetch tool ${result.name} in fallback search:`, error);
+          }
+        }
+      }
+      
+      logger.info(`Fallback search found ${filteredTools.length} tools`);
+      return filteredTools;
+    } catch (fallbackError) {
+      logger.error('Fallback search also failed:', fallbackError);
+      throw new Error(`Search failed (including fallback): ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`);
     }
   }
 
@@ -237,8 +306,36 @@ export class EnactCore {
 
       // Verify signature if present and not skipped
       if (!options.skipVerification && tool.signature) {
-        const isValid = verifyToolSignature(tool);
-        if (!isValid && this.options.verificationPolicy !== 'permissive') {
+        // Load public key from keys/file-public.pem
+        let publicKey: string | undefined;
+        try {
+          const keyPath = path.resolve(__dirname, '../../keys/file-public.pem');
+          publicKey = fs.readFileSync(keyPath, 'utf8');
+        } catch (e) {
+          logger.warn('Could not load public key for signature verification:', e);
+        }
+        if (!publicKey) {
+          return {
+            success: false,
+            error: {
+              message: 'Public key not found for signature verification',
+              code: 'PUBLIC_KEY_MISSING'
+            },
+            metadata: {
+              executionId,
+              toolName: tool.name,
+              version: tool.version,
+              executedAt: new Date().toISOString(),
+              environment: 'direct',
+              command: tool.command
+            }
+          };
+        }
+        const policyKey = (options.verifyPolicy || 'permissive').toUpperCase() as 'PERMISSIVE' | 'ENTERPRISE' | 'PARANOID';
+        const policyObj = VERIFICATION_POLICIES[policyKey];
+        const verificationResult = await verifyToolSignatureWithPolicy(tool, policyObj);
+        const isValid = verificationResult.isValid;
+        if (!isValid && options.verifyPolicy !== 'permissive') {
           return {
             success: false,
             error: {
@@ -437,7 +534,35 @@ export class EnactCore {
         };
       }
 
-      const verified = verifyToolSignature(tool);
+      // Load public key from keys/file-public.pem
+      let publicKey: string | undefined;
+      try {
+        const keyPath = path.resolve(__dirname, '../../keys/file-public.pem');
+        publicKey = fs.readFileSync(keyPath, 'utf8');
+      } catch (e) {
+        logger.warn('Could not load public key for signature verification:', e);
+      }
+      if (!publicKey) {
+        return {
+          verified: false,
+          signatures: [],
+          policy: policy || 'permissive',
+          errors: ['Public key not found for signature verification']
+        };
+      }
+      const policyKey = (policy || 'permissive').toUpperCase() as 'PERMISSIVE' | 'ENTERPRISE' | 'PARANOID';
+      const policyObj = VERIFICATION_POLICIES[policyKey];
+      const verificationResult = await verifyToolSignatureWithPolicy(tool, policyObj);
+
+      if (!verificationResult.isValid) {
+        return {
+          verified: false,
+          signatures: [],
+          policy: policy || 'permissive',
+          errors: verificationResult.errors
+        };
+      }
+
       const signatures: any[] = [];
       
       if (tool.signature) {
@@ -449,7 +574,7 @@ export class EnactCore {
       }
 
       return {
-        verified,
+        verified: verificationResult.isValid,
         signatures,
         policy: policy || 'permissive'
       };
@@ -474,6 +599,7 @@ export class EnactCore {
       return false;
     }
   }
+
 
   /**
    * Get tools by tags

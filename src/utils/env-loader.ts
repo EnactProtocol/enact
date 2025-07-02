@@ -145,7 +145,7 @@ function loadPackageEnvFile(toolName: string): Record<string, string> {
 export async function resolveToolEnvironmentVariables(
   toolName: string,
   toolEnvConfig?: Record<string, any>
-): Promise<{ resolved: Record<string, string>; missing: string[] }> {
+): Promise<{ resolved: Record<string, string>; missing: string[]; configLink?: string }> {
   // Start with system environment variables
   const resolved: Record<string, string> = { ...process.env } as Record<string, string>;
   
@@ -198,7 +198,20 @@ export async function resolveToolEnvironmentVariables(
     }
   }
   
-  return { resolved, missing };
+  // Generate and show configuration link if there are missing variables
+  let configLink: string | undefined;
+  if (missing.length > 0) {
+    configLink = generateConfigLink(missing, toolName) || undefined;
+    if (configLink) {
+      console.log(`\n🔧 Missing environment variables: ${missing.join(', ')}`);
+      console.log(`📋 Configure them here: ${configLink}\n`);
+    } else {
+      console.log(`\n⚠️  Missing required environment variables: ${missing.join(', ')}`);
+      console.log(`💡 Set them using the 'enact env set' command or your system environment\n`);
+    }
+  }
+  
+  return { resolved, missing, configLink };
 }
 
 /**
@@ -288,3 +301,30 @@ export { extractPackageNamespace };
 
 // Load .env file if it exists
 loadDotenv();
+
+/**
+ * Get the web server URL if it's running
+ */
+export function getWebServerUrl(): string | null {
+  // For now, default to localhost:5555 as that's the standard port
+  // When running via MCP (npx -p enact-cli enact-mcp), the web server is automatically started
+  // TODO: In the future, we could check if the server is actually responding or get the port dynamically
+  return 'http://localhost:5555';
+}
+
+/**
+ * Generate a configuration link for missing environment variables
+ */
+export function generateConfigLink(missingVars: string[], toolName: string): string | null {
+  const webUrl = getWebServerUrl();
+  if (!webUrl) {
+    return null;
+  }
+  
+  // Extract package namespace from tool name (exclude tool name itself)
+  const packageNamespace = extractPackageNamespace(toolName);
+  
+  const encodedVars = encodeURIComponent(JSON.stringify(missingVars));
+  const encodedPackage = encodeURIComponent(packageNamespace);
+  return `${webUrl}/?vars=${encodedVars}&package=${encodedPackage}`;
+}

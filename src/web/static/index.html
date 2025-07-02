@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enact Environment Manager</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌐</text></svg>">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <h1>Enact Environment Manager</h1>
+    <p class="subtitle">Manage environment variables by package namespace (~/.enact/env/)</p>
+  </header>
+
+  <div id="notification" class="notification"></div>
+  
+  <!-- Bulk Variables Modal -->
+  <div id="bulk-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add Multiple Environment Variables</h2>
+        <span class="close-modal" id="close-modal">&times;</span>
+      </div>
+      
+      <form id="bulk-form" class="modal-form">
+        <div id="bulk-variables-container">
+          <!-- Dynamically populated fields will go here -->
+        </div>
+        
+        <div class="modal-actions">
+          <button type="button" id="cancel-bulk">Cancel</button>
+          <button type="submit" id="save-bulk">Save All</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <div class="path-display">
+    Environment Directory: <span id="env-path">~/.enact/env/</span>
+  </div>
+
+  <div class="packages-container">
+    <div class="package-list">
+      <h2>Package Namespaces</h2>
+      <div id="package-list-content">
+        <div class="loading">Loading packages...</div>
+      </div>
+      
+      <div class="new-package-form">
+        <h3>Create New Package</h3>
+        <div class="form-group">
+          <label for="new-package-namespace">Package Namespace</label>
+          <input type="text" id="new-package-namespace" placeholder="e.g., org/package/subpackage">
+        </div>
+        <button id="create-package-btn">Create Package</button>
+      </div>
+      
+      <div class="new-package-form">
+        <h3>Generate Configuration Link</h3>
+        <p>Create a shareable link with multiple configuration variables to be filled in. The recipient can either select an existing package or create a new one.</p>
+        
+        <div class="form-group">
+          <label for="vars-input">Variable Keys (one per line or comma-separated)</label>
+          <textarea id="vars-input" style="width: 100%; height: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;" placeholder="API_KEY&#10;DATABASE_URL&#10;PASSWORD"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="package-input">Target Package (optional)</label>
+          <input type="text" id="package-input" placeholder="org/package/subpackage">
+          <small style="color: #666; font-size: 0.9em;">If specified, variables will be pre-assigned to this package. If not, recipient can choose.</small>
+        </div>
+        
+        <button id="generate-link-btn">Generate Link</button>
+        
+        <div id="link-output-container" style="display: none; margin-top: 15px;">
+          <div style="background-color: #f1f1f1; padding: 10px; border-radius: 4px; font-family: monospace; word-break: break-all; margin-bottom: 10px;" id="link-output"></div>
+          <button id="copy-link-btn">Copy Link</button>
+          <div style="margin-top: 10px; font-size: 0.9em; color: #666;">
+            <strong>Usage:</strong> Send this link to someone who needs to configure these environment variables. They can paste values and either select an existing package or create a new one.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="package-detail">
+      <div class="package-header">
+        <h2 id="selected-package-title">Select a Package</h2>
+      </div>
+      
+      <div id="package-detail-content">
+        <div class="empty-state">
+          <p>Select a package from the list to view and manage its environment variables</p>
+        </div>
+      </div>
+      
+      <div id="add-var-form" style="display: none;">
+        <h3>Add/Update Environment Variable</h3>
+        <form id="env-var-form">
+          <div class="form-group">
+            <label for="var-key">Variable Name</label>
+            <input type="text" id="var-key" name="key" required>
+          </div>
+          <div class="form-group">
+            <label for="var-value">Variable Value</label>
+            <input type="text" id="var-value" name="value" required>
+          </div>
+          <button type="submit">Save Variable</button>
+          <button type="button" id="clear-form-btn">Clear</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

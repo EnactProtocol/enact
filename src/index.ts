@@ -246,9 +246,6 @@ async function main() {
       case 'env': // New case for env command
         await handleEnvCommand(commandArgs, {
           help: values.help as boolean | undefined,
-          global: values.global as boolean | undefined,
-          project: values.project as boolean | undefined,
-          encrypt: values.encrypt as boolean | undefined,
           format: values.format as string | undefined,
           show: values.show as boolean | undefined
         });

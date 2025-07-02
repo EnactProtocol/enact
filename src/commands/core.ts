@@ -10,7 +10,7 @@ import pc from 'picocolors';
 import * as p from '@clack/prompts';
 import yaml from 'yaml';
 import { verifyTool, shouldExecuteTool, VERIFICATION_POLICIES, VerificationPolicy } from '../security/sign';
-import { resolveToolEnvironmentVariables, validateRequiredEnvironmentVariables } from '../utils/env-loader';
+import { resolveToolEnvironmentVariables, validateRequiredEnvironmentVariables, generateConfigLink } from '../utils/env-loader';
 import { EnactApiClient, EnactApiError } from '../api/enact-api';
 import { getAuthHeaders } from './auth';
 import { addToHistory } from '../utils/config';
@@ -668,11 +668,16 @@ Examples:
     });
     
     console.error(pc.yellow('\n💡 You can set environment variables using:'));
-    console.error(pc.cyan('  enact env set <VAR_NAME> <value> --project  # Simple project .env file'));
     console.error(pc.cyan('  enact env set <package> <VAR_NAME> <value>  # Package-managed (shared)'));
     console.error(pc.cyan('  enact env set <package> <VAR_NAME> --encrypt # For sensitive values'));
-    console.error(pc.yellow('\n💡 Or add them directly to your project .env file:'));
-    console.error(pc.cyan('  echo "VAR_NAME=value" >> .env'));
+    console.error(pc.cyan('  enact env set <VAR_NAME> <value> --project   # Project-specific (.env file)'));
+    
+    // Generate a configuration link for the web interface
+    const configLink = generateConfigLink(validation.missing, toolDefinition.name);
+    if (configLink) {
+      console.error(pc.yellow('\n🌐 Or use the web interface to configure all missing variables:'));
+      console.error(pc.blue(`  ${configLink}`));
+    }
     
     p.outro(pc.red('✗ Execution aborted due to missing environment variables'));
     return;
@@ -733,49 +738,21 @@ Examples:
     return;
   }
 
-  if (options.verbose && Object.keys(envVars).length > 0) {
-    console.error(pc.cyan('\n🌍 Environment variables loaded:'));
-    
-    // We need to determine the source of each variable
-    const systemEnv = process.env;
-    let packageEnv: Record<string, string> = {};
-    
-    // Load package .env to determine sources
-    if (toolDefinition.name) {
-      try {
-        const { extractPackageNamespace } = await import('../utils/env-loader');
-        const packageNamespace = extractPackageNamespace(toolDefinition.name);
-        const packageEnvPath = require('path').join(require('os').homedir(), '.enact', 'env', packageNamespace, '.env');
-        
-        const fs = require('fs');
-        if (fs.existsSync(packageEnvPath)) {
-          const dotenv = require('dotenv');
-          const result = dotenv.config({ path: packageEnvPath });
-          packageEnv = result.parsed || {};
-        }
-      } catch (error) {
-        // Ignore errors
-      }
-    }
-    
-    Object.entries(envVars).forEach(([key, value]) => {
-      const toolConfig = toolDefinition.env?.[key];
-      
-      // Determine source with correct priority
-      let source = ' (from system)';
-      if (key in packageEnv) {
-        source = ' (from package .env)';
-      }
-      // Package JSON variables override both system and package .env
-      if (key in envVars && !(key in systemEnv) && !(key in packageEnv)) {
-        source = ' (from Enact package config)';
-      }
-      
-      const description = toolConfig?.description ? ` - ${toolConfig.description}` : '';
-      const required = toolConfig?.required ? ' [REQUIRED]' : '';
-      const displayValue = (key.includes('KEY') || key.includes('TOKEN') || key.includes('SECRET')) 
-        ? '[hidden]' : value;
-      console.error(`  ${key}=${displayValue}${required}${description}${source}`);
+  if (options.verbose && toolDefinition.env && Object.keys(toolDefinition.env).length > 0) {
+    console.error(pc.cyan('\n🌍 Tool-specific environment variables:'));
+    Object.entries(toolDefinition.env).forEach(([key, config]) => {
+      const value = envVars[key];
+      const isSet = value !== undefined;
+      const isFromEnact = key in envVars && !(key in process.env);
+      const source = isFromEnact ? ' (from Enact config)' : ' (from system)';
+      const description = config?.description ? ` - ${config.description}` : '';
+      const required = config?.required ? ' [REQUIRED]' : '';
+      const displayValue = isSet 
+        ? ((key.includes('KEY') || key.includes('TOKEN') || key.includes('SECRET')) 
+           ? '[hidden]' : value)
+        : '[not set]';
+      const status = isSet ? '✓' : (required ? '✗' : '○');
+      console.error(`  ${status} ${key}=${displayValue}${required}${description}${source}`);
     });
   }
 

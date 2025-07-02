@@ -128,23 +128,51 @@ export class EnactApiClient {
    */
   async searchTools(query: ToolSearchQuery): Promise<EnactToolDefinition[]> {
     const endpoint = '/functions/v1/tools-search';
-    const response = await this.makeRequest<any>(endpoint, {
-      method: 'POST',
-      body: JSON.stringify(query),
-    });
     
-    // Handle different response structures
-    if (Array.isArray(response)) {
-      return response;
-    } else if (response.data && Array.isArray(response.data)) {
-      return response.data;
-    } else if (response.results && Array.isArray(response.results)) {
-      return response.results;
-    } else if (response.tools && Array.isArray(response.tools)) {
-      return response.tools;
-    } else {
-      console.warn('Unexpected response structure for searchTools:', response);
-      return [];
+    try {
+      // Log the request for debugging
+      if (process.env.NODE_ENV === 'development' || process.env.DEBUG) {
+        console.error(`Search request to ${endpoint}:`, JSON.stringify(query, null, 2));
+      }
+      
+      const response = await this.makeRequest<any>(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(query),
+      });
+      
+      // Handle different response structures
+      if (Array.isArray(response)) {
+        return response;
+      } else if (response.data && Array.isArray(response.data)) {
+        return response.data;
+      } else if (response.results && Array.isArray(response.results)) {
+        return response.results;
+      } else if (response.tools && Array.isArray(response.tools)) {
+        return response.tools;
+      } else {
+        console.warn('Unexpected response structure for searchTools:', response);
+        return [];
+      }
+    } catch (error) {
+      // Enhanced error logging
+      if (error instanceof EnactApiError) {
+        console.error(`Search API error (${error.statusCode}): ${error.message}`);
+        console.error(`Endpoint: ${error.endpoint}`);
+        
+        // If it's a 502 error, provide more specific guidance
+        if (error.statusCode === 502) {
+          console.error('502 Bad Gateway error - this usually indicates:');
+          console.error('• The API server is temporarily unavailable');
+          console.error('• The search service is overloaded');
+          console.error('• Network connectivity issues');
+          console.error('• Try again in a few moments');
+        }
+      } else {
+        console.error('Unexpected search error:', error);
+      }
+      
+      // Re-throw the error
+      throw error;
     }
   }
 

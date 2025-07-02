@@ -10,6 +10,7 @@ Official CLI for the Enact Protocol - package, secure, and discover AI tools.
 - 🔐 **Security** - Cryptographic signing and verification
 - 🎯 **MCP Integration** - Full Model Context Protocol support
 - 🚀 **Direct Library** - Use as a library in your applications
+- 🌐 **Environment Manager** - Web-based interface for managing environment variables
 
 ## Installation
 
@@ -61,12 +62,22 @@ enact exec author/tool-name --input '{"key": "value"}'
 
 ### MCP Server Usage
 ```bash
-# Start the comprehensive MCP server
+# Start the comprehensive MCP server (includes web-based environment manager)
 enact-mcp-server
 
 # Start the MCP server  
 enact-mcp
 ```
+
+#### Environment Manager Web Interface
+
+The MCP server includes a built-in web interface for managing environment variables:
+
+- **URL**: `http://localhost:5555` (when MCP server is running)
+- **Features**: Package-based environment variable management
+- **File Structure**: `~/.enact/env/{namespace}/.env`
+
+See [ENVIRONMENT_MANAGER.md](./ENVIRONMENT_MANAGER.md) for detailed usage instructions.
 
 ### Library Usage
 ```typescript
