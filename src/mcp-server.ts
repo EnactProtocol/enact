@@ -57,6 +57,7 @@ const runningOperations = new Map<string, {
 
 // Store web server port for MCP tools
 let webServerPort: number | null = null;
+let webServerInstance: any = null; // Store the server instance for closing
 
 // Helper function for safe JSON stringification
 function safeJsonStringify(obj: any, fallback: string = "Unable to stringify object"): string {
@@ -958,6 +959,217 @@ server.registerTool(
   }
 );
 
+// Launch web server async
+server.registerTool(
+  "launch-env-manager-server",
+  {
+    title: "Launch Environment Manager Server",
+    description: "Start the web-based environment variable manager server asynchronously",
+    inputSchema: {
+      port: z.number().optional().describe("Port to run the server on (default: 5555)"),
+      async: z.boolean().optional().describe("Run in background (default: true)")
+    }
+  },
+  async ({ port = 5555, async = true }) => {
+    try {
+      if (webServerInstance) {
+        return {
+          content: [{ 
+            type: "text", 
+            text: `🌐 Environment Manager Server is already running on port ${webServerPort}\n\nURL: http://localhost:${webServerPort}` 
+          }]
+        };
+      }
+
+      if (async) {
+        // Generate operation ID for async launch
+        const operationId = `web-server-launch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Start server launch in background
+        const launchPromise = startEnvManagerServer(port).then(({ server: webServer, port: actualPort }) => {
+          webServerInstance = webServer;
+          webServerPort = actualPort;
+          logger.info(`🌐 Environment Manager available at http://localhost:${actualPort}`);
+          return { server: webServer, port: actualPort };
+        });
+        
+        // Store the operation
+        const operation = {
+          id: operationId,
+          name: 'launch-env-manager-server',
+          startTime: new Date(),
+          promise: launchPromise,
+          status: 'running' as 'running' | 'completed' | 'failed',
+          result: undefined as any,
+          error: undefined as any,
+        };
+        
+        runningOperations.set(operationId, operation);
+        
+        // Handle completion in background
+        launchPromise
+          .then(result => {
+            operation.status = 'completed';
+            operation.result = result;
+            logger.info(`Environment Manager Server started successfully on port ${result.port}`);
+          })
+          .catch(error => {
+            operation.status = 'failed';
+            operation.error = error;
+            logger.error(`Failed to start Environment Manager Server:`, error);
+          });
+        
+        return {
+          content: [{ 
+            type: "text", 
+            text: `🚀 Starting Environment Manager Server asynchronously on port ${port}\n\nOperation ID: ${operationId}\nStarted: ${operation.startTime.toISOString()}\n\n⏳ Use "check-operation-status" with operation ID "${operationId}" to check when the server is ready.\n\nOnce running, the server will be available at: http://localhost:${port}` 
+          }]
+        };
+      } else {
+        // Synchronous launch
+        const { server: webServer, port: actualPort } = await startEnvManagerServer(port);
+        webServerInstance = webServer;
+        webServerPort = actualPort;
+        
+        return {
+          content: [{ 
+            type: "text", 
+            text: `✅ Environment Manager Server started successfully!\n\nURL: http://localhost:${actualPort}\n\nThe environment manager allows you to:\n• View all package namespaces and their environment variables\n• Add, edit, and delete environment variables\n• Create new package namespaces\n• Manage variables following the Enact package structure\n\nEnvironment variables are stored in ~/.enact/env/ organized by package namespace.` 
+          }]
+        };
+      }
+    } catch (error) {
+      logger.error(`Error launching Environment Manager Server:`, error);
+      return {
+        content: [{ 
+          type: "text", 
+          text: `❌ Error launching Environment Manager Server: ${error instanceof Error ? error.message : String(error)}` 
+        }],
+        isError: true
+      };
+    }
+  }
+);
+
+// Close web server
+server.registerTool(
+  "close-env-manager-server",
+  {
+    title: "Close Environment Manager Server",
+    description: "Stop the web-based environment variable manager server",
+    inputSchema: {
+      force: z.boolean().optional().describe("Force close the server (default: false)")
+    }
+  },
+  async ({ force = false }) => {
+    try {
+      if (!webServerInstance) {
+        return {
+          content: [{ 
+            type: "text", 
+            text: `ℹ️ Environment Manager Server is not currently running` 
+          }]
+        };
+      }
+
+      const currentPort = webServerPort;
+      
+      return new Promise((resolve) => {
+        const timeout = force ? 1000 : 5000; // 1s for force, 5s for graceful
+        
+        const cleanup = () => {
+          webServerInstance = null;
+          webServerPort = null;
+          resolve({
+            content: [{ 
+              type: "text", 
+              text: `✅ Environment Manager Server stopped successfully\n\nServer was running on port ${currentPort}` 
+            }]
+          });
+        };
+
+        if (force) {
+          // Force close
+          webServerInstance.close(cleanup);
+          // Fallback timeout for force close
+          setTimeout(cleanup, timeout);
+        } else {
+          // Graceful close
+          webServerInstance.close((err: any) => {
+            if (err) {
+              logger.error('Error during graceful shutdown:', err);
+              resolve({
+                content: [{ 
+                  type: "text", 
+                  text: `⚠️ Server closed with warnings: ${err.message}\n\nServer was running on port ${currentPort}` 
+                }]
+              });
+            } else {
+              cleanup();
+            }
+          });
+          
+          // Fallback timeout
+          setTimeout(() => {
+            logger.warn('Graceful shutdown timeout, forcing close');
+            cleanup();
+          }, timeout);
+        }
+      });
+    } catch (error) {
+      logger.error(`Error closing Environment Manager Server:`, error);
+      return {
+        content: [{ 
+          type: "text", 
+          text: `❌ Error closing Environment Manager Server: ${error instanceof Error ? error.message : String(error)}` 
+        }],
+        isError: true
+      };
+    }
+  }
+);
+
+// Get environment manager status
+server.registerTool(
+  "get-env-manager-status",
+  {
+    title: "Get Environment Manager Status",
+    description: "Check if the environment manager server is running and get its status",
+    inputSchema: {}
+  },
+  async () => {
+    try {
+      if (!webServerInstance || !webServerPort) {
+        return {
+          content: [{ 
+            type: "text", 
+            text: `📊 Environment Manager Server Status: STOPPED\n\nThe server is not currently running.\n\n💡 Use "launch-env-manager-server" to start the server.` 
+          }]
+        };
+      }
+
+      // Check if server is actually listening
+      const isListening = webServerInstance.listening;
+      
+      return {
+        content: [{ 
+          type: "text", 
+          text: `📊 Environment Manager Server Status: ${isListening ? 'RUNNING' : 'STOPPED'}\n\n${isListening ? `🌐 URL: http://localhost:${webServerPort}\n\nThe environment manager allows you to:\n• View all package namespaces and their environment variables\n• Add, edit, and delete environment variables\n• Create new package namespaces\n• Manage variables following the Enact package structure` : 'Server instance exists but is not listening'}\n\nEnvironment variables are stored in ~/.enact/env/ organized by package namespace.` 
+        }]
+      };
+    } catch (error) {
+      logger.error(`Error getting Environment Manager Server status:`, error);
+      return {
+        content: [{ 
+          type: "text", 
+          text: `❌ Error getting Environment Manager Server status: ${error instanceof Error ? error.message : String(error)}` 
+        }],
+        isError: true
+      };
+    }
+  }
+);
+
 // Get environment manager URL
 server.registerTool(
   "get-env-manager-url",
@@ -1406,34 +1618,29 @@ server.registerTool(
 // Start the server
 async function main() {
   try {
-    // Start the web server for environment management
-    try {
-      const configuredPort = process.env.ENACT_WEB_PORT ? parseInt(process.env.ENACT_WEB_PORT) : 5555;
-      const { server: webServer, port } = await startEnvManagerServer(configuredPort);
-      webServerPort = port; // Store the actual port for MCP tools
-      logger.info(`🌐 Environment Manager available at http://localhost:${port}`);
-      
-      // Store web server reference for cleanup
-      process.on('SIGINT', () => {
+    // Set up signal handlers for graceful shutdown
+    process.on('SIGINT', () => {
+      logger.info('Received SIGINT, shutting down gracefully...');
+      if (webServerInstance) {
         logger.info('Shutting down web server...');
-        webServer.close();
-        process.exit(0);
-      });
-      
-      process.on('SIGTERM', () => {
+        webServerInstance.close();
+      }
+      process.exit(0);
+    });
+    
+    process.on('SIGTERM', () => {
+      logger.info('Received SIGTERM, shutting down gracefully...');
+      if (webServerInstance) {
         logger.info('Shutting down web server...');
-        webServer.close();
-        process.exit(0);
-      });
-      
-    } catch (webError) {
-      logger.warn('Failed to start web server for environment management:', webError);
-      logger.info('MCP server will continue without web interface');
-    }
+        webServerInstance.close();
+      }
+      process.exit(0);
+    });
     
     const transport = new StdioServerTransport();
     await server.connect(transport);
     logger.info("🚀 Enact MCP Server with Direct Core Integration started successfully");
+    logger.info("💡 Use 'launch-env-manager-server' tool to start the web interface for environment management");
   } catch (error) {
     console.error("❌ Server connection error:", error);
     if (error instanceof Error) {
