@@ -8,6 +8,7 @@ import { resolveToolEnvironmentVariables } from "../utils/env-loader.js";
 import logger from "../exec/logger.js";
 import yaml from 'yaml';
 import { verifyTool as verifyToolSignatureWithPolicy, VERIFICATION_POLICIES } from "../security/sign.js";
+import { enforceSignatureVerification, createVerificationFailureResult, logSecurityAudit } from "../security/verification-enforcer.js";
 import fs from 'fs';
 import path from 'path';
 
@@ -304,54 +305,24 @@ export class EnactCore {
       // Validate tool structure
       validateToolStructure(tool);
 
-      // Verify signature if present and not skipped
-      if (!options.skipVerification && tool.signature) {
-        // Load public key from keys/file-public.pem
-        let publicKey: string | undefined;
-        try {
-          const keyPath = path.resolve(__dirname, '../../keys/file-public.pem');
-          publicKey = fs.readFileSync(keyPath, 'utf8');
-        } catch (e) {
-          logger.warn('Could not load public key for signature verification:', e);
-        }
-        if (!publicKey) {
-          return {
-            success: false,
-            error: {
-              message: 'Public key not found for signature verification',
-              code: 'PUBLIC_KEY_MISSING'
-            },
-            metadata: {
-              executionId,
-              toolName: tool.name,
-              version: tool.version,
-              executedAt: new Date().toISOString(),
-              environment: 'direct',
-              command: tool.command
-            }
-          };
-        }
-        const policyKey = (options.verifyPolicy || 'permissive').toUpperCase() as 'PERMISSIVE' | 'ENTERPRISE' | 'PARANOID';
-        const policyObj = VERIFICATION_POLICIES[policyKey];
-        const verificationResult = await verifyToolSignatureWithPolicy(tool, policyObj);
-        const isValid = verificationResult.isValid;
-        if (!isValid && options.verifyPolicy !== 'permissive') {
-          return {
-            success: false,
-            error: {
-              message: `Tool signature verification failed: ${tool.name}`,
-              code: 'SIGNATURE_INVALID'
-            },
-            metadata: {
-              executionId,
-              toolName: tool.name,
-              version: tool.version,
-              executedAt: new Date().toISOString(),
-              environment: 'direct',
-              command: tool.command
-            }
-          };
-        }
+      // MANDATORY SIGNATURE VERIFICATION - All tools must be verified before execution
+      const verificationResult = await enforceSignatureVerification(tool, {
+        skipVerification: options.skipVerification,
+        verifyPolicy: options.verifyPolicy,
+        force: options.force,
+        allowUnsigned: false // Never allow unsigned tools in production
+      });
+      
+      // Log security audit information
+      logSecurityAudit(tool, verificationResult, verificationResult.allowed, {
+        skipVerification: options.skipVerification,
+        verifyPolicy: options.verifyPolicy,
+        force: options.force
+      });
+      
+      // Block execution if verification fails
+      if (!verificationResult.allowed) {
+        return createVerificationFailureResult(tool, verificationResult, executionId);
       }
 
       // Validate inputs

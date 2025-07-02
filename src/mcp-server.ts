@@ -7,6 +7,7 @@ import { silentMcpTool, validateSilentEnvironment } from './utils/silent-monitor
 import { startEnvManagerServer } from './web/env-manager-server';
 import { resolveToolEnvironmentVariables, validateRequiredEnvironmentVariables, generateConfigLink } from './utils/env-loader';
 import { verifyTool, VERIFICATION_POLICIES, type VerificationPolicy } from './security/sign';
+import { enforceSignatureVerification } from './security/verification-enforcer';
 
 // Set required environment variables for silent operation first
 process.env.CI = process.env.CI || 'true';
@@ -1497,8 +1498,8 @@ server.registerTool(
         };
       }
       
-      // Verify the tool's signature (mandatory)
-      logger.info(`Verifying tool signatures for: ${name} with policy: ${verifyPolicy}`);
+      // Verify the tool's signature (MANDATORY - no execution without verification)
+      logger.info(`Performing mandatory signature verification for: ${name} with policy: ${verifyPolicy}`);
       
       // Determine verification policy
       const policyKey = verifyPolicy.toUpperCase() as keyof typeof VERIFICATION_POLICIES;

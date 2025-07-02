@@ -10,6 +10,7 @@ import pc from 'picocolors';
 import * as p from '@clack/prompts';
 import yaml from 'yaml';
 import { verifyTool, shouldExecuteTool, VERIFICATION_POLICIES, VerificationPolicy } from '../security/sign';
+import { enforceSignatureVerification } from '../security/verification-enforcer';
 import { resolveToolEnvironmentVariables, validateRequiredEnvironmentVariables, generateConfigLink } from '../utils/env-loader';
 import { EnactApiClient, EnactApiError } from '../api/enact-api';
 import { getAuthHeaders } from './auth';

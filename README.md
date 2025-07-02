@@ -7,7 +7,7 @@ Official CLI for the Enact Protocol - package, secure, and discover AI tools.
 - 🔍 **Search & Discovery** - Find AI tools in the Enact ecosystem
 - ⚡ **Execute Tools** - Run tools directly with secure execution
 - 📦 **Publishing** - Publish your own tools to the registry
-- 🔐 **Security** - Cryptographic signing and verification
+- 🔐 **Security** - **Mandatory cryptographic signing and verification** for all tool execution
 - 🎯 **MCP Integration** - Full Model Context Protocol support
 - 🚀 **Direct Library** - Use as a library in your applications
 - 🌐 **Environment Manager** - Web-based interface for managing environment variables
@@ -78,6 +78,29 @@ The MCP server includes a built-in web interface for managing environment variab
 - **File Structure**: `~/.enact/env/{namespace}/.env`
 
 See [ENVIRONMENT_MANAGER.md](./ENVIRONMENT_MANAGER.md) for detailed usage instructions.
+
+## Security
+
+🔐 **Mandatory Signature Verification** - All tools must be cryptographically signed and verified before execution.
+
+**Verification Policies:**
+- `permissive` - Require 1+ valid signatures (default)
+- `enterprise` - Require author + reviewer signatures
+- `paranoid` - Require author + reviewer + approver signatures
+
+**Example Usage:**
+```bash
+# Tools are automatically verified before execution
+enact exec my-org/secure-tool
+
+# Use strict enterprise policy
+enact exec critical-tool --verify-policy enterprise
+
+# Sign your own tools
+enact sign sign my-tool.yaml --role author
+```
+
+📋 **See [MANDATORY_SIGNATURE_VERIFICATION.md](./MANDATORY_SIGNATURE_VERIFICATION.md) for complete security documentation.**
 
 ### Library Usage
 ```typescript
