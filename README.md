@@ -62,12 +62,24 @@ enact exec author/tool-name --input '{"key": "value"}'
 
 ### MCP Server Usage
 ```bash
-# Start the comprehensive MCP server (includes web-based environment manager)
+# Start the minimal MCP server (7 essential tools)
 enact-mcp-server
 
 # Start the MCP server  
 enact-mcp
 ```
+
+> 🆕 **Minimal Implementation**: The MCP server now uses a streamlined implementation with 7 essential tools instead of 20+. See [MCP_MINIMAL_IMPLEMENTATION.md](./MCP_MINIMAL_IMPLEMENTATION.md) for details.
+
+#### Essential MCP Tools (Minimal Implementation)
+
+1. **`execute-tool-by-name-enhanced`** - Smart tool execution (local → cache → registry)
+2. **`manage-local-tools`** - Local tool management and directory operations
+3. **`create-local-tool`** - Create new local YAML tools
+4. **`enact-search-tools`** - Search registry tools
+5. **`check-operation-status`** - Monitor background operations
+6. **`launch-env-manager-server`** - Start environment variable web UI
+7. **`enact-core-status`** - System health and status
 
 #### Environment Manager Web Interface
 
