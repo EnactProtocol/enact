@@ -15,10 +15,32 @@ import { resolveToolEnvironmentVariables, validateRequiredEnvironmentVariables, 
 import { EnactApiClient, EnactApiError } from '../api/enact-api';
 import { getAuthHeaders } from './auth';
 import { addToHistory } from '../utils/config';
+import { getCurrentConfig } from './config';
 import stripAnsi from 'strip-ansi';
 
-// Create core instance
-const core = new EnactCore();
+// Create core instance with configuration
+let core: EnactCore;
+
+async function getConfiguredCore(): Promise<EnactCore> {
+  if (!core) {
+    try {
+      const config = await getCurrentConfig();
+      
+      const coreOptions = {
+        executionProvider: config.executionProvider,
+        defaultTimeout: config.defaultTimeout,
+        verificationPolicy: config.verificationPolicy,
+        daggerOptions: config.daggerOptions
+      };
+      
+      core = new EnactCore(coreOptions);
+    } catch (error) {
+      // Fallback to default configuration if config loading fails
+      core = new EnactCore();
+    }
+  }
+  return core;
+}
 
 /**
  * Clean output text by removing ANSI escape codes for better readability
@@ -194,7 +216,8 @@ ${pc.bold('EXAMPLES:')}
       format: format as any
     };
 
-    const results = await core.searchTools(searchOptions);
+    const configuredCore = await getConfiguredCore();
+    const results = await configuredCore.searchTools(searchOptions);
     
     spinner.stop(`Found ${results.length} tool${results.length === 1 ? '' : 's'}`);
 
@@ -799,14 +822,15 @@ Examples:
       resources: toolDefinition.resources
     };
 
-    const result = await core.executeTool(enactTool, params, executeOptions);
+    const configuredCore = await getConfiguredCore();
+    const result = await configuredCore.executeTool(enactTool, params, executeOptions);
     
     if (options.verbose) {
       spinner.stop('Execution completed');
     }
 
     if (result.success) {
-      console.error(pc.green('\n✅ Tool executed successfully'));
+      console.error(pc.green('\n✅ Tool executed successfully!!'));
       
       if (result.output) {
         // Check if output contains both stdout and stderr
@@ -910,6 +934,9 @@ Examples:
     p.outro(pc.red('Execution failed'));
     process.exit(1);
   }
+  
+  process.exit(0);
+  
 }
 
 /**
@@ -956,7 +983,8 @@ ${pc.bold('EXAMPLES:')}
     const spinner = p.spinner();
     spinner.start(`Fetching ${toolName}...`);
 
-    const tool = await core.getToolByName(toolName);
+    const configuredCore = await getConfiguredCore();
+    const tool = await configuredCore.getToolByName(toolName);
     
     spinner.stop('Fetch completed');
 
@@ -1085,7 +1113,8 @@ ${pc.bold('EXAMPLES:')}
     const spinner = p.spinner();
     spinner.start(`Verifying ${toolName}...`);
 
-    const result = await core.verifyTool(toolName, policy);
+    const configuredCore = await getConfiguredCore();
+    const result = await configuredCore.verifyTool(toolName, policy);
     
     spinner.stop('Verification completed');
 

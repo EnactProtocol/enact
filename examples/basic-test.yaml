@@ -1,0 +1,50 @@
+name: examples/basic-test
+description: Basic test tool for Enact CLI
+version: 1.0.0
+enact: 1.0.0
+
+# Simple command without complex JSON
+command: 'echo "Hello ${name}! Your message: ${message}"'
+
+tags:
+  - example
+  - test
+
+timeout: 10s
+
+# Input schema
+inputSchema:
+  type: object
+  properties:
+    name:
+      type: string
+      description: Name to greet
+      default: World
+    message:
+      type: string
+      description: Custom message
+      default: Welcome!
+  required:
+    - name
+
+# Simple string output
+outputSchema:
+  type: string
+  description: Greeting message
+
+# Example
+examples:
+  - description: Basic test
+    input:
+      name: Test
+      message: Hello there!
+    output: "Hello Test! Your message: Hello there!"
+
+annotations:
+  readOnlyHint: true
+  idempotentHint: true
+
+authors:
+  - name: Enact Examples
+
+license: MIT

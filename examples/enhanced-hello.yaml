@@ -1,0 +1,134 @@
+name: examples/enhanced-hello
+description: Enhanced Hello World with environment variables and multiple outputs
+version: 1.0.0
+enact: 1.0.0
+
+# Multi-line command with environment variable usage
+command: |
+  #!/bin/bash
+  echo "=== Enhanced Hello World ==="
+  echo "Hello, ${name}!"
+  echo "Current time: $(date)"
+  echo "Environment: ${ENVIRONMENT:-development}"
+  echo "Message: ${message}"
+  echo "Count: ${count}"
+  echo ""
+  echo "JSON Output:"
+  cat << EOF
+  {
+    "greeting": "Hello, ${name}!",
+    "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+    "environment": "${ENVIRONMENT:-development}",
+    "message": "${message}",
+    "count": ${count},
+    "success": true
+  }
+  EOF
+
+tags:
+  - example
+  - greeting
+  - json
+  - environment
+
+timeout: 15s
+
+# Input schema with multiple parameter types
+inputSchema:
+  type: object
+  properties:
+    name:
+      type: string
+      description: The name of the person to greet
+      default: World
+    message:
+      type: string
+      description: A custom message to include
+      default: Welcome to Enact CLI!
+    count:
+      type: integer
+      description: A number to demonstrate integer inputs
+      default: 42
+      minimum: 1
+      maximum: 1000
+  required:
+    - name
+
+# Environment variables
+env:
+  ENVIRONMENT:
+    description: The environment name (development, staging, production)
+    required: false
+    default: development
+    source: env
+
+# Output schema for JSON response
+outputSchema:
+  type: object
+  properties:
+    greeting:
+      type: string
+      description: The greeting message
+    timestamp:
+      type: string
+      description: ISO timestamp when the tool was executed
+    environment:
+      type: string
+      description: The environment name
+    message:
+      type: string
+      description: The custom message
+    count:
+      type: integer
+      description: The provided count
+    success:
+      type: boolean
+      description: Whether the operation succeeded
+  required:
+    - greeting
+    - timestamp
+    - success
+
+# Multiple examples
+examples:
+  - description: Basic usage with defaults
+    input:
+      name: Alice
+    output: |
+      {
+        "greeting": "Hello, Alice!",
+        "timestamp": "2023-12-21T10:30:45Z",
+        "environment": "development",
+        "message": "Welcome to Enact CLI!",
+        "count": 42,
+        "success": true
+      }
+  
+  - description: Custom message and count
+    input:
+      name: Bob
+      message: Have a great day!
+      count: 100
+    output: |
+      {
+        "greeting": "Hello, Bob!",
+        "timestamp": "2023-12-21T10:30:45Z",
+        "environment": "development",
+        "message": "Have a great day!",
+        "count": 100,
+        "success": true
+      }
+
+# Tool annotations
+annotations:
+  readOnlyHint: true
+  idempotentHint: true
+  networkAccessHint: false
+  destructiveHint: false
+
+# Author information
+authors:
+  - name: Enact Examples
+    email: examples@enact.tools
+
+license: MIT

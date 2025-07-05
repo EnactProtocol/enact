@@ -11,6 +11,7 @@ import { verifyTool, shouldExecuteTool, VERIFICATION_POLICIES  } from '../securi
 import { resolveToolEnvironmentVariables, validateRequiredEnvironmentVariables, generateConfigLink } from '../utils/env-loader';
 import { parseTimeout } from '../utils/timeout';
 import { DirectExecutionProvider } from '../core/DirectExecutionProvider';
+import { DaggerExecutionProvider } from '../core/DaggerExecutionProvider';
 
 
 /**
@@ -528,5 +529,47 @@ async function executeCommand(
   return executionProvider.executeCommandExecStyle(command, timeout, verbose, envVars);
 }
 
-// Add a factory function to create a DirectExecutionProvider instance
-const executionProvider = new DirectExecutionProvider();
+// Add factory functions to create execution providers
+function createExecutionProvider(): DirectExecutionProvider | DaggerExecutionProvider {
+  switch (execConfig.provider) {
+    case 'dagger':
+      return new DaggerExecutionProvider(execConfig.daggerOptions);
+    case 'direct':
+    default:
+      return new DirectExecutionProvider();
+  }
+}
+
+// Create execution provider instance
+const executionProvider = createExecutionProvider();
+
+/**
+ * Configure execution provider
+ */
+export function configureExecution(config: ExecConfig): void {
+  execConfig = { ...execConfig, ...config };
+  
+  if (config.provider) {
+    console.log(pc.cyan(`🔧 Switching to ${config.provider} execution provider`));
+    if (config.provider === 'dagger') {
+      console.log(pc.gray('   Using containerized execution with Dagger'));
+    }
+  }
+}
+
+// Configuration for execution provider
+interface ExecConfig {
+  provider: 'direct' | 'dagger';
+  daggerOptions?: {
+    baseImage?: string;
+    enableNetwork?: boolean;
+    enableHostFS?: boolean;
+    maxMemory?: string;
+    maxCPU?: string;
+  };
+}
+
+// Default configuration
+let execConfig: ExecConfig = {
+  provider: 'direct'
+};

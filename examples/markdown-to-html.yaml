@@ -1,0 +1,104 @@
+name: "examples/markdown-to-html"
+description: "Convert Markdown to HTML using markdown-it in a containerized environment"
+command: "npx markdown-it@14.0.0 /app/input.md"
+timeout: "30s"
+version: "1.0.0"
+tags: ["markdown", "html", "converter", "dagger-demo"]
+license: "MIT"
+
+# Input schema - what parameters this tool accepts
+inputSchema:
+  type: object
+  properties:
+    content:
+      type: string
+      description: "Markdown content to convert to HTML"
+    title:
+      type: string
+      description: "Optional title for the document"
+      default: "Untitled Document"
+  required: ["content"]
+
+# Output schema - what this tool returns
+outputSchema:
+  type: object
+  properties:
+    html:
+      type: string
+      description: "Generated HTML content"
+    success:
+      type: boolean
+      description: "Whether the conversion was successful"
+
+# Environment variables (none needed for this simple example)
+env: {}
+
+# Resource requirements
+resources:
+  memory: "256Mi"
+  disk: "100Mi"
+
+# Documentation
+doc: |
+  # Markdown to HTML Converter
+  
+  This tool converts Markdown content to HTML using the popular markdown-it library.
+  It demonstrates containerized execution with Dagger.
+  
+  ## Features
+  
+  - Clean HTML output
+  - CommonMark compliant
+  - Fast execution in containers
+  - No local dependencies required
+  
+  ## Usage Examples
+  
+  ```bash
+  # Basic conversion
+  enact exec examples/markdown-to-html --content "# Hello World"
+  
+  # With custom title
+  enact exec examples/markdown-to-html \
+    --content "# My Document\n\nThis is **bold** text." \
+    --title "My Custom Title"
+  ```
+
+# Example inputs and outputs for testing
+examples:
+  - input:
+      content: "# Hello World\n\nThis is a **bold** statement and this is *italic*."
+      title: "Demo Document"
+    description: "Basic markdown conversion with formatting"
+    
+  - input:
+      content: |
+        # Getting Started
+        
+        ## Prerequisites
+        
+        - Node.js installed
+        - Basic understanding of Markdown
+        
+        ## Steps
+        
+        1. Write your markdown
+        2. Run the converter
+        3. Get beautiful HTML
+        
+        > **Note**: This runs in a container for security!
+      title: "Getting Started Guide"
+    description: "More complex markdown with lists and blockquotes"
+
+# Behavior annotations for MCP compatibility
+annotations:
+  title: "Markdown to HTML Converter"
+  readOnlyHint: true      # This tool doesn't modify the environment
+  idempotentHint: true    # Same input always produces same output
+  openWorldHint: false    # Doesn't interact with external systems (when network disabled)
+
+# Authors
+authors:
+  - name: "Enact Team"
+    email: "team@enact.tools"
+    url: "https://enact.tools"

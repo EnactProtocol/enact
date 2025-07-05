@@ -1,0 +1,184 @@
+name: examples/nodejs-calculator
+description: A Node.js-based calculator tool demonstrating JavaScript execution
+version: 1.0.0
+enact: 1.0.0
+
+# Node.js command that creates and executes a JavaScript file
+command: |
+  cat << 'EOF' > calculator.js
+  const args = process.argv.slice(2);
+  const operation = args[0] || '${operation}';
+  const a = parseFloat(args[1] || '${a}');
+  const b = parseFloat(args[2] || '${b}');
+  
+  let result;
+  let error = null;
+  
+  try {
+    switch (operation) {
+      case 'add':
+        result = a + b;
+        break;
+      case 'subtract':
+        result = a - b;
+        break;
+      case 'multiply':
+        result = a * b;
+        break;
+      case 'divide':
+        if (b === 0) {
+          throw new Error('Division by zero is not allowed');
+        }
+        result = a / b;
+        break;
+      case 'power':
+        result = Math.pow(a, b);
+        break;
+      default:
+        throw new Error('Unsupported operation: ' + operation);
+    }
+    
+    const output = {
+      operation: operation,
+      operands: [a, b],
+      result: result,
+      success: true,
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log(JSON.stringify(output, null, 2));
+  } catch (err) {
+    const output = {
+      operation: operation,
+      operands: [a, b],
+      error: err.message,
+      success: false,
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log(JSON.stringify(output, null, 2));
+    process.exit(1);
+  }
+  EOF
+  
+  node calculator.js
+
+tags:
+  - example
+  - calculator
+  - nodejs
+  - math
+  - javascript
+
+timeout: 20s
+
+# Input schema for calculator operations
+inputSchema:
+  type: object
+  properties:
+    operation:
+      type: string
+      description: Mathematical operation to perform
+      enum: [add, subtract, multiply, divide, power]
+      default: add
+    a:
+      type: number
+      description: First operand
+      default: 10
+    b:
+      type: number
+      description: Second operand
+      default: 5
+  required:
+    - operation
+    - a
+    - b
+
+# Output schema for calculation results
+outputSchema:
+  type: object
+  properties:
+    operation:
+      type: string
+      description: The performed operation
+    operands:
+      type: array
+      items:
+        type: number
+      description: The input operands
+    result:
+      type: number
+      description: The calculation result
+    success:
+      type: boolean
+      description: Whether the operation succeeded
+    timestamp:
+      type: string
+      description: When the calculation was performed
+    error:
+      type: string
+      description: Error message if operation failed
+
+# Calculator examples
+examples:
+  - description: Add two numbers
+    input:
+      operation: add
+      a: 15
+      b: 25
+    output: |
+      {
+        "operation": "add",
+        "operands": [15, 25],
+        "result": 40,
+        "success": true,
+        "timestamp": "2023-12-21T10:30:45.123Z"
+      }
+  
+  - description: Divide numbers
+    input:
+      operation: divide
+      a: 100
+      b: 4
+    output: |
+      {
+        "operation": "divide",
+        "operands": [100, 4],
+        "result": 25,
+        "success": true,
+        "timestamp": "2023-12-21T10:30:45.123Z"
+      }
+  
+  - description: Division by zero error
+    input:
+      operation: divide
+      a: 10
+      b: 0
+    output: |
+      {
+        "operation": "divide",
+        "operands": [10, 0],
+        "error": "Division by zero is not allowed",
+        "success": false,
+        "timestamp": "2023-12-21T10:30:45.123Z"
+      }
+
+# Tool annotations
+annotations:
+  readOnlyHint: true
+  idempotentHint: true
+  networkAccessHint: false
+  destructiveHint: false
+
+# Resource requirements
+resources:
+  cpu: "100m"
+  memory: "128Mi"
+  timeout: "20s"
+
+# Author information
+authors:
+  - name: Enact Examples
+    email: examples@enact.tools
+
+license: MIT

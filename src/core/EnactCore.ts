@@ -4,6 +4,7 @@ import { EnactApiClient } from "../api/enact-api.js";
 import { verifyCommandSafety, sanitizeEnvironmentVariables } from "../security/security.js";
 import { validateToolStructure, validateInputs, validateOutput } from "../exec/validate.js";
 import { DirectExecutionProvider } from "./DirectExecutionProvider.js";
+import { DaggerExecutionProvider } from "./DaggerExecutionProvider.js";
 import { resolveToolEnvironmentVariables } from "../utils/env-loader.js";
 import logger from "../exec/logger.js";
 import yaml from 'yaml';
@@ -15,11 +16,19 @@ import path from 'path';
 export interface EnactCoreOptions {
   apiUrl?: string;
   supabaseUrl?: string;
-  executionProvider?: 'direct' | 'docker' | 'cloud';
+  executionProvider?: 'direct' | 'docker' | 'dagger' | 'cloud';
   authToken?: string;
   verbose?: boolean;
   defaultTimeout?: string;
   verificationPolicy?: 'permissive' | 'enterprise' | 'paranoid';
+  // Dagger-specific options
+  daggerOptions?: {
+    baseImage?: string;
+    enableNetwork?: boolean;
+    enableHostFS?: boolean;
+    maxMemory?: string;
+    maxCPU?: string;
+  };
 }
 
 export interface ToolSearchOptions {
@@ -41,7 +50,7 @@ export interface ToolExecuteOptions {
 
 export class EnactCore {
   private apiClient: EnactApiClient;
-  private executionProvider: DirectExecutionProvider;
+  private executionProvider: DirectExecutionProvider | DaggerExecutionProvider;
   private options: EnactCoreOptions;
 
   constructor(options: EnactCoreOptions = {}) {
@@ -59,7 +68,8 @@ export class EnactCore {
       this.options.supabaseUrl
     );
 
-    this.executionProvider = new DirectExecutionProvider();
+    // Initialize the appropriate execution provider
+    this.executionProvider = this.createExecutionProvider();
   }
   /**
    * Set authentication token for API operations
@@ -698,6 +708,27 @@ export class EnactCore {
       defaultTimeout: this.options.defaultTimeout || '30s',
       authenticated: authStatus.authenticated
     };
+  }
+
+  /**
+   * Create the appropriate execution provider based on options
+   */
+  private createExecutionProvider(): DirectExecutionProvider | DaggerExecutionProvider {
+    switch (this.options.executionProvider) {
+      case 'dagger':
+        return new DaggerExecutionProvider(this.options.daggerOptions);
+      case 'direct':
+      default:
+        return new DirectExecutionProvider();
+    }
+  }
+
+  /**
+   * Switch execution provider at runtime
+   */
+  switchExecutionProvider(provider: 'direct' | 'dagger', options?: any): void {
+    this.options.executionProvider = provider;
+    this.executionProvider = this.createExecutionProvider();
   }
 
   /**

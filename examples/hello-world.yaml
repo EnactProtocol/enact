@@ -1,0 +1,57 @@
+name: examples/hello-world
+description: A simple Hello World tool that greets the user
+version: 1.0.0
+enact: 1.0.0
+
+# Basic command that uses template substitution
+command: echo "Hello, ${name}! Welcome to Enact CLI."
+
+# Tool metadata
+tags:
+  - example
+  - greeting
+  - beginner
+
+timeout: 10s
+
+# Input schema definition
+inputSchema:
+  type: object
+  properties:
+    name:
+      type: string
+      description: The name of the person to greet
+      default: World
+  required:
+    - name
+
+# Output schema definition
+outputSchema:
+  type: string
+  description: A greeting message
+
+# Example usage
+examples:
+  - description: Basic greeting
+    input:
+      name: Alice
+    output: "Hello, Alice! Welcome to Enact CLI."
+  
+  - description: Default greeting
+    input: {}
+    output: "Hello, World! Welcome to Enact CLI."
+
+# Tool annotations for safety
+annotations:
+  readOnlyHint: true
+  idempotentHint: true
+  networkAccessHint: false
+  destructiveHint: false
+
+# Author information
+authors:
+  - name: Enact Examples
+    email: examples@enact.tools
+
+# License
+license: MIT

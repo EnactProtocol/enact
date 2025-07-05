@@ -1,0 +1,67 @@
+name: examples/simple-hello
+description: Simple Hello World tool with JSON output
+version: 1.0.0
+enact: 1.0.0
+
+# Simple command that produces JSON output
+command: |
+  echo "{\"greeting\": \"Hello, ${name}!\", \"message\": \"${message}\", \"success\": true, \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
+
+tags:
+  - example
+  - greeting
+  - json
+
+timeout: 10s
+
+# Input schema
+inputSchema:
+  type: object
+  properties:
+    name:
+      type: string
+      description: The name of the person to greet
+      default: World
+    message:
+      type: string
+      description: A custom message
+      default: Welcome to Enact!
+  required:
+    - name
+
+# Output schema for JSON response
+outputSchema:
+  type: object
+  properties:
+    greeting:
+      type: string
+    message:
+      type: string
+    success:
+      type: boolean
+    timestamp:
+      type: string
+
+# Example
+examples:
+  - description: Basic greeting
+    input:
+      name: Alice
+      message: Have a great day!
+    output: |
+      {
+        "greeting": "Hello, Alice!",
+        "message": "Have a great day!",
+        "success": true,
+        "timestamp": "2023-12-21T10:30:45Z"
+      }
+
+# Tool annotations
+annotations:
+  readOnlyHint: true
+  idempotentHint: true
+
+authors:
+  - name: Enact Examples
+
+license: MIT

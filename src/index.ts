@@ -10,6 +10,7 @@ import { handleUserCommand } from './commands/user';
 import { handleSignCommand } from './commands/sign';
 import { handleEnvCommand } from './commands/env';
 import { handleMcpCommand } from './commands/mcp';
+import { handleConfigCommand } from './commands/config';
 
 // Import core-based handlers
 import { 
@@ -258,6 +259,13 @@ async function main() {
         });
         break;
         
+      case 'config': // New case for config command
+        await handleConfigCommand(commandArgs, {
+          help: values.help as boolean | undefined,
+          global: values.global as boolean | undefined
+        });
+        break;
+        
       case undefined:
         // No command specified, show interactive mode
         if (values.help) {
@@ -276,10 +284,12 @@ async function main() {
               { value: 'init', label: '📝 Create a new tool definition' },
               { value: 'sign', label: '✍️ Sign & verify tools' },
               { value: 'env', label: '🌍 Manage environment variables' },
+              { value: 'config', label: '🔧 Configure Enact settings' },
               { value: 'auth', label: '🔐 Manage authentication' },
               { value: 'remote', label: '🌐 Manage remote servers' },
               { value: 'user', label: '👤 User operations' }, // New option
               { value: 'mcp', label: '🛠️ Manage MCP' }, // New MCP option
+              { value: 'config', label: '⚙️ Manage configuration' }, // New config option
               { value: 'help', label: '❓ Show help' },
               { value: 'exit', label: '👋 Exit' }
             ]
@@ -414,6 +424,25 @@ async function main() {
             
             if (mcpAction !== null) {
               await handleMcpCommand([mcpAction as string], {});
+            }
+            return;
+          }
+          
+          if (action === 'config') {
+            // Show config submenu
+            const configAction = await p.select({
+              message: 'Configuration:',
+              options: [
+                { value: 'setup', label: '🔧 Interactive setup' },
+                { value: 'list', label: '📋 Show current config' },
+                { value: 'set', label: '⚙️ Set configuration value' },
+                { value: 'get', label: '📝 Get configuration value' },
+                { value: 'reset', label: '🔄 Reset to defaults' }
+              ]
+            });
+            
+            if (configAction !== null) {
+              await handleConfigCommand([configAction as string], {});
             }
             return;
           }
