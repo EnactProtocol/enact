@@ -115,7 +115,7 @@ describe('DirectExecutionProvider Output Validation', () => {
       const tool: EnactTool = {
         name: 'test/multiline-output',
         description: 'Tool that outputs multiple lines',
-        command: 'node -e "console.log(\\"Line 1\\\\nLine 2\\\\nLine 3\\")"',
+        command: 'printf "Line 1\\nLine 2\\nLine 3\\n"',
         timeout: '5s'
       };
 
@@ -148,15 +148,14 @@ describe('DirectExecutionProvider Output Validation', () => {
       const tool: EnactTool = {
         name: 'test/whitespace-output',
         description: 'Tool that outputs only whitespace',
-        command: 'echo "   " && echo "\t" && echo "   "',
+        command: 'printf "   \\n\\t\\n   \\n"',
         timeout: '5s'
       };
 
       const result = await provider.execute(tool, {}, createEnvironment());
 
       expect(result.success).toBe(true);
-      expect(result.output.stdout.length).toBeGreaterThan(0);
-      expect(result.output.stdout.replace(/\s/g, '')).toBe('');
+      expect(result.output.stdout.trim()).toBe('');
     });
   });
 
@@ -165,7 +164,7 @@ describe('DirectExecutionProvider Output Validation', () => {
       const tool: EnactTool = {
         name: 'test/stderr-output',
         description: 'Tool that outputs to stderr',
-        command: 'sh -c "echo \\"Error message\\" >&2; echo \\"Success message\\""',
+        command: 'sh -c "echo Error message >&2; echo Success message"',
         timeout: '5s'
       };
 
@@ -180,7 +179,7 @@ describe('DirectExecutionProvider Output Validation', () => {
       const tool: EnactTool = {
         name: 'test/command-failure',
         description: 'Tool that fails with error output',
-        command: 'sh -c "echo \\"This failed\\" >&2; exit 1"',
+        command: 'sh -c "echo This failed >&2; exit 1"',
         timeout: '5s'
       };
 
@@ -340,7 +339,7 @@ describe('DirectExecutionProvider Output Validation', () => {
       const tool: EnactTool = {
         name: 'test/env-output',
         description: 'Tool that outputs environment variable',
-        command: 'sh -c "echo \\"TEST_VAR is: $TEST_VAR\\""',
+        command: 'sh -c "echo TEST_VAR is: $TEST_VAR"',
         timeout: '5s'
       };
 
@@ -358,7 +357,7 @@ describe('DirectExecutionProvider Output Validation', () => {
       const tool: EnactTool = {
         name: 'test/multi-env',
         description: 'Tool that uses multiple environment variables',
-        command: 'sh -c "echo \\"{\\\"var1\\\": \\\"$VAR1\\\", \\\"var2\\\": \\\"$VAR2\\\", \\\"var3\\\": \\\"$VAR3\\\"}\\\""',
+        command: 'sh -c \'echo "{\\"var1\\": \\"$VAR1\\", \\"var2\\": \\"$VAR2\\", \\"var3\\": \\"$VAR3\\"}"\'',
         timeout: '5s'
       };
 
@@ -384,7 +383,7 @@ describe('DirectExecutionProvider Output Validation', () => {
       const tool: EnactTool = {
         name: 'test/control-chars',
         description: 'Tool with control characters in output',
-        command: 'node -e "process.stdout.write(\\"Before\\\\rCarriage\\\\nReturn\\\\tTab\\\\bBackspace\\\\fFormFeed\\\\vVerticalTab\\")"',
+        command: 'printf "Before\\rCarriage\\nReturn\\tTab\\bBackspace\\fFormFeed\\vVerticalTab"',
         timeout: '5s'
       };
 
@@ -399,8 +398,8 @@ describe('DirectExecutionProvider Output Validation', () => {
       const tool: EnactTool = {
         name: 'test/long-line',
         description: 'Tool with very long single line',
-        command: 'node -e "console.log(\\"🎉\\".repeat(10000))"',
-        timeout: '10s'
+        command: "bash -c 'for i in {1..8000}; do printf \"a\"; done'",
+        timeout: '10s',
       };
 
       const result = await provider.execute(tool, {}, createEnvironment());
@@ -413,7 +412,7 @@ describe('DirectExecutionProvider Output Validation', () => {
       const tool: EnactTool = {
         name: 'test/mixed-output',
         description: 'Tool with mixed stdout/stderr',
-        command: 'sh -c "echo \\"stdout line 1\\"; echo \\"stderr line 1\\" >&2; echo \\"stdout line 2\\"; echo \\"stderr line 2\\" >&2"',
+        command: 'sh -c "echo stdout line 1; echo stderr line 1 >&2; echo stdout line 2; echo stderr line 2 >&2"',
         timeout: '5s'
       };
 

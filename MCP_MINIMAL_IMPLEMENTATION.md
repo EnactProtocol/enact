@@ -7,7 +7,6 @@ This directory now contains a **simplified, minimal MCP server** implementation 
 ### Replaced Complex MCP Server
 - **Before**: `mcp-server.ts` had 20+ tools with complex legacy implementations
 - **After**: `mcp-server.ts` now has only 7 essential, well-designed tools
-- **Backup**: The old implementation was saved as `mcp-server-legacy.ts`
 
 ### 7 Essential Tools (Minimal Implementation)
 
@@ -77,8 +76,8 @@ This directory now contains a **simplified, minimal MCP server** implementation 
 
 ```
 src/
-├── mcp-server.ts          # ← NEW: Minimal 7-tool implementation
-├── mcp-server-legacy.ts   # ← BACKUP: Original complex implementation  
+├── mcp-server.ts          # ← Minimal 7-tool implementation
+├── mcp-server-minimal.ts  # ← Alternative minimal version
 ├── LocalToolResolver.ts   # Tool resolution logic
 └── ...
 ```
@@ -165,14 +164,13 @@ npm run demo:mcp-local
 npm run demo:mcp-enact-local
 ```
 
-## 🚀 Migration from Legacy
+## 🚀 Migration Notes
 
-If you need specific functionality that was removed:
+The minimal implementation provides all essential functionality through 7 well-designed tools:
 
-1. **Check `mcp-server-legacy.ts`** for the old implementation
-2. **Most functionality is still available** through the 7 essential tools
-3. **Complex tool registrations** were consolidated into the enhanced execution tool
-4. **Multiple search tools** were unified into one search tool
+1. **Most functionality is still available** through the 7 essential tools
+2. **Complex tool registrations** were consolidated into the enhanced execution tool
+3. **Multiple search tools** were unified into one search tool
 
 ## ✅ Verification
 
