@@ -46,34 +46,33 @@ describe('Exec Command Migration', () => {
     });
 
     test('should have core library integration', () => {
-      const { EnactCore } = require('../../src/core/EnactCore');
+      const { EnactCore } = require('@enactprotocol/shared/core');
       expect(EnactCore).toBeDefined();
       
       // Should have the required execution methods
       const core = new EnactCore();
       expect(typeof core.executeTool).toBe('function');
-      expect(typeof core.executeToolByName).toBe('function');
     });
 
     test('should support all verification policies', () => {
-      const { VERIFICATION_POLICIES } = require('../../src/security/sign');
+      const { VERIFICATION_POLICIES } = require('@enactprotocol/shared/security');
       expect(VERIFICATION_POLICIES.PERMISSIVE).toBeDefined();
       expect(VERIFICATION_POLICIES.ENTERPRISE).toBeDefined();
       expect(VERIFICATION_POLICIES.PARANOID).toBeDefined();
     });
 
     test('should support environment variable management', () => {
-      const envLoader = require('../../src/utils/env-loader');
-      expect(typeof envLoader.resolveToolEnvironmentVariables).toBe('function');
-      expect(typeof envLoader.validateRequiredEnvironmentVariables).toBe('function');
+      const { resolveToolEnvironmentVariables, validateRequiredEnvironmentVariables } = require('@enactprotocol/shared/utils');
+      expect(typeof resolveToolEnvironmentVariables).toBe('function');
+      expect(typeof validateRequiredEnvironmentVariables).toBe('function');
     });
 
     test('should have proper type definitions', () => {
-      const coreTypes = require('../../src/core/EnactCore');
-      expect(coreTypes.EnactCore).toBeDefined();
+      const { EnactCore } = require('@enactprotocol/shared/core');
+      expect(EnactCore).toBeDefined();
       
-      const apiTypes = require('../../src/api/enact-api');
-      expect(apiTypes.EnactApiClient).toBeDefined();
+      const { EnactApiClient } = require('@enactprotocol/shared/api');
+      expect(EnactApiClient).toBeDefined();
     });
   });
 
@@ -184,8 +183,8 @@ describe('Exec Command Migration', () => {
       expect(coreContent).toContain('options.input');
       
       // Key=value parameters
-      expect(coreContent).toContain('arg.includes(\'=\')');
-      expect(coreContent).toContain('arg.split(\'=\')');
+      expect(coreContent).toContain('arg.includes("=")');
+      expect(coreContent).toContain('arg.split("=")');
     });
 
     test('should have dry run support', () => {

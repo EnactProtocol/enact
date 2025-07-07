@@ -75,7 +75,7 @@ export class EnactCore {
 		this.options = {
 			apiUrl: "https://enact.tools",
 			supabaseUrl: "https://xjnhhxwxovjifdxdwzih.supabase.co",
-			executionProvider: "direct",
+			executionProvider: "dagger",
 			defaultTimeout: "30s",
 			verificationPolicy: "permissive",
 			...options,
@@ -805,11 +805,11 @@ export class EnactCore {
 		| DirectExecutionProvider
 		| DaggerExecutionProvider {
 		switch (this.options.executionProvider) {
-			case "dagger":
-				return new DaggerExecutionProvider(this.options.daggerOptions);
 			case "direct":
-			default:
 				return new DirectExecutionProvider();
+			case "dagger":
+			default:
+				return new DaggerExecutionProvider(this.options.daggerOptions);
 		}
 	}
 

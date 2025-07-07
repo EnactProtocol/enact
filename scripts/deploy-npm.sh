@@ -178,7 +178,7 @@ publish_package() {
         npm pack --dry-run
     else
         # Actual publish
-        if npm publish --tag "$TAG"; then
+        if npm publish --tag "$TAG" --access public; then
             log_success "Published $package_name@$version"
         else
             log_error "Failed to publish $package_name@$version"

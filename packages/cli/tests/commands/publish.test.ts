@@ -45,9 +45,9 @@ describe('Publish Command Migration', () => {
       const coreContent = await readFile('src/commands/core.ts', 'utf8');
       
       // Should import necessary dependencies
-      expect(coreContent).toContain("import { readFile } from 'fs/promises'");
-      expect(coreContent).toContain("import { getAuthHeaders } from './auth'");
-      expect(coreContent).toContain("import { addToHistory } from '../utils/config'");
+      expect(coreContent).toContain("import { readFile } from \"fs/promises\"");
+      expect(coreContent).toContain("import { getAuthHeaders } from \"./auth\"");
+      expect(coreContent).toContain("import { addToHistory } from \"@enactprotocol/shared/utils\"");
     });
 
     test('should integrate with EnactCore for publishing', async () => {
@@ -129,7 +129,7 @@ describe('Publish Command Migration', () => {
       const indexContent = await readFile('src/index.ts', 'utf8');
       
       // Should include publish in interactive options
-      expect(indexContent).toContain("value: 'publish'");
+      expect(indexContent).toContain('value: "publish"');
       expect(indexContent).toContain('📤 Publish a tool');
     });
   });

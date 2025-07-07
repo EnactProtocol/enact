@@ -51,7 +51,7 @@ async function loadConfig(global: boolean = false): Promise<EnactConfig> {
 
 	if (!existsSync(configPath)) {
 		return {
-			executionProvider: "direct",
+			executionProvider: "dagger",
 			defaultTimeout: "30s",
 			verificationPolicy: "permissive",
 		};
@@ -63,7 +63,7 @@ async function loadConfig(global: boolean = false): Promise<EnactConfig> {
 
 		// Ensure defaults
 		return {
-			executionProvider: "direct",
+			executionProvider: "dagger",
 			defaultTimeout: "30s",
 			verificationPolicy: "permissive",
 			...config,
@@ -71,7 +71,7 @@ async function loadConfig(global: boolean = false): Promise<EnactConfig> {
 	} catch (error) {
 		console.error(pc.red(`Error reading config file: ${error}`));
 		return {
-			executionProvider: "direct",
+			executionProvider: "dagger",
 			defaultTimeout: "30s",
 			verificationPolicy: "permissive",
 		};
@@ -175,7 +175,7 @@ async function listConfig(global: boolean = false): Promise<void> {
  */
 async function resetConfig(global: boolean = false): Promise<void> {
 	const defaultConfig: EnactConfig = {
-		executionProvider: "direct",
+		executionProvider: "dagger",
 		defaultTimeout: "30s",
 		verificationPolicy: "permissive",
 	};
@@ -194,8 +194,8 @@ async function interactiveConfig(global: boolean = false): Promise<void> {
 	const executionProvider = await p.select({
 		message: "Select execution provider:",
 		options: [
-			{ value: "direct", label: "Direct (run commands directly on host)" },
 			{ value: "dagger", label: "Dagger (containerized execution)" },
+			{ value: "direct", label: "Direct (run commands directly on host)" },
 		],
 		initialValue: currentConfig.executionProvider,
 	});
@@ -298,7 +298,7 @@ function showConfigHelp(): void {
 	);
 	console.log("  --help              Show this help\n");
 	console.log("Configuration Keys:");
-	console.log("  executionProvider              direct | dagger");
+	console.log("  executionProvider              dagger | direct");
 	console.log(
 		"  verificationPolicy             permissive | enterprise | paranoid",
 	);

@@ -43,7 +43,7 @@ const enactCore = new EnactCore({
 	supabaseUrl:
 		process.env.ENACT_SUPABASE_URL ||
 		"https://xjnhhxwxovjifdxdwzih.supabase.co",
-	executionProvider: "direct",
+	executionProvider: (process.env.ENACT_EXECUTION_PROVIDER as any) || "dagger",
 	verificationPolicy: (process.env.ENACT_VERIFY_POLICY as any) || "permissive",
 	authToken: process.env.ENACT_AUTH_TOKEN,
 	defaultTimeout: "120s", // Increased timeout for MCP operations

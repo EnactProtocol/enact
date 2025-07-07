@@ -636,11 +636,11 @@ function createExecutionProvider():
 	| DirectExecutionProvider
 	| DaggerExecutionProvider {
 	switch (execConfig.provider) {
-		case "dagger":
-			return new DaggerExecutionProvider(execConfig.daggerOptions);
 		case "direct":
-		default:
 			return new DirectExecutionProvider();
+		case "dagger":
+		default:
+			return new DaggerExecutionProvider(execConfig.daggerOptions);
 	}
 }
 
@@ -677,5 +677,5 @@ interface ExecConfig {
 
 // Default configuration
 let execConfig: ExecConfig = {
-	provider: "direct",
+	provider: "dagger",
 };
