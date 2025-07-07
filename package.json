@@ -30,7 +30,16 @@
     "build:linux": "bun --cwd packages/cli run build:linux",
     "build:macos": "bun --cwd packages/cli run build:macos", 
     "build:windows": "bun --cwd packages/cli run build:windows",
-    "release": "bun run build:all && bun run build"
+    "release": "bun run build:all && bun run build",
+    "deploy": "./scripts/deploy-npm.sh",
+    "deploy:dry": "./scripts/deploy-npm.sh --dry-run",
+    "deploy:cli": "./scripts/deploy-npm.sh --package cli",
+    "deploy:mcp": "./scripts/deploy-npm.sh --package mcp-server",
+    "deploy:shared": "./scripts/deploy-npm.sh --package shared",
+    "version:patch": "./scripts/version-bump.sh patch",
+    "version:minor": "./scripts/version-bump.sh minor",
+    "version:major": "./scripts/version-bump.sh major",
+    "version:dry": "./scripts/version-bump.sh patch --dry-run"
   },
   "keywords": [
     "cli",
