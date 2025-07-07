@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/mcp-server",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "MCP server for the Enact Protocol - enables AI tools integration via Model Context Protocol",
   "type": "module",
   "main": "./dist/index.js",
@@ -41,7 +41,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@enactprotocol/shared": "^1.0.13",
+    "@enactprotocol/shared": "^1.0.14",
     "@modelcontextprotocol/sdk": "^1.13.0",
     "zod": "^3.25.67"
   },
