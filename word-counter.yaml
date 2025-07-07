@@ -1,0 +1,24 @@
+enact: "1.0.0"
+name: test/word-counter
+description: "Count words in text using a simple approach"
+command: "bash -c \"echo '${text}' | wc -w\""
+timeout: "5s"
+tags: ["text", "analysis", "utility"]
+inputSchema:
+  type: object
+  properties:
+    text:
+      type: string
+      description: "Text to analyze"
+  required: ["text"]
+outputSchema:
+  type: object
+  properties:
+    word_count:
+      type: number
+      description: "Number of words in the text"
+examples:
+  - input:
+      text: "Hello world test"
+    output:
+      word_count: 3

@@ -13,14 +13,15 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target node && sed -i.bak '1{/^#!/d;}' ./dist/index.js && echo '#!/usr/bin/env node' | cat - ./dist/index.js > temp && mv temp ./dist/index.js && chmod +x ./dist/index.js",
+    "build": "bun build ./src/index.ts --outdir ./dist --target node && mkdir -p ./dist/web && cp -r ../shared/src/web/static ./dist/web/ && sed -i.bak '1{/^#!/d;}' ./dist/index.js && echo '#!/usr/bin/env node' | cat - ./dist/index.js > temp && mv temp ./dist/index.js && chmod +x ./dist/index.js",
     "build:minimal": "bun build ./src/minimal.ts --outdir ./dist --target node && sed -i.bak '1{/^#!/d;}' ./dist/minimal.js && echo '#!/usr/bin/env node' | cat - ./dist/minimal.js > temp && mv temp ./dist/minimal.js && chmod +x ./dist/minimal.js",
     "start": "node ./dist/index.js",
     "start:minimal": "node ./dist/minimal.js",
     "dev": "bun run --watch src/index.ts",
     "dev:minimal": "bun run --watch src/minimal.ts",
-    "test": "vitest",
-    "test:watch": "vitest --watch"
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage"
   },
   "keywords": [
     "mcp",
@@ -47,7 +48,6 @@
   "devDependencies": {
     "@types/node": "^20.12.12",
     "bun-types": "latest",
-    "typescript": "^5.4.5",
-    "vitest": "^2.0.0"
+    "typescript": "^5.4.5"
   }
 }

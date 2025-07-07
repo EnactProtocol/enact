@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
-import { verifyTool, VERIFICATION_POLICIES } from '../src/security/sign';
+import { verifyTool, VERIFICATION_POLICIES } from '@enactprotocol/shared/security';
 
 // Mock the security module
 const mockVerifyTool = mock(async (tool: any, policy: any) => ({
@@ -63,7 +63,7 @@ describe('Enact Register Tool with Signature Verification', () => {
       expect(typeof verifyTool).toBe('function');
       
       // Test that we can import the MCP server module
-      const { server } = await import('../src/mcp-server');
+      const { server } = await import('../src/index');
       expect(server).toBeDefined();
     });
 

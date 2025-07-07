@@ -2,24 +2,22 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { EnactCore } from "@enactprotocol/shared/core";
-import logger from "@enactprotocol/shared/exec";
+import { logger } from "@enactprotocol/shared/exec";
 import {
 	silentMcpTool,
 	validateSilentEnvironment,
-} from "@enactprotocol/shared/utils";
-import { startEnvManagerServer } from "@enactprotocol/shared/web";
-import {
 	resolveToolEnvironmentVariables,
 	validateRequiredEnvironmentVariables,
 	generateConfigLink,
 } from "@enactprotocol/shared/utils";
+import { startEnvManagerServer } from "@enactprotocol/shared/web";
 import {
 	verifyTool,
 	VERIFICATION_POLICIES,
 	type VerificationPolicy,
+	enforceSignatureVerification,
 } from "@enactprotocol/shared/security";
-import { enforceSignatureVerification } from "@enactprotocol/shared/security";
-import LocalToolResolver from "@enactprotocol/shared";
+import { LocalToolResolver } from "@enactprotocol/shared";
 import { homedir } from "os";
 import { join } from "path";
 
@@ -193,9 +191,9 @@ const toolResolver = new LocalToolResolver(
 
 // ===== TOOL 1: Main Execution (Enhanced) =====
 server.registerTool(
-	"execute-tool-by-name-enhanced",
+	"execute-tool-by-name",
 	{
-		title: "Execute Tool (Enhanced)",
+		title: "Execute Tool",
 		description:
 			"Execute tools with smart resolution: local files, local tools directory, or registry. Supports async execution.",
 		inputSchema: {
@@ -789,7 +787,7 @@ server.registerTool(
 				output += `🏷️ Tags: ${tags.join(", ")}\n`;
 			}
 
-			output += `\n💡 Execute with: execute-tool-by-name-enhanced "${name}"`;
+			output += `\n💡 Execute with: execute-tool-by-name "${name}"`;
 
 			return { content: [{ type: "text", text: output }] };
 		} catch (error) {
@@ -866,7 +864,7 @@ server.registerTool(
 				output += `\n`;
 			});
 
-			output += `💡 Execute any tool with: execute-tool-by-name-enhanced "<tool-name>"`;
+			output += `💡 Execute any tool with: execute-tool-by-name "<tool-name>"`;
 
 			return { content: [{ type: "text", text: output }] };
 		} catch (error) {

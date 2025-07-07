@@ -3,6 +3,7 @@ import * as p from "@clack/prompts";
 import pc from "picocolors";
 import * as fs from "fs";
 import * as path from "path";
+import * as os from "os";
 import {
 	verifyTool,
 	VERIFICATION_POLICIES,
@@ -42,7 +43,7 @@ Options:
   --policy <policy>   Verification policy: permissive, enterprise, paranoid
   --private-key <path> Path to private key for signing
   --role <role>       Role for signature: author, reviewer, approver
-  --signer <name>     Signer identifier
+  --signer <name>     Signer identifier (defaults to system username)
   --verbose, -v       Show detailed information
 
 Verification Policies:
@@ -375,18 +376,15 @@ async function handleSignToolCommand(
 	}
 
 	if (!signerName) {
+		const defaultSigner = os.userInfo().username;
 		signerName = (await p.text({
 			message: "Enter your signer identifier:",
-			placeholder: "your-username or email@domain.com",
-			validate: (value) => {
-				if (!value.trim()) return "Please enter a signer identifier";
-				return undefined;
-			},
+			placeholder: defaultSigner,
+			initialValue: defaultSigner,
 		})) as string;
 
 		if (!signerName) {
-			p.outro(pc.yellow("Signing cancelled"));
-			return;
+			signerName = defaultSigner;
 		}
 	}
 

@@ -1,0 +1,11 @@
+[test]
+# Global test configuration
+timeout = 10000
+
+# Test patterns  
+include = ["**/*.test.ts", "**/*.spec.ts"]
+exclude = [
+  "**/node_modules/**",
+  "**/dist/**",
+  "**/*.d.ts"
+]

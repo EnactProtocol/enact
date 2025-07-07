@@ -2,7 +2,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { mcpCoreService } from "@enactprotocol/shared/services";
+import { McpCoreService } from "@enactprotocol/shared/services";
+
+// Initialize the core service
+const mcpCoreService = new McpCoreService();
 
 const server = new McpServer(
 	{
@@ -33,73 +36,6 @@ function safeJsonStringify(
 	}
 }
 
-// Execute tool by name using core library
-server.tool(
-	"execute-tool-by-name",
-	"Execute an Enact tool by its name using core library",
-	{
-		name: z.string(),
-		inputs: z.record(z.any()).optional(),
-		timeout: z.string().optional(),
-		verifyPolicy: z.enum(["permissive", "enterprise", "paranoid"]).optional(),
-		skipVerification: z.boolean().optional(),
-		force: z.boolean().optional(),
-		dryRun: z.boolean().optional(),
-	},
-	async ({
-		name,
-		inputs = {},
-		timeout,
-		verifyPolicy,
-		skipVerification,
-		force,
-		dryRun,
-	}) => {
-		try {
-			console.error(`Executing tool ${name} via core library`);
-
-			const result = await mcpCoreService.executeToolByName(name, inputs, {
-				timeout,
-				verifyPolicy,
-				skipVerification,
-				force,
-				dryRun,
-			});
-
-			if (!result.success) {
-				return {
-					content: [
-						{
-							type: "text",
-							text: `Error executing tool ${name}: ${result.error?.message}`,
-						},
-					],
-					isError: true,
-				};
-			}
-
-			return {
-				content: [
-					{
-						type: "text",
-						text: `Successfully executed tool ${name}\nOutput: ${safeJsonStringify(result)}`,
-					},
-				],
-			};
-		} catch (error) {
-			console.error(`Error executing tool:`, error);
-			return {
-				content: [
-					{
-						type: "text",
-						text: `Internal error executing tool: ${error instanceof Error ? error.message : String(error)}`,
-					},
-				],
-				isError: true,
-			};
-		}
-	},
-);
 
 // Search tools using core library
 server.tool(

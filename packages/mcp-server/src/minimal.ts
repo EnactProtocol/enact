@@ -2,24 +2,22 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { EnactCore } from "@enactprotocol/shared/core";
-import logger from "@enactprotocol/shared/exec";
+import { logger } from "@enactprotocol/shared/exec";
 import {
 	silentMcpTool,
 	validateSilentEnvironment,
-} from "@enactprotocol/shared/utils";
-import { startEnvManagerServer } from "@enactprotocol/shared/web";
-import {
 	resolveToolEnvironmentVariables,
 	validateRequiredEnvironmentVariables,
 	generateConfigLink,
 } from "@enactprotocol/shared/utils";
+import { startEnvManagerServer } from "@enactprotocol/shared/web";
 import {
 	verifyTool,
 	VERIFICATION_POLICIES,
 	type VerificationPolicy,
+	enforceSignatureVerification,
 } from "@enactprotocol/shared/security";
-import { enforceSignatureVerification } from "@enactprotocol/shared/security";
-import LocalToolResolver from "@enactprotocol/shared";
+import { LocalToolResolver } from "@enactprotocol/shared";
 import { homedir } from "os";
 import { join } from "path";
 
@@ -125,7 +123,7 @@ async function validateMcpToolEnvironmentVariables(
 		if (!validation.valid) {
 			let errorMessage = "❌ Missing required environment variables:\n\n";
 
-			validation.missing.forEach((varName) => {
+			validation.missing.forEach((varName: string) => {
 				const config = toolEnv[varName];
 				const description = config?.description
 					? ` - ${config.description}`
@@ -193,9 +191,9 @@ const toolResolver = new LocalToolResolver(
 
 // ===== TOOL 1: Main Execution (Enhanced) =====
 server.registerTool(
-	"execute-tool-by-name-enhanced",
+	"execute-tool-by-name",
 	{
-		title: "Execute Tool (Enhanced)",
+		title: "Execute Tool",
 		description:
 			"Execute tools with smart resolution: local files, local tools directory, or registry. Supports async execution.",
 		inputSchema: {
@@ -409,11 +407,11 @@ server.registerTool(
 				runningOperations.set(operationId, operation);
 
 				executionPromise
-					.then((result) => {
+					.then((result: any) => {
 						operation.status = "completed";
 						operation.result = result;
 					})
-					.catch((error) => {
+					.catch((error: any) => {
 						operation.status = "failed";
 						operation.error = error;
 					});
@@ -789,7 +787,7 @@ server.registerTool(
 				output += `🏷️ Tags: ${tags.join(", ")}\n`;
 			}
 
-			output += `\n💡 Execute with: execute-tool-by-name-enhanced "${name}"`;
+			output += `\n💡 Execute with: execute-tool-by-name "${name}"`;
 
 			return { content: [{ type: "text", text: output }] };
 		} catch (error) {
@@ -843,7 +841,7 @@ server.registerTool(
 			let output = `🔍 Found ${tools.length} tools for "${query}"\n`;
 			output += `${"=".repeat(40)}\n\n`;
 
-			tools.forEach((tool, index) => {
+			tools.forEach((tool: any, index: number) => {
 				output += `${index + 1}. 🔧 ${tool.name}\n`;
 				output += `   📝 ${tool.description || "No description"}\n`;
 				output += `   👤 ${tool.author || "Unknown author"}\n`;
@@ -866,7 +864,7 @@ server.registerTool(
 				output += `\n`;
 			});
 
-			output += `💡 Execute any tool with: execute-tool-by-name-enhanced "<tool-name>"`;
+			output += `💡 Execute any tool with: execute-tool-by-name "<tool-name>"`;
 
 			return { content: [{ type: "text", text: output }] };
 		} catch (error) {
@@ -1045,7 +1043,7 @@ server.registerTool(
 				const operationId = `env-manager-${Date.now()}`;
 
 				const launchPromise = startEnvManagerServer(port).then(
-					({ server: webServer, port: actualPort }) => {
+					({ server: webServer, port: actualPort }: { server: any; port: number }) => {
 						webServerInstance = webServer;
 						webServerPort = actualPort;
 						return { server: webServer, port: actualPort };
@@ -1065,11 +1063,11 @@ server.registerTool(
 				runningOperations.set(operationId, operation);
 
 				launchPromise
-					.then((result) => {
+					.then((result: any) => {
 						operation.status = "completed";
 						operation.result = result;
 					})
-					.catch((error) => {
+					.catch((error: any) => {
 						operation.status = "failed";
 						operation.error = error;
 					});

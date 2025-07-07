@@ -1,0 +1,5 @@
+{
+  "executionProvider": "dagger",
+  "defaultTimeout": "30s",
+  "verificationPolicy": "permissive"
+}

@@ -4,8 +4,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, spyOn, mock } from 'bun:test';
-import { createMockConsole, ProcessExitError } from './helpers/test-utils';
-import { EnactCore } from '../src/core/EnactCore';
+import { createMockConsole, ProcessExitError } from '../../shared/tests/helpers/test-utils';
+import { EnactCore } from '@enactprotocol/shared/core';
 
 interface ConsoleMock {
   log: any;

@@ -50,8 +50,9 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "test": "vitest",
-    "test:watch": "vitest --watch"
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage"
   },
   "keywords": [
     "enact",
@@ -73,7 +74,6 @@
   },
   "devDependencies": {
     "@types/node": "^20.12.12",
-    "typescript": "^5.4.5",
-    "vitest": "^2.0.0"
+    "typescript": "^5.4.5"
   }
 }

@@ -10,7 +10,7 @@ This directory now contains a **simplified, minimal MCP server** implementation 
 
 ### 7 Essential Tools (Minimal Implementation)
 
-1. **`execute-tool-by-name-enhanced`** - Smart tool execution with local-first resolution
+1. **`execute-tool-by-name`** - Smart tool execution with local-first resolution
    - Local file execution
    - Local tools directory 
    - Registry caching
@@ -88,19 +88,19 @@ src/
 ```javascript
 // Execute local file directly
 await client.callTool({
-  name: "execute-tool-by-name-enhanced",
+  name: "execute-tool-by-name",
   arguments: { name: "./my-tool.yaml", localFile: true }
 });
 
 // Smart resolution (local → cache → registry)
 await client.callTool({
-  name: "execute-tool-by-name-enhanced", 
+  name: "execute-tool-by-name", 
   arguments: { name: "hello-world" }
 });
 
 // Force registry lookup
 await client.callTool({
-  name: "execute-tool-by-name-enhanced",
+  name: "execute-tool-by-name",
   arguments: { name: "some-tool", forceRegistry: true }
 });
 ```
@@ -130,7 +130,7 @@ await client.callTool({
 ```javascript
 // Start long-running operation
 const result = await client.callTool({
-  name: "execute-tool-by-name-enhanced",
+  name: "execute-tool-by-name",
   arguments: { name: "build-project", async: true }
 });
 // Returns operation ID

@@ -1,5 +1,5 @@
 {
-  "name": "enact-monorepo",
+  "name": "@enactprotocol/monorepo",
   "version": "1.0.11",
   "description": "Enact Protocol - AI tool ecosystem with CLI and MCP server",
   "private": true,
@@ -8,16 +8,21 @@
   ],
   "type": "module",
   "scripts": {
-    "build": "bun run build:cli && bun run build:mcp",
-    "build:cli": "bun --cwd packages/cli run build",
-    "build:mcp": "bun --cwd packages/mcp-server run build",
+    "build": "bun run build:shared && bun run build:cli && bun run build:mcp",
+    "build:shared": "cd packages/shared && bun run build",
+    "build:cli": "cd packages/cli && bun run build",
+    "build:mcp": "cd packages/mcp-server && bun run build",
     "dev": "bun --cwd packages/cli run dev",
     "dev:cli": "bun --cwd packages/cli run dev",
     "dev:mcp": "bun --cwd packages/mcp-server run dev",
-    "test": "bun test",
+    "test": "bun test --filter-out integration",
+    "test:all": "bun test",
+    "test:integration": "bun test --filter integration",
     "test:cli": "bun --cwd packages/cli run test",
     "test:mcp": "bun --cwd packages/mcp-server run test",
+    "test:shared": "bun --cwd packages/shared run test",
     "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage",
     "test:cleanup": "node scripts/cleanup-test-dirs.js",
     "lint": "bunx @biomejs/biome lint ./packages",
     "format": "bunx @biomejs/biome format --write ./packages",
@@ -54,10 +59,8 @@
   },
   "devDependencies": {
     "@types/node": "^20.12.12",
-    "@vitest/coverage-v8": "^2.0.0",
     "bun-types": "latest",
-    "typescript": "^5.4.5",
-    "vitest": "^2.0.0"
+    "typescript": "^5.4.5"
   },
   "dependencies": {
     "@clack/core": "^0.4.2",

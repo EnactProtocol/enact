@@ -73,7 +73,7 @@ enact-mcp
 
 #### Essential MCP Tools (Minimal Implementation)
 
-1. **`execute-tool-by-name-enhanced`** - Smart tool execution (local → cache → registry)
+1. **`execute-tool-by-name`** - Smart tool execution (local → cache → registry)
 2. **`manage-local-tools`** - Local tool management and directory operations
 3. **`create-local-tool`** - Create new local YAML tools
 4. **`enact-search-tools`** - Search registry tools
