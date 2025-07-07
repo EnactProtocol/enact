@@ -329,7 +329,7 @@ async function installMcpServer(client: {
 			config.extensions.enact = {
 				name: "enact",
 				cmd: "npx",
-				args: ["-y", "-p", "enact-cli", "enact-mcp"],
+				args: ["-y", "@enactprotocol/mcp-server"],
 				enabled: true,
 				type: "stdio",
 				timeout: 300,
@@ -383,7 +383,7 @@ async function installMcpServer(client: {
 	const mcpServerConfig = {
 		enact: {
 			command: "npx",
-			args: ["-y", "-p", "enact-cli", "enact-mcp"],
+			args: ["-y", "@enactprotocol/mcp-server"],
 		},
 	};
 

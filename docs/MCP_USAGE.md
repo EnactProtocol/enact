@@ -4,12 +4,12 @@
 
 ### Global Installation (Recommended for MCP Servers)
 ```bash
-npm install -g enact-cli
+npm install -g @enactprotocol/cli
 ```
 
 ### Local Installation
 ```bash
-npm install enact-cli
+npm install @enactprotocol/cli
 ```
 
 ## Running the MCP Servers
@@ -155,7 +155,7 @@ If you're developing locally or want to use a specific version:
 
 ```bash
 # Install locally
-npm install enact-cli
+npm install @enactprotocol/cli
 
 # Run via npx
 npx enact-mcp-server
@@ -227,7 +227,7 @@ chmod +x $(which enact-mcp-server)
 ```bash
 # Reinstall to fix missing dependencies
 npm uninstall -g enact-cli
-npm install -g enact-cli
+npm install -g @enactprotocol/cli
 ```
 
 ### Debug Mode

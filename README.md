@@ -18,7 +18,7 @@ Official CLI for the Enact Protocol - package, secure, and discover AI tools.
 
 ```bash
 # Install globally
-npm install -g enact-cli
+npm install -g @enactprotocol/cli
 
 # Now you can use:
 enact search --tags web,api
@@ -116,7 +116,7 @@ enact sign sign my-tool.yaml --role author
 
 ### Library Usage
 ```typescript
-import { executeToolByName, searchTools } from 'enact-cli/dist/lib/enact-direct.js';
+import { executeToolByName, searchTools } from '@enactprotocol/shared/lib/enact-direct';
 
 // Search for tools
 const tools = await searchTools({ query: 'text processing', limit: 5 });
