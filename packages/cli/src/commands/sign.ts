@@ -1,9 +1,9 @@
 // src/commands/sign.ts - Handle signing and verification operations
 import * as p from "@clack/prompts";
 import pc from "picocolors";
-import * as fs from "fs";
-import * as path from "path";
-import * as os from "os";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import * as os from "node:os";
 import {
 	verifyTool,
 	VERIFICATION_POLICIES,
@@ -243,7 +243,7 @@ async function handleVerifyCommand(
  * Handle the list-keys subcommand
  */
 async function handleListKeysCommand(
-	args: string[],
+	_args: string[],
 	options: SignOptions,
 ): Promise<void> {
 	p.intro(pc.bgCyan(pc.white(" Trusted Public Keys ")));
@@ -262,7 +262,7 @@ async function handleListKeysCommand(
 		let keyIndex = 1;
 		for (const [base64Key, pemContent] of trustedKeys.entries()) {
 			const keyId = base64Key.substring(0, 16); // First 16 chars as key ID
-			const shortKey = base64Key.substring(0, 32) + "...";
+			const shortKey = `${base64Key.substring(0, 32)}...`;
 
 			console.error(`${keyIndex}. Key ID: ${pc.green(keyId)}`);
 			console.error(`   Preview: ${pc.dim(shortKey)}`);
