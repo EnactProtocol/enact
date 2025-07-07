@@ -104,8 +104,14 @@ update_package_version() {
     else
         log_info "Updating $package_name to $new_version..."
         
-        # Update package.json using npm version (which handles it properly)
-        (cd "$package_path" && npm version "$new_version" --no-git-tag-version)
+        # Update package.json directly using Node.js to handle workspace dependencies
+        node -e "
+            const fs = require('fs');
+            const path = './$package_path/package.json';
+            const pkg = JSON.parse(fs.readFileSync(path, 'utf8'));
+            pkg.version = '$new_version';
+            fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + '\n');
+        "
         
         log_success "Updated $package_name"
     fi

@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/monorepo",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "Enact Protocol - AI tool ecosystem with CLI and MCP server",
   "private": true,
   "workspaces": [
@@ -28,7 +28,7 @@
     "format": "bunx @biomejs/biome format --write ./packages",
     "build:all": "bun run build:linux && bun run build:macos && bun run build:windows",
     "build:linux": "bun --cwd packages/cli run build:linux",
-    "build:macos": "bun --cwd packages/cli run build:macos", 
+    "build:macos": "bun --cwd packages/cli run build:macos",
     "build:windows": "bun --cwd packages/cli run build:windows",
     "release": "bun run build:all && bun run build",
     "deploy": "./scripts/deploy-npm.sh",
