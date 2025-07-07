@@ -1,0 +1,79 @@
+{
+  "name": "@enactprotocol/shared",
+  "version": "1.0.11",
+  "description": "Shared utilities and core functionality for Enact Protocol",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./core": {
+      "import": "./dist/core/index.js",
+      "types": "./dist/core/index.d.ts"
+    },
+    "./exec": {
+      "import": "./dist/exec/index.js",
+      "types": "./dist/exec/index.d.ts"
+    },
+    "./utils": {
+      "import": "./dist/utils/index.js",
+      "types": "./dist/utils/index.d.ts"
+    },
+    "./security": {
+      "import": "./dist/security/index.js",
+      "types": "./dist/security/index.d.ts"
+    },
+    "./services": {
+      "import": "./dist/services/index.js",
+      "types": "./dist/services/index.d.ts"
+    },
+    "./web": {
+      "import": "./dist/web/index.js",
+      "types": "./dist/web/index.d.ts"
+    },
+    "./api": {
+      "import": "./dist/api/index.js",
+      "types": "./dist/api/index.d.ts"
+    },
+    "./lib": {
+      "import": "./dist/lib/index.js",
+      "types": "./dist/lib/index.d.ts"
+    }
+  },
+  "files": [
+    "dist/**/*",
+    "src/**/*"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "test:watch": "vitest --watch"
+  },
+  "keywords": [
+    "enact",
+    "enact-protocol",
+    "shared",
+    "utilities",
+    "core"
+  ],
+  "author": "EnactProtocol",
+  "license": "MIT",
+  "dependencies": {
+    "@dagger.io/dagger": "^0.9.11",
+    "dotenv": "^16.5.0",
+    "pino": "^9.7.0",
+    "pino-pretty": "^13.0.0",
+    "strip-ansi": "^7.1.0",
+    "yaml": "^2.8.0",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "typescript": "^5.4.5",
+    "vitest": "^2.0.0"
+  }
+}

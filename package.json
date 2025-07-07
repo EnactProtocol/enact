@@ -1,41 +1,31 @@
 {
-  "name": "enact-cli",
+  "name": "enact-monorepo",
   "version": "1.0.11",
-  "description": "Official CLI for the Enact Protocol - package, secure, and discover AI tools",
-  "type": "module",
-  "main": "./dist/index.js",
-  "bin": {
-    "enact": "./dist/index.js",
-    "enact-mcp": "./dist/mcp-server.js"
-  },
-  "files": [
-    "dist/**/*",
-    "src/web/static/**/*",
-    "README.md",
-    "LICENSE"
+  "description": "Enact Protocol - AI tool ecosystem with CLI and MCP server",
+  "private": true,
+  "workspaces": [
+    "packages/*"
   ],
+  "type": "module",
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target node && bun build ./src/mcp-server.ts --outdir ./dist --target node && mkdir -p ./dist/web && cp -r ./src/web/static ./dist/web/ && sed -i.bak '1{/^#!/d;}' ./dist/index.js && sed -i.bak '1{/^#!/d;}' ./dist/mcp-server.js && echo '#!/usr/bin/env node' | cat - ./dist/index.js > temp && mv temp ./dist/index.js && chmod +x ./dist/index.js && echo '#!/usr/bin/env node' | cat - ./dist/mcp-server.js > temp2 && mv temp2 ./dist/mcp-server.js && chmod +x ./dist/mcp-server.js",
-    "build:mcp": "bun build ./src/mcp-server.ts --outdir ./dist --target node",
-    "start:mcp": "node ./dist/mcp-server.js",
-    "dev:mcp": "bun run --watch src/mcp-server.ts",
-    "dev:mcp-server": "bun run --watch src/mcp-server.ts",
+    "build": "bun run build:cli && bun run build:mcp",
+    "build:cli": "bun --cwd packages/cli run build",
+    "build:mcp": "bun --cwd packages/mcp-server run build",
+    "dev": "bun --cwd packages/cli run dev",
+    "dev:cli": "bun --cwd packages/cli run dev",
+    "dev:mcp": "bun --cwd packages/mcp-server run dev",
     "test": "bun test",
+    "test:cli": "bun --cwd packages/cli run test",
+    "test:mcp": "bun --cwd packages/mcp-server run test",
     "test:watch": "bun test --watch",
     "test:cleanup": "node scripts/cleanup-test-dirs.js",
-    "prepublishOnly": "npm run build",
-    "start": "bun ./dist/index.js",
-    "dev": "bun run --watch src/index.ts",
-    "dev:cmd": "bun src/index.ts",
-    "test:coverage": "vitest --coverage",
-    "lint": "bunx @biomejs/biome lint ./src",
-    "format": "bunx @biomejs/biome format --write ./src",
-    "build:binary": "bun build ./src/index.ts --compile --outfile enact",
-    "build:all": "npm run build:linux && npm run build:macos && npm run build:windows",
-    "build:linux": "bun build ./src/index.ts --compile --target=bun-linux-x64 --outfile dist/enact-linux",
-    "build:macos": "bun build ./src/index.ts --compile --target=bun-darwin-x64 --outfile dist/enact-macos",
-    "build:windows": "bun build ./src/index.ts --compile --target=bun-windows-x64 --outfile dist/enact-windows.exe",
-    "release": "npm run build:all && npm run build"
+    "lint": "bunx @biomejs/biome lint ./packages",
+    "format": "bunx @biomejs/biome format --write ./packages",
+    "build:all": "bun run build:linux && bun run build:macos && bun run build:windows",
+    "build:linux": "bun --cwd packages/cli run build:linux",
+    "build:macos": "bun --cwd packages/cli run build:macos", 
+    "build:windows": "bun --cwd packages/cli run build:windows",
+    "release": "bun run build:all && bun run build"
   },
   "keywords": [
     "cli",
@@ -45,7 +35,9 @@
     "mcp",
     "model-context-protocol",
     "tool-discovery",
-    "command-line-tool"
+    "command-line-tool",
+    "workspace",
+    "monorepo"
   ],
   "author": "EnactProtocol",
   "license": "MIT",
@@ -74,6 +66,8 @@
     "@modelcontextprotocol/sdk": "^1.13.0",
     "dotenv": "^16.5.0",
     "picocolors": "^1.1.1",
+    "pino": "^9.7.0",
+    "pino-pretty": "^13.0.0",
     "strip-ansi": "^7.1.0",
     "yaml": "^2.8.0",
     "zod": "^3.25.67"

@@ -1,0 +1,53 @@
+{
+  "name": "@enactprotocol/mcp-server",
+  "version": "1.0.11",
+  "description": "MCP server for the Enact Protocol - enables AI tools integration via Model Context Protocol",
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "enact-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target node && sed -i.bak '1{/^#!/d;}' ./dist/index.js && echo '#!/usr/bin/env node' | cat - ./dist/index.js > temp && mv temp ./dist/index.js && chmod +x ./dist/index.js",
+    "build:minimal": "bun build ./src/minimal.ts --outdir ./dist --target node && sed -i.bak '1{/^#!/d;}' ./dist/minimal.js && echo '#!/usr/bin/env node' | cat - ./dist/minimal.js > temp && mv temp ./dist/minimal.js && chmod +x ./dist/minimal.js",
+    "start": "node ./dist/index.js",
+    "start:minimal": "node ./dist/minimal.js",
+    "dev": "bun run --watch src/index.ts",
+    "dev:minimal": "bun run --watch src/minimal.ts",
+    "test": "vitest",
+    "test:watch": "vitest --watch"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "enact",
+    "enact-protocol",
+    "ai-tools",
+    "server"
+  ],
+  "author": "EnactProtocol",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EnactProtocol/enact-cli.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@enactprotocol/shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.13.0",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "bun-types": "latest",
+    "typescript": "^5.4.5",
+    "vitest": "^2.0.0"
+  }
+}

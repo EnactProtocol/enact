@@ -1,0 +1,55 @@
+{
+  "name": "@enactprotocol/cli",
+  "version": "1.0.11",
+  "description": "Official CLI for the Enact Protocol - package, secure, and discover AI tools",
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "enact": "./dist/index.js"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target node && mkdir -p ./dist/web && cp -r ../shared/src/web/static ./dist/web/ && sed -i.bak '1{/^#!/d;}' ./dist/index.js && echo '#!/usr/bin/env node' | cat - ./dist/index.js > temp && mv temp ./dist/index.js && chmod +x ./dist/index.js",
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun ./dist/index.js",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "build:binary": "bun build ./src/index.ts --compile --outfile enact",
+    "build:linux": "bun build ./src/index.ts --compile --target=bun-linux-x64 --outfile ../../dist/enact-linux",
+    "build:macos": "bun build ./src/index.ts --compile --target=bun-darwin-x64 --outfile ../../dist/enact-macos",
+    "build:windows": "bun build ./src/index.ts --compile --target=bun-windows-x64 --outfile ../../dist/enact-windows.exe"
+  },
+  "keywords": [
+    "cli",
+    "enact",
+    "enact-protocol",
+    "ai-tools",
+    "tool-discovery",
+    "command-line-tool"
+  ],
+  "author": "EnactProtocol",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EnactProtocol/enact-cli.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@enactprotocol/shared": "workspace:*",
+    "@clack/core": "^0.4.2",
+    "@clack/prompts": "^0.10.1",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "bun-types": "latest",
+    "typescript": "^5.4.5",
+    "vitest": "^2.0.0"
+  }
+}
