@@ -126,7 +126,7 @@ run_tests() {
     
     log_info "Running tests..."
     
-    if ! bun test; then
+    if ! bun run test; then
         log_error "Tests failed! Fix tests before deploying."
         exit 1
     fi
