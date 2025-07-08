@@ -34,15 +34,41 @@ After installation, you can use Enact with any MCP client:
 # With MCP Inspector
 npx @modelcontextprotocol/inspector enact-mcp-server
 
-# In Claude Desktop (add to config)
+# Auto-install to supported MCP clients
+enact mcp install
+
+# Or manually add to Claude Desktop config
 {
   "mcpServers": {
     "enact": {
-      "command": "enact-mcp-server"
+      "command": "npx",
+      "args": ["-y", "@enactprotocol/mcp-server"]
+    }
+  }
+}
+
+# Or manually add to Gemini config (~/.gemini/settings.json)
+{
+  "mcpServers": {
+    "enact": {
+      "command": "npx",
+      "args": ["-y", "@enactprotocol/mcp-server"]
     }
   }
 }
 ```
+
+#### Supported MCP Clients
+
+The `enact mcp install` command supports automatic installation for:
+
+- **Claude Desktop** - `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
+- **Claude Code** - `~/.claude.json`
+- **VS Code MCP** - VS Code settings.json
+- **Goose AI** - `~/.config/goose/config.yaml`
+- **Gemini** - `~/.gemini/settings.json`
+
+After installation, restart your MCP client to activate the Enact tools.
 
 See [MCP_USAGE.md](./MCP_USAGE.md) for detailed MCP integration guide.
 
@@ -58,6 +84,11 @@ enact --help
 
 # Execute a tool
 enact exec author/tool-name --input '{"key": "value"}'
+
+# MCP integration commands
+enact mcp install    # Install to MCP clients
+enact mcp list       # List detected MCP clients
+enact mcp status     # Check installation status
 ```
 
 ### MCP Server Usage
@@ -189,9 +220,11 @@ This section provides instructions for setting up your development environment a
    enact --version  # Test the installed binary
    ```
 
-4. **Run tests (when available):**
+4. **Run tests:**
    ```bash
-   bun test
+   bun test                    # Run all tests
+   bun test mcp.test.ts        # Run MCP-specific tests
+   bun test --coverage         # Run with coverage report
    ```
 
 5. **Lint and format your code:**
@@ -268,10 +301,11 @@ DEBUG=* bun src/index.ts <command>
 ### Contributing Guidelines
 
 - Follow TypeScript best practices
-- Add tests for new features
+- Add tests for new features (comprehensive test suite available)
 - Update documentation for any CLI changes
 - Use conventional commit messages
 - Ensure the binary builds successfully before submitting PRs
+- Run the test suite to verify MCP configuration generation works correctly
 
 ### Troubleshooting
 

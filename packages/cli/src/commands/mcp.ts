@@ -67,6 +67,14 @@ const MCP_CLIENTS = {
 			linux: join(homedir(), ".config/goose/config.yaml"),
 		},
 	},
+	gemini: {
+		name: "Gemini",
+		configPaths: {
+			darwin: join(homedir(), ".gemini/settings.json"),
+			win32: join(homedir(), ".gemini/settings.json"),
+			linux: join(homedir(), ".gemini/settings.json"),
+		},
+	},
 };
 
 export async function handleMcpCommand(
@@ -86,7 +94,7 @@ Subcommands:
 
 Options:
   --help, -h          Show this help message
-  --client <name>     Target specific client (claude-desktop, claude-code, vscode, goose)
+  --client <name>     Target specific client (claude-desktop, claude-code, vscode, goose, gemini)
 `);
 		return;
 	}
@@ -119,7 +127,7 @@ async function handleInstallCommand(options: McpOptions): Promise<void> {
 		if (detectedClients.length === 0) {
 			note(
 				pc.yellow(
-					"No MCP clients detected on this system.\n\nSupported clients:\n• Claude Desktop\n• Claude Code\n• VS Code MCP\n• Goose AI",
+					"No MCP clients detected on this system.\n\nSupported clients:\n• Claude Desktop\n• Claude Code\n• VS Code MCP\n• Goose AI\n• Gemini",
 				),
 				"No clients found",
 			);
@@ -381,15 +389,13 @@ async function installMcpServer(client: {
 
 	// Prepare MCP server configuration
 	const mcpServerConfig = {
-		enact: {
-			command: "npx",
-			args: ["-y", "@enactprotocol/mcp-server"],
-		},
+		command: "npx",
+		args: ["-y", "@enactprotocol/mcp-server"],
 	};
 
 	// Handle different client configuration formats
-	if (client.id === "claude-desktop" || client.id === "claude-code") {
-		// Claude Desktop/Code format
+	if (client.id === "claude-desktop" || client.id === "claude-code" || client.id === "gemini") {
+		// Claude Desktop/Code/Gemini format
 		if (!config.mcpServers) {
 			config.mcpServers = {};
 		}
@@ -437,7 +443,7 @@ async function checkMcpServerInstalled(client: {
 		const configContent = await readFile(client.configPath, "utf-8");
 		const config = JSON.parse(configContent);
 
-		if (client.id === "claude-desktop" || client.id === "claude-code") {
+		if (client.id === "claude-desktop" || client.id === "claude-code" || client.id === "gemini") {
 			return config.mcpServers && config.mcpServers.enact;
 		} else if (client.id === "vscode") {
 			return config["mcp.servers"] && config["mcp.servers"].enact;
