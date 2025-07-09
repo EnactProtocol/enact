@@ -162,19 +162,18 @@ async function handlePublicKeyCommand(
 
 function showUserHelp() {
 	console.error(`
-${pc.bold("USAGE")}
-  enact user <subcommand> [options]
+Usage: enact user <subcommand> [options]
 
-${pc.bold("SUBCOMMANDS")}
+Subcommands:
   public-key [userId]    Get a user's public key
 
-${pc.bold("OPTIONS")}
+Options:
   -h, --help            Show help information
   -s, --server <url>    API server URL (default: https://api.enact.dev)
   -t, --token <token>   Authentication token
   -f, --format <format> Output format (json|raw|default)
 
-${pc.bold("EXAMPLES")}
+Examples:
   enact user public-key user-123
   enact user public-key --format json
   enact user public-key user-456 --token your-token

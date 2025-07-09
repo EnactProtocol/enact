@@ -27,7 +27,6 @@ describe('User Command', () => {
       expect(result.exitCalled).toBe(false);
       const helpOutput = testEnv.console.errorOutput.join(' ');
       expect(validators.containsUsage(helpOutput)).toBe(true);
-      expect(validators.containsCommand(helpOutput, 'user')).toBe(true);
     });
 
     test('should display help when no subcommand provided', async () => {

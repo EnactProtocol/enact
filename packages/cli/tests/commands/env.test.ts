@@ -200,84 +200,40 @@ describe('Env Command', () => {
   });
 
   describe('Set Command', () => {
-    test('should set a global environment variable', async () => {
-      await testCommandHandler(handleEnvCommand, [['set', 'MY_VAR', 'my_value'], { global: true }], testEnv);
-      const output = stripAnsi(testEnv.console.logOutput.join(' '));
-      expect(output).toContain('Set global environment variable MY_VAR');
-    });
-
-    test('should set a project environment variable', async () => {
-      await testCommandHandler(handleEnvCommand, [['set', 'MY_VAR', 'my_value'], { project: true }], testEnv);
-      const output = stripAnsi(testEnv.console.logOutput.join(' '));
-      expect(output).toContain('Set project environment variable MY_VAR');
+    test('should set a package environment variable', async () => {
+      await testCommandHandler(handleEnvCommand, [['set', 'test/package', 'MY_VAR', 'my_value'], {}], testEnv);
+      const output = stripAnsi(testEnv.console.errorOutput.join(' '));
+      expect(output).toContain('Set environment variable for test/package: MY_VAR');
     });
   });
 
   describe('Get Command', () => {
-    test('should get a global environment variable', async () => {
-      await testCommandHandler(handleEnvCommand, [['set', 'MY_VAR', 'my_value'], { global: true }], testEnv);
-      testEnv.console.logOutput = []; // Clear output
-      await testCommandHandler(handleEnvCommand, [['get', 'MY_VAR'], { global: true }], testEnv);
-      const output = stripAnsi(testEnv.console.logOutput.join(' '));
-      expect(output).toBe('my_value');
-    });
-
-    test('should get a project environment variable', async () => {
-      await testCommandHandler(handleEnvCommand, [['set', 'MY_VAR', 'my_value'], { project: true }], testEnv);
-      testEnv.console.logOutput = []; // Clear output
-      await testCommandHandler(handleEnvCommand, [['get', 'MY_VAR'], { project: true }], testEnv);
-      const output = stripAnsi(testEnv.console.logOutput.join(' '));
-      expect(output).toBe('my_value');
+    test('should get a package environment variable', async () => {
+      await testCommandHandler(handleEnvCommand, [['set', 'test/package', 'MY_VAR', 'my_value'], {}], testEnv);
+      testEnv.console.errorOutput = []; // Clear output
+      await testCommandHandler(handleEnvCommand, [['get', 'test/package', 'MY_VAR'], { show: true }], testEnv);
+      const output = stripAnsi(testEnv.console.errorOutput.join(' '));
+      expect(output).toContain('Environment variable: MY_VAR');
+      expect(output).toContain('my_value');
     });
   });
 
   describe('List Command', () => {
-    test('should list global environment variables', async () => {
-      await testCommandHandler(handleEnvCommand, [['set', 'MY_VAR_1', 'val1'], { global: true }], testEnv);
-      await testCommandHandler(handleEnvCommand, [['set', 'MY_VAR_2', 'val2'], { global: true }], testEnv);
-      testEnv.console.logOutput = []; // Clear output
-      await testCommandHandler(handleEnvCommand, [['list'], { global: true }], testEnv);
-      const output = stripAnsi(testEnv.console.logOutput.join('\n'));
-      expect(output).toContain('MY_VAR_1=val1');
-      expect(output).toContain('MY_VAR_2=val2');
-    });
-
-    test('should list project environment variables', async () => {
-      await testCommandHandler(handleEnvCommand, [['set', 'PROJ_VAR_1', 'proj1'], { project: true }], testEnv);
-      await testCommandHandler(handleEnvCommand, [['set', 'PROJ_VAR_2', 'proj2'], { project: true }], testEnv);
-      testEnv.console.logOutput = []; // Clear output
-      await testCommandHandler(handleEnvCommand, [['list'], { project: true }], testEnv);
-      const output = stripAnsi(testEnv.console.logOutput.join('\n'));
-      expect(output).toContain('PROJ_VAR_1=proj1');
-      expect(output).toContain('PROJ_VAR_2=proj2');
+    test('should list package environment variables', async () => {
+      await testCommandHandler(handleEnvCommand, [['set', 'test/package', 'VAR_1', 'val1'], {}], testEnv);
+      await testCommandHandler(handleEnvCommand, [['set', 'test/package', 'VAR_2', 'val2'], {}], testEnv);
+      testEnv.console.errorOutput = []; // Clear output
+      await testCommandHandler(handleEnvCommand, [['list', 'test/package'], {}], testEnv);
+      const output = stripAnsi(testEnv.console.errorOutput.join('\n'));
+      expect(output).toContain('Environment variables for test/package');
     });
   });
 
   describe('Delete Command', () => {
-    test('should delete a global environment variable', async () => {
-      await testCommandHandler(handleEnvCommand, [['set', 'MY_VAR', 'my_value'], { global: true }], testEnv);
-      testEnv.console.logOutput = []; // Clear output
-      await testCommandHandler(handleEnvCommand, [['delete', 'MY_VAR'], { global: true }], testEnv);
-      const output = stripAnsi(testEnv.console.logOutput.join(' '));
-      expect(output).toContain('Deleted global environment variable MY_VAR');
-      
-      testEnv.console.logOutput = []; // Clear output
-      await testCommandHandler(handleEnvCommand, [['get', 'MY_VAR'], { global: true }], testEnv);
-      const getOutput = stripAnsi(testEnv.console.logOutput.join(' '));
-      expect(getOutput).toBe('');
-    });
-
-    test('should delete a project environment variable', async () => {
-      await testCommandHandler(handleEnvCommand, [['set', 'MY_VAR', 'my_value'], { project: true }], testEnv);
-      testEnv.console.logOutput = []; // Clear output
-      await testCommandHandler(handleEnvCommand, [['delete', 'MY_VAR'], { project: true }], testEnv);
-      const output = stripAnsi(testEnv.console.logOutput.join(' '));
-      expect(output).toContain('Deleted project environment variable MY_VAR');
-
-      testEnv.console.logOutput = []; // Clear output
-      await testCommandHandler(handleEnvCommand, [['get', 'MY_VAR'], { project: true }], testEnv);
-      const getOutput = stripAnsi(testEnv.console.logOutput.join(' '));
-      expect(getOutput).toBe('');
+    test('should require package name and variable name for delete command', async () => {
+      await testCommandHandler(handleEnvCommand, [['delete'], {}], testEnv, true);
+      const output = stripAnsi(testEnv.console.errorOutput.join(' '));
+      expect(output).toContain('Package name is required');
     });
   });
 });

@@ -248,7 +248,7 @@ async function handleStatusCommand(): Promise<void> {
 	outro("Status check complete.");
 }
 
-async function detectMcpClients(): Promise<
+export async function detectMcpClients(): Promise<
 	Array<{ id: string; name: string; configPath: string }>
 > {
 	const currentPlatform =
@@ -294,7 +294,7 @@ async function detectMcpClients(): Promise<
 	return detected;
 }
 
-async function installMcpServer(client: {
+export async function installMcpServer(client: {
 	id: string;
 	name: string;
 	configPath: string;
@@ -412,7 +412,7 @@ async function installMcpServer(client: {
 	await writeFile(configPath, JSON.stringify(config, null, 2), "utf-8");
 }
 
-async function checkMcpServerInstalled(client: {
+export async function checkMcpServerInstalled(client: {
 	id: string;
 	name: string;
 	configPath: string;

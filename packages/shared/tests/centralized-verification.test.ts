@@ -84,7 +84,7 @@ describe("Centralized Signature Verification", () => {
 				});
 
 				expect(result.allowed).toBe(true);
-				expect(result.reason).toContain("unsigned tool allowed");
+				expect(result.reason).toContain("Unsigned tool allowed");
 			});
 		});
 
@@ -160,9 +160,8 @@ describe("Centralized Signature Verification", () => {
 
 				// This would fail in real implementation due to missing reviewer signature
 				// But shows the policy is being applied
-				expect(result.verificationResult?.verificationResult?.message).toContain(
-					"signatures" // Error message should mention signatures
-				);
+				expect(result.allowed).toBe(false);
+				expect(result.reason).toContain("verification");
 			});
 
 			it("should provide detailed error information", async () => {
