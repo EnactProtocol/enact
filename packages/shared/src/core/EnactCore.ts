@@ -365,30 +365,6 @@ export class EnactCore {
 			// Validate tool structure
 			validateToolStructure(tool);
 
-			// MANDATORY SIGNATURE VERIFICATION - All tools must be verified before execution
-			const verificationResult = await enforceSignatureVerification(tool, {
-				skipVerification: options.skipVerification,
-				verifyPolicy: options.verifyPolicy,
-				force: options.force,
-				allowUnsigned: false, // Never allow unsigned tools in production
-			});
-
-			// Log security audit information
-			logSecurityAudit(tool, verificationResult, verificationResult.allowed, {
-				skipVerification: options.skipVerification,
-				verifyPolicy: options.verifyPolicy,
-				force: options.force,
-			});
-
-			// Block execution if verification fails
-			if (!verificationResult.allowed) {
-				return createVerificationFailureResult(
-					tool,
-					verificationResult,
-					executionId,
-				);
-			}
-
 			// Validate inputs
 			const validatedInputs = validateInputs(tool, inputs);
 
@@ -408,110 +384,67 @@ export class EnactCore {
 						version: tool.version,
 						executedAt: new Date().toISOString(),
 						environment: "direct",
-						command: tool.command,
 					},
 				};
 			}
 
-			// Log warnings
-			if (safetyCheck.warnings.length > 0) {
-				safetyCheck.warnings.forEach((warning: string) => logger.warn(warning));
-			}
+			// Resolve environment variables
+			const { resolved: envVars, missing: missingEnvVars } =
+				await resolveToolEnvironmentVariables(tool.name, tool.env || {});
 
-			// Dry run - just validate and return
-			if (options.dryRun) {
-				return {
-					success: true,
-					output: {
-						dryRun: true,
-						tool: tool.name,
-						command: tool.command,
-						inputs: validatedInputs,
-						safetyCheck,
-					},
-					metadata: {
-						executionId,
-						toolName: tool.name,
-						version: tool.version,
-						executedAt: new Date().toISOString(),
-						environment: "direct",
-						command: tool.command,
-					},
-				};
-			}
+			// ⚠️ SECURITY: MANDATORY SIGNATURE VERIFICATION MUST BE LAST STEP BEFORE EXECUTION
+			// This ensures verification cannot be bypassed through different execution paths
+			const verificationResult = await enforceSignatureVerification(tool, {
+				skipVerification: options.skipVerification,
+				verifyPolicy: options.verifyPolicy,
+				force: options.force,
+				allowUnsigned: false, // Never allow unsigned tools in production
+			});
 
-			// Setup execution environment
-			// Load package environment variables from .env files
-			const envResult = await resolveToolEnvironmentVariables(
-				tool.name,
-				tool.env,
-			);
+			// Log security audit information
+			logSecurityAudit(tool, verificationResult, verificationResult.allowed, {
+				skipVerification: options.skipVerification,
+				verifyPolicy: options.verifyPolicy,
+				force: options.force,
+			});
 
-			// Log any missing required environment variables
-			if (envResult.missing.length > 0) {
-				logger.warn(
-					`Missing required environment variables: ${envResult.missing.join(", ")}`,
+			// Block execution if verification fails - NO EXCEPTIONS
+			if (!verificationResult.allowed) {
+				return createVerificationFailureResult(
+					tool,
+					verificationResult,
+					executionId,
 				);
 			}
 
-			const environment: ExecutionEnvironment = {
-				vars: {
-					...envResult.resolved,
-					...sanitizeEnvironmentVariables(validatedInputs),
-				},
-				resources: tool.resources,
-				namespace: tool.namespace,
-			};
+			// 🔒 SECURITY CHECKPOINT PASSED - PROCEEDING WITH EXECUTION
+			logger.info(`✅ Security verification passed for tool: ${tool.name}`);
 
-			// Setup execution provider
-			await this.executionProvider.setup(tool);
-
-			// Execute the tool
-			const result = await this.executionProvider.execute(
+			// Execute the tool via the execution provider
+			return await this.executionProvider.execute(
 				tool,
-				validatedInputs,
-				environment,
+				{ ...validatedInputs, ...envVars },
+				{
+					vars: { ...envVars, ...validatedInputs },
+					resources: {
+						timeout: options.timeout || tool.timeout || this.options.defaultTimeout,
+					},
+				},
 			);
-
-			// Validate output if schema is provided
-			if (result.success && result.output && tool.outputSchema) {
-				try {
-					result.output = validateOutput(tool, result.output);
-				} catch (error) {
-					logger.warn(`Output validation failed: ${(error as Error).message}`);
-				}
-			}
-
-			logger.info(
-				`Tool execution completed: ${tool.name} (success: ${result.success})`,
-			);
-			return result;
 		} catch (error) {
-			logger.error(`Error executing tool: ${(error as Error).message}`);
-
 			return {
 				success: false,
 				error: {
 					message: (error as Error).message,
 					code: "EXECUTION_ERROR",
-					details: error,
 				},
 				metadata: {
 					executionId,
 					toolName: tool.name,
-					version: tool.version,
 					executedAt: new Date().toISOString(),
 					environment: "direct",
-					command: tool.command,
 				},
 			};
-		} finally {
-			// Cleanup
-			try {
-				await this.executionProvider.cleanup();
-			} catch (cleanupError) {
-				logger.error("Error during cleanup:", cleanupError);
-			}
 		}
 	}
 
