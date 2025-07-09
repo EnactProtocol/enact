@@ -277,6 +277,7 @@ ${pc.bold("EXAMPLES:")}
 							name: tool.name,
 							description: tool.description || "",
 							command: tool.command,
+							from: tool.from,
 							version: tool.version || "1.0.0",
 							timeout: tool.timeout,
 							tags: tool.tags || [],
@@ -774,6 +775,8 @@ Examples:
 		console.error(`Name: ${toolDefinition.name}`);
 		console.error(`Description: ${toolDefinition.description}`);
 		console.error(`Command: ${toolDefinition.command}`);
+		if (toolDefinition.from)
+			console.error(`Container: ${toolDefinition.from}`);
 		if (toolDefinition.timeout)
 			console.error(`Timeout: ${toolDefinition.timeout}`);
 		if (toolDefinition.tags)
@@ -1016,6 +1019,7 @@ Examples:
 			name: toolDefinition.name,
 			description: toolDefinition.description || "",
 			command: toolDefinition.command,
+			from: toolDefinition.from,
 			version: toolDefinition.version || "1.0.0",
 			timeout: toolDefinition.timeout,
 			tags: toolDefinition.tags || [],
@@ -1246,6 +1250,7 @@ ${pc.bold("EXAMPLES:")}
 			name: toolDefinition.name,
 			description: toolDefinition.description || "",
 			command: toolDefinition.command,
+			from: toolDefinition.from,
 			version: toolDefinition.version || "1.0.0",
 			timeout: toolDefinition.timeout,
 			tags: toolDefinition.tags || [],
@@ -1288,6 +1293,10 @@ ${pc.bold("EXAMPLES:")}
 
 			if (tool.command) {
 				console.error(`${pc.bold("Command:")} ${pc.gray(tool.command)}`);
+			}
+
+			if (tool.from) {
+				console.error(`${pc.bold("Container:")} ${pc.gray(tool.from)}`);
 			}
 
 			if (tool.tags && tool.tags.length > 0) {
@@ -1572,6 +1581,12 @@ async function showToolDetailsFromCore(toolName: string): Promise<void> {
 		if (tool.command) {
 			console.error(pc.bold("Command:"));
 			console.error(pc.cyan(tool.command));
+			console.error("");
+		}
+
+		if (tool.from) {
+			console.error(pc.bold("Container:"));
+			console.error(pc.cyan(tool.from));
 			console.error("");
 		}
 

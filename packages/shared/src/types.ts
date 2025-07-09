@@ -6,6 +6,7 @@ export interface EnactTool {
 	command: string; // Shell command to execute with version pins
 
 	// RECOMMENDED FIELDS
+	from?: string; // Container image to run the command on (optional, defaults to system shell)
 	timeout?: string; // Go duration format: "30s", "5m", "1h" (default: "30s")
 	tags?: string[]; // Tags for search and categorization
 	license?: string; // SPDX License identifier (e.g., "MIT", "Apache-2.0")

@@ -2,6 +2,7 @@ export interface EnactToolDefinition {
 	name: string;
 	description: string;
 	command: string;
+	from?: string;
 	version?: string;
 	timeout?: string;
 	tags?: string[];

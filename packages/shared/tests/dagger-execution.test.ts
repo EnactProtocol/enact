@@ -267,6 +267,63 @@ describe('Dagger Execution Provider', () => {
     
     await daggerProvider.cleanup();
   }, 30000);
+
+  it('should use tool.from field for container image when specified', async () => {
+    if (!dockerAvailable) return;
+
+    console.log('🧪 Testing tool.from field functionality...');
+
+    // Create provider with default baseImage
+    const daggerProvider = createProvider({
+      baseImage: 'alpine:latest' // This should be overridden by tool.from
+    });
+
+    // Test tool with 'from' field specifying a different image
+    const mockToolWithFrom: EnactTool = {
+      name: 'test/python-from-field',
+      description: 'Test tool with from field using Python image',
+      from: 'python:3.11-slim', // This should override the provider's baseImage
+      command: 'python3 --version',
+      timeout: '30s'
+    };
+
+    // Test tool without 'from' field (should use default baseImage)
+    const mockToolWithoutFrom: EnactTool = {
+      name: 'test/alpine-default',
+      description: 'Test tool without from field using default image',
+      command: 'cat /etc/alpine-release',
+      timeout: '30s'
+    };
+
+    const environment: ExecutionEnvironment = {
+      vars: {},
+      resources: { timeout: '30s' }
+    };
+
+    // Test 1: Tool WITH 'from' field should use Python container
+    console.log('📦 Testing tool with from: python:3.11-slim');
+    await daggerProvider.setup(mockToolWithFrom);
+    const resultWithFrom = await daggerProvider.execute(mockToolWithFrom, {}, environment);
+    
+    expect(resultWithFrom.success).toBe(true);
+    expect(resultWithFrom.output).toMatch(/Python \d+\.\d+\.\d+/); // Should output Python version
+    expect(resultWithFrom.metadata.environment).toBe('dagger');
+    console.log(`✅ Python version detected: ${resultWithFrom.output?.trim()}`);
+
+    // Test 2: Tool WITHOUT 'from' field should use default Alpine container
+    console.log('📦 Testing tool without from field (using default: alpine:latest)');
+    await daggerProvider.setup(mockToolWithoutFrom);
+    const resultWithoutFrom = await daggerProvider.execute(mockToolWithoutFrom, {}, environment);
+    
+    expect(resultWithoutFrom.success).toBe(true);
+    expect(resultWithoutFrom.output).toMatch(/\d+\.\d+\.\d+/); // Should output Alpine version
+    expect(resultWithoutFrom.metadata.environment).toBe('dagger');
+    console.log(`✅ Alpine version detected: ${resultWithoutFrom.output?.trim()}`);
+    
+    console.log('🎉 Both tests passed - from field is working correctly!');
+    
+    await daggerProvider.cleanup();
+  }, 60000); // Longer timeout as this pulls multiple images
 });
 
 describe('Enact Core with Dagger', () => {

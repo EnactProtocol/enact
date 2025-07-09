@@ -409,6 +409,8 @@ export class DaggerExecutionProvider extends ExecutionProvider {
 						inputs,
 						environment,
 						tool.timeout,
+						undefined,
+						tool,
 					);
 
 					logger.debug(
@@ -527,6 +529,7 @@ export class DaggerExecutionProvider extends ExecutionProvider {
 			showSpinner?: boolean;
 			streamOutput?: boolean;
 		},
+		tool?: EnactTool,
 	): Promise<CommandResult> {
 		const verbose = options?.verbose ?? false;
 		const showSpinner = options?.showSpinner ?? false;
@@ -554,17 +557,20 @@ export class DaggerExecutionProvider extends ExecutionProvider {
 			);
 
 			if (verbose) {
+				// Determine which container image to use - prefer tool's 'from' field over default baseImage
+				const containerImage = tool?.from || this.options.baseImage!;
+				
 				try {
 					const pc = require("picocolors");
 					console.error(
 						pc.cyan("\n🐳 Executing Enact command in Dagger container:"),
 					);
 					console.error(pc.white(substitutedCommand));
-					console.error(pc.gray(`Base image: ${this.options.baseImage}`));
+					console.error(pc.gray(`Container image: ${containerImage}${tool?.from ? ' (from tool.from)' : ' (default baseImage)'}`));
 				} catch (e) {
 					console.error("\n🐳 Executing Enact command in Dagger container:");
 					console.error(substitutedCommand);
-					console.error(`Base image: ${this.options.baseImage}`);
+					console.error(`Container image: ${containerImage}${tool?.from ? ' (from tool.from)' : ' (default baseImage)'}`);
 				}
 			}
 
@@ -577,7 +583,7 @@ export class DaggerExecutionProvider extends ExecutionProvider {
 
 			// Execute command with enhanced error handling and timeout management
 			const result = await Promise.race([
-				this.executeWithConnect(substitutedCommand, environment, inputs),
+				this.executeWithConnect(substitutedCommand, environment, inputs, tool),
 				this.createTimeoutPromise(effectiveTimeout),
 			]);
 
@@ -627,6 +633,7 @@ export class DaggerExecutionProvider extends ExecutionProvider {
 		command: string,
 		environment: ExecutionEnvironment,
 		inputs: Record<string, any>,
+		tool?: EnactTool,
 	): Promise<CommandResult> {
 		return new Promise<CommandResult>((resolve, reject) => {
 			// Setup abort handling
@@ -645,6 +652,7 @@ export class DaggerExecutionProvider extends ExecutionProvider {
 						client,
 						environment,
 						inputs,
+						tool,
 					);
 					logger.debug("📦 Container setup complete");
 					const commandResult = await this.executeInContainer(
@@ -698,13 +706,17 @@ export class DaggerExecutionProvider extends ExecutionProvider {
 		client: Client,
 		environment: ExecutionEnvironment,
 		inputs: Record<string, any>,
+		tool?: EnactTool,
 	): Promise<Container> {
+		// Determine which container image to use - prefer tool's 'from' field over default baseImage
+		const containerImage = tool?.from || this.options.baseImage!;
+		
 		logger.debug(
-			`🚀 Setting up container with base image: ${this.options.baseImage}`,
+			`🚀 Setting up container with image: ${containerImage}${tool?.from ? ' (from tool.from)' : ' (default baseImage)'}`,
 		);
 
 		// Start with base container
-		let container = client.container().from(this.options.baseImage!);
+		let container = client.container().from(containerImage);
 		logger.debug("📦 Base container created");
 
 		// Set working directory
@@ -721,7 +733,7 @@ export class DaggerExecutionProvider extends ExecutionProvider {
 
 		// Install common tools needed for Enact commands
 		if (this.options.enableNetwork) {
-			container = await this.installCommonTools(container);
+			container = await this.installCommonTools(container, containerImage);
 			logger.debug("🔧 Common tools installed");
 		} else {
 			logger.debug("🔧 Skipping common tools installation (network disabled)");
@@ -745,14 +757,14 @@ export class DaggerExecutionProvider extends ExecutionProvider {
 	 * Install common tools that Enact commands might need
 	 * Enhanced with better error handling and timeout
 	 */
-	private async installCommonTools(container: Container): Promise<Container> {
+	private async installCommonTools(container: Container, containerImage: string): Promise<Container> {
 		logger.debug(
-			`🔧 Installing common tools for base image: ${this.options.baseImage}`,
+			`🔧 Installing common tools for container image: ${containerImage}`,
 		);
 
 		try {
 			// For node images, most tools are already available, so we can skip installation
-			if (this.options.baseImage?.includes("node:")) {
+			if (containerImage.includes("node:")) {
 				logger.debug(
 					"📦 Node.js image detected, skipping tool installation (most tools already available)",
 				);
@@ -760,10 +772,10 @@ export class DaggerExecutionProvider extends ExecutionProvider {
 			}
 
 			// Determine package manager based on base image
-			const isAlpine = this.options.baseImage?.includes("alpine");
+			const isAlpine = containerImage.includes("alpine");
 			const isDebian =
-				this.options.baseImage?.includes("debian") ||
-				this.options.baseImage?.includes("ubuntu");
+				containerImage.includes("debian") ||
+				containerImage.includes("ubuntu");
 
 			if (isAlpine) {
 				logger.debug("📦 Detected Alpine Linux, installing basic tools");
@@ -783,7 +795,7 @@ export class DaggerExecutionProvider extends ExecutionProvider {
 				]);
 			} else {
 				logger.warn(
-					`Unknown base image ${this.options.baseImage}, skipping tool installation`,
+					`Unknown container image ${containerImage}, skipping tool installation`,
 				);
 			}
 
@@ -1161,6 +1173,7 @@ export class DaggerExecutionProvider extends ExecutionProvider {
 				showSpinner: true,
 				streamOutput: false,
 			},
+			undefined, // no tool parameter for backwards compatibility
 		);
 
 		if (result.exitCode !== 0) {
