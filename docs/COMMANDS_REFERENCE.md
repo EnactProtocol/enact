@@ -77,9 +77,8 @@ enact search prettier --limit 5 --json
 - `--timeout <time>` - Override tool timeout (Go duration format: 30s, 5m, 1h)
 - `--dry` - Show command that would be executed without running it
 - `--verbose, -v` - Show detailed execution information
-- `--skip-verification` - Skip signature verification (not recommended)
+- `--dangerously-skip-verification` - Skip all signature verification (DANGEROUS, not recommended)
 - `--verify-policy <policy>` - Verification policy: permissive, enterprise, paranoid (default: permissive)
-- `--force` - Force execution even if signature verification fails
 
 **Security Policies**:
 - `permissive` - Require 1+ valid signatures from trusted keys (default)
@@ -91,7 +90,7 @@ enact search prettier --limit 5 --json
 enact exec enact/text/slugify --input "Hello World"
 enact exec org/ai/review --params '{"file": "README.md"}' --verify-policy enterprise
 enact exec ./my-tool.yaml --input "test data"
-enact exec untrusted/tool --skip-verification
+enact exec untrusted/tool --dangerously-skip-verification  # DANGEROUS, not recommended
 ```
 
 ### 4. init - Tool Creation
