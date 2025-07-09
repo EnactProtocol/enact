@@ -865,5 +865,4 @@ export class EnactCore {
 	}
 }
 
-// Export a default instance
-export const enactCore = new EnactCore();
+// No default instance to avoid eager initialization of Dagger

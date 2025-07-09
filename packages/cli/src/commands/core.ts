@@ -976,6 +976,7 @@ Examples:
 		force: options.force,
 		dryRun: options.dry,
 		verbose: options.verbose,
+		isLocalFile: isLocalFile,
 	};
 
 	try {
