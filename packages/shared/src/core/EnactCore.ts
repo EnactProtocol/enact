@@ -99,9 +99,17 @@ export class EnactCore {
 	}
 
 	/**
-	 * Search for tools
+	 * Static method to search for tools (no execution provider needed)
 	 */
-	async searchTools(options: ToolSearchOptions): Promise<EnactTool[]> {
+	static async searchTools(
+		options: ToolSearchOptions,
+		coreOptions: Pick<EnactCoreOptions, 'apiUrl' | 'supabaseUrl'> = {}
+	): Promise<EnactTool[]> {
+		const apiClient = new EnactApiClient(
+			coreOptions.apiUrl || "https://enact.tools",
+			coreOptions.supabaseUrl || "https://xjnhhxwxovjifdxdwzih.supabase.co"
+		);
+
 		try {
 			logger.info(`Searching for tools with query: "${options.query}"`);
 
@@ -111,14 +119,14 @@ export class EnactCore {
 				tags: options.tags,
 			};
 
-			const results = await this.apiClient.searchTools(searchParams);
+			const results = await apiClient.searchTools(searchParams);
 
 			// Parse and validate results
 			const tools: EnactTool[] = [];
 			for (const result of results) {
 				if (result.name) {
 					try {
-						const tool = await this.getToolByName(result.name);
+						const tool = await EnactCore.getToolByName(result.name, undefined, coreOptions);
 						if (tool) {
 							tools.push(tool);
 						}
@@ -138,7 +146,7 @@ export class EnactCore {
 				logger.info(
 					"Search API unavailable, trying fallback to local filtering...",
 				);
-				return this.searchToolsFallback(options);
+				return EnactCore.searchToolsFallback(options, coreOptions);
 			}
 
 			throw new Error(
@@ -148,16 +156,29 @@ export class EnactCore {
 	}
 
 	/**
-	 * Fallback search method that gets all tools and filters locally
+	 * Instance method wrapper for backward compatibility
 	 */
-	private async searchToolsFallback(
+	async searchTools(options: ToolSearchOptions): Promise<EnactTool[]> {
+		return EnactCore.searchTools(options, this.options);
+	}
+
+	/**
+	 * Static fallback search method that gets all tools and filters locally
+	 */
+	private static async searchToolsFallback(
 		options: ToolSearchOptions,
+		coreOptions: Pick<EnactCoreOptions, 'apiUrl' | 'supabaseUrl'> = {}
 	): Promise<EnactTool[]> {
+		const apiClient = new EnactApiClient(
+			coreOptions.apiUrl || "https://enact.tools",
+			coreOptions.supabaseUrl || "https://xjnhhxwxovjifdxdwzih.supabase.co"
+		);
+
 		try {
 			logger.info("Using fallback search method...");
 
 			// Get all tools (limited to avoid overwhelming the API)
-			const allTools = await this.apiClient.getTools({
+			const allTools = await apiClient.getTools({
 				limit: options.limit || 100,
 			});
 
@@ -168,7 +189,7 @@ export class EnactCore {
 			for (const result of allTools) {
 				if (result.name) {
 					try {
-						const tool = await this.getToolByName(result.name);
+						const tool = await EnactCore.getToolByName(result.name, undefined, coreOptions);
 						if (tool) {
 							// Check if tool matches search criteria
 							const matchesQuery =
@@ -228,16 +249,22 @@ export class EnactCore {
 	}
 
 	/**
-	 * Get a specific tool by name
+	 * Static method to get a specific tool by name
 	 */
-	async getToolByName(
+	static async getToolByName(
 		name: string,
 		version?: string,
+		coreOptions: Pick<EnactCoreOptions, 'apiUrl' | 'supabaseUrl'> = {}
 	): Promise<EnactTool | null> {
+		const apiClient = new EnactApiClient(
+			coreOptions.apiUrl || "https://enact.tools",
+			coreOptions.supabaseUrl || "https://xjnhhxwxovjifdxdwzih.supabase.co"
+		);
+
 		try {
 			logger.info(`Fetching tool: ${name}${version ? `@${version}` : ""}`);
 
-			const response = await this.apiClient.getTool(name);
+			const response = await apiClient.getTool(name);
 
 			if (!response) {
 				logger.info(`Tool not found: ${name}`);
@@ -300,6 +327,16 @@ export class EnactCore {
 			);
 			throw error;
 		}
+	}
+
+	/**
+	 * Instance method wrapper for backward compatibility
+	 */
+	async getToolByName(
+		name: string,
+		version?: string,
+	): Promise<EnactTool | null> {
+		return EnactCore.getToolByName(name, version, this.options);
 	}
 
 	/**
@@ -500,11 +537,12 @@ export class EnactCore {
 	}
 
 	/**
-	 * Verify a tool's signature
+	 * Static method to verify a tool's signature
 	 */
-	async verifyTool(
+	static async verifyTool(
 		name: string,
 		policy?: string,
+		coreOptions: Pick<EnactCoreOptions, 'apiUrl' | 'supabaseUrl'> = {}
 	): Promise<{
 		verified: boolean;
 		signatures: any[];
@@ -512,7 +550,7 @@ export class EnactCore {
 		errors?: string[];
 	}> {
 		try {
-			const tool = await this.getToolByName(name);
+			const tool = await EnactCore.getToolByName(name, undefined, coreOptions);
 
 			if (!tool) {
 				return {
@@ -584,15 +622,40 @@ export class EnactCore {
 	}
 
 	/**
-	 * Check if a tool exists
+	 * Instance method wrapper for backward compatibility
 	 */
-	async toolExists(name: string): Promise<boolean> {
+	async verifyTool(
+		name: string,
+		policy?: string,
+	): Promise<{
+		verified: boolean;
+		signatures: any[];
+		policy: string;
+		errors?: string[];
+	}> {
+		return EnactCore.verifyTool(name, policy, this.options);
+	}
+
+	/**
+	 * Static method to check if a tool exists
+	 */
+	static async toolExists(
+		name: string,
+		coreOptions: Pick<EnactCoreOptions, 'apiUrl' | 'supabaseUrl'> = {}
+	): Promise<boolean> {
 		try {
-			const tool = await this.getToolByName(name);
+			const tool = await EnactCore.getToolByName(name, undefined, coreOptions);
 			return tool !== null;
 		} catch (error) {
 			return false;
 		}
+	}
+
+	/**
+	 * Instance method wrapper for backward compatibility
+	 */
+	async toolExists(name: string): Promise<boolean> {
+		return EnactCore.toolExists(name, this.options);
 	}
 
 	/**
@@ -602,11 +665,11 @@ export class EnactCore {
 		tags: string[],
 		limit: number = 20,
 	): Promise<EnactTool[]> {
-		return this.searchTools({
+		return EnactCore.searchTools({
 			query: tags.join(" "),
 			tags,
 			limit,
-		});
+		}, this.options);
 	}
 
 	/**
@@ -616,33 +679,39 @@ export class EnactCore {
 		author: string,
 		limit: number = 20,
 	): Promise<EnactTool[]> {
-		return this.searchTools({
+		return EnactCore.searchTools({
 			query: `author:${author}`,
 			author,
 			limit,
-		});
+		}, this.options);
 	}
 
 	/**
-	 * Get all tools with filters
+	 * Static method to get all tools with filters
 	 */
-	async getTools(
+	static async getTools(
 		options: {
 			limit?: number;
 			offset?: number;
 			tags?: string[];
 			author?: string;
 		} = {},
+		coreOptions: Pick<EnactCoreOptions, 'apiUrl' | 'supabaseUrl'> = {}
 	): Promise<EnactTool[]> {
+		const apiClient = new EnactApiClient(
+			coreOptions.apiUrl || "https://enact.tools",
+			coreOptions.supabaseUrl || "https://xjnhhxwxovjifdxdwzih.supabase.co"
+		);
+
 		try {
-			const apiResults = await this.apiClient.getTools(options);
+			const apiResults = await apiClient.getTools(options);
 
 			// Parse and validate results
 			const tools: EnactTool[] = [];
 			for (const result of apiResults) {
 				if (result.name) {
 					try {
-						const tool = await this.getToolByName(result.name);
+						const tool = await EnactCore.getToolByName(result.name, undefined, coreOptions);
 						if (tool) {
 							tools.push(tool);
 						}
@@ -662,6 +731,20 @@ export class EnactCore {
 	}
 
 	/**
+	 * Instance method wrapper for backward compatibility
+	 */
+	async getTools(
+		options: {
+			limit?: number;
+			offset?: number;
+			tags?: string[];
+			author?: string;
+		} = {},
+	): Promise<EnactTool[]> {
+		return EnactCore.getTools(options, this.options);
+	}
+
+	/**
 	 * Get authentication status (placeholder - would need actual auth implementation)
 	 */
 	async getAuthStatus(): Promise<{
@@ -678,22 +761,22 @@ export class EnactCore {
 	}
 
 	/**
-	 * Publish a tool (requires authentication)
+	 * Static method to publish a tool
 	 */
-	async publishTool(
+	static async publishTool(
 		tool: EnactTool,
+		authToken: string,
+		coreOptions: Pick<EnactCoreOptions, 'apiUrl' | 'supabaseUrl'> = {}
 	): Promise<{ success: boolean; message: string }> {
-		if (!this.options.authToken) {
-			return {
-				success: false,
-				message: "Authentication required to publish tools",
-			};
-		}
+		const apiClient = new EnactApiClient(
+			coreOptions.apiUrl || "https://enact.tools",
+			coreOptions.supabaseUrl || "https://xjnhhxwxovjifdxdwzih.supabase.co"
+		);
 
 		try {
 			validateToolStructure(tool);
 
-			await this.apiClient.publishTool(tool, this.options.authToken);
+			await apiClient.publishTool(tool, authToken);
 
 			return {
 				success: true,
@@ -708,10 +791,26 @@ export class EnactCore {
 	}
 
 	/**
+	 * Instance method wrapper for backward compatibility
+	 */
+	async publishTool(
+		tool: EnactTool,
+	): Promise<{ success: boolean; message: string }> {
+		if (!this.options.authToken) {
+			return {
+				success: false,
+				message: "Authentication required to publish tools",
+			};
+		}
+
+		return EnactCore.publishTool(tool, this.options.authToken, this.options);
+	}
+
+	/**
 	 * Get tool information (alias for getToolByName for consistency)
 	 */
 	async getToolInfo(name: string, version?: string): Promise<EnactTool | null> {
-		return this.getToolByName(name, version);
+		return EnactCore.getToolByName(name, version, this.options);
 	}
 
 	/**

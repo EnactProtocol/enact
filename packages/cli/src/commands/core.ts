@@ -51,30 +51,6 @@ async function getConfiguredCore(): Promise<EnactCore> {
 	return core;
 }
 
-// Create core instance for non-execution operations (API calls, crypto, etc.)
-async function getNonExecutionCore(): Promise<EnactCore> {
-	try {
-		const config = await getCurrentConfig();
-
-		// Enable silent mode for CLI operations to reduce noise
-		process.env.ENACT_SILENT = "true";
-
-		const coreOptions = {
-			executionProvider: "direct" as const, // Always use direct for non-execution operations
-			defaultTimeout: config.defaultTimeout,
-			verificationPolicy: config.verificationPolicy,
-			apiUrl: config.apiUrl,
-			supabaseUrl: config.supabaseUrl,
-		};
-
-		return new EnactCore(coreOptions);
-	} catch (error) {
-		// Fallback to direct execution
-		process.env.ENACT_SILENT = "true";
-		return new EnactCore({ executionProvider: "direct" });
-	}
-}
-
 /**
  * Clean output text by removing ANSI escape codes for better readability
  */
@@ -1427,8 +1403,11 @@ ${pc.bold("EXAMPLES:")}
 		const spinner = p.spinner();
 		spinner.start(`Verifying ${toolName}...`);
 
-		const nonExecutionCore = await getNonExecutionCore();
-		const result = await nonExecutionCore.verifyTool(toolName, policy);
+		const config = await getCurrentConfig();
+		const result = await EnactCore.verifyTool(toolName, policy, {
+			apiUrl: config.apiUrl,
+			supabaseUrl: config.supabaseUrl,
+		});
 
 		spinner.stop("Verification completed");
 
@@ -1561,8 +1540,11 @@ async function showToolDetailsFromCore(toolName: string): Promise<void> {
 	spinner.start(`Loading details for ${toolName}...`);
 
 	try {
-		const nonExecutionCore = await getNonExecutionCore();
-		const tool = await nonExecutionCore.getToolByName(toolName);
+		const config = await getCurrentConfig();
+		const tool = await EnactCore.getToolByName(toolName, undefined, {
+			apiUrl: config.apiUrl,
+			supabaseUrl: config.supabaseUrl,
+		});
 
 		if (!tool) {
 			spinner.stop("Tool not found");
@@ -1818,18 +1800,15 @@ File: ${filePath}
 			return;
 		}
 
-		// Initialize core with auth token
-		const core = new EnactCore({
-			authToken,
-			supabaseUrl: options.url,
-			verbose: options.verbose,
-		});
-
 		// Publish the tool
 		s.start("Publishing tool...");
 
 		try {
-			const result = await core.publishTool(tool);
+			const config = await getCurrentConfig();
+			const result = await EnactCore.publishTool(tool, authToken, {
+				supabaseUrl: options.url || config.supabaseUrl,
+				apiUrl: config.apiUrl,
+			});
 
 			if (result.success) {
 				s.stop("Tool published successfully!");

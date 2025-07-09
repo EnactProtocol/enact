@@ -79,7 +79,7 @@ describe('Exec Command Migration', () => {
   describe('Legacy Command Removal', () => {
     test('should confirm legacy exec import is removed from index', () => {
       const fs = require('fs');
-      const indexContent = fs.readFileSync('./src/index.ts', 'utf8');
+      const indexContent = fs.readFileSync('../../src/index.ts', 'utf8');
       
       // Should not import the legacy exec handler
       expect(indexContent).not.toContain("import { handleExecCommand } from './commands/exec'");
@@ -90,7 +90,7 @@ describe('Exec Command Migration', () => {
 
     test('should use core exec handler in routing', () => {
       const fs = require('fs');
-      const indexContent = fs.readFileSync('./src/index.ts', 'utf8');
+      const indexContent = fs.readFileSync('../../src/index.ts', 'utf8');
       
       // Should route to core handler
       expect(indexContent).toContain('await handleCoreExecCommand');
@@ -108,7 +108,7 @@ describe('Exec Command Migration', () => {
 
     test('should have proper error handling structure', () => {
       const fs = require('fs');
-      const coreContent = fs.readFileSync('./src/commands/core.ts', 'utf8');
+      const coreContent = fs.readFileSync('../../src/commands/core.ts', 'utf8');
       
       // Should have try-catch blocks for error handling
       expect(coreContent).toContain('try {');
@@ -120,7 +120,7 @@ describe('Exec Command Migration', () => {
 
     test('should maintain help text structure', () => {
       const fs = require('fs');
-      const coreContent = fs.readFileSync('./src/commands/core.ts', 'utf8');
+      const coreContent = fs.readFileSync('../../src/commands/core.ts', 'utf8');
       
       // Should have comprehensive help text
       expect(coreContent).toContain('Usage: enact exec');
@@ -137,7 +137,7 @@ describe('Exec Command Migration', () => {
   describe('Core Library Features', () => {
     test('should have signature verification integration', () => {
       const fs = require('fs');
-      const coreContent = fs.readFileSync('./src/commands/core.ts', 'utf8');
+      const coreContent = fs.readFileSync('../../src/commands/core.ts', 'utf8');
       
       expect(coreContent).toContain('verifyTool');
       expect(coreContent).toContain('VERIFICATION_POLICIES');
@@ -146,7 +146,7 @@ describe('Exec Command Migration', () => {
 
     test('should have environment variable support', () => {
       const fs = require('fs');
-      const coreContent = fs.readFileSync('./src/commands/core.ts', 'utf8');
+      const coreContent = fs.readFileSync('../../src/commands/core.ts', 'utf8');
       
       expect(coreContent).toContain('resolveToolEnvironmentVariables');
       expect(coreContent).toContain('validateRequiredEnvironmentVariables');
@@ -154,7 +154,7 @@ describe('Exec Command Migration', () => {
 
     test('should have local file support', () => {
       const fs = require('fs');
-      const coreContent = fs.readFileSync('./src/commands/core.ts', 'utf8');
+      const coreContent = fs.readFileSync('../../src/commands/core.ts', 'utf8');
       
       expect(coreContent).toContain('isLocalToolPath');
       expect(coreContent).toContain('loadLocalTool');
@@ -164,7 +164,7 @@ describe('Exec Command Migration', () => {
 
     test('should have interactive parameter collection', () => {
       const fs = require('fs');
-      const coreContent = fs.readFileSync('./src/commands/core.ts', 'utf8');
+      const coreContent = fs.readFileSync('../../src/commands/core.ts', 'utf8');
       
       expect(coreContent).toContain('collectParametersInteractively');
       expect(coreContent).toContain('inputSchema');
@@ -174,7 +174,7 @@ describe('Exec Command Migration', () => {
   describe('Command Line Interface', () => {
     test('should support all parameter formats', () => {
       const fs = require('fs');
-      const coreContent = fs.readFileSync('./src/commands/core.ts', 'utf8');
+      const coreContent = fs.readFileSync('../../src/commands/core.ts', 'utf8');
       
       // JSON params
       expect(coreContent).toContain('JSON.parse(options.params)');
@@ -189,7 +189,7 @@ describe('Exec Command Migration', () => {
 
     test('should have dry run support', () => {
       const fs = require('fs');
-      const coreContent = fs.readFileSync('./src/commands/core.ts', 'utf8');
+      const coreContent = fs.readFileSync('../../src/commands/core.ts', 'utf8');
       
       expect(coreContent).toContain('options.dry');
       expect(coreContent).toContain('Command that would be executed');
@@ -197,7 +197,7 @@ describe('Exec Command Migration', () => {
 
     test('should have verbose output support', () => {
       const fs = require('fs');
-      const coreContent = fs.readFileSync('./src/commands/core.ts', 'utf8');
+      const coreContent = fs.readFileSync('../../src/commands/core.ts', 'utf8');
       
       expect(coreContent).toContain('options.verbose');
       expect(coreContent).toContain('Tool Information');

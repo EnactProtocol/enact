@@ -6,21 +6,21 @@ import { readFile } from 'fs/promises';
 
 describe('Publish Command Migration', () => {
   describe('Legacy Command Removal', () => {
-    test('should confirm legacy publish import is removed from index', () => {
-      const indexPath = 'src/index.ts';
+    test('should confirm legacy publish import is removed from index', async () => {
+      const indexPath = '../../../../src/index.ts';
       expect(existsSync(indexPath)).toBe(true);
       
-      const indexContent = Bun.file(indexPath).text();
-      expect(indexContent).resolves.not.toContain("import { handlePublishCommand } from './commands/publish'");
-      expect(indexContent).resolves.toContain("handleCorePublishCommand");
+      const indexContent = await Bun.file(indexPath).text();
+      expect(indexContent).not.toContain("import { handlePublishCommand } from './commands/publish'");
+      expect(indexContent).toContain("handleCorePublishCommand");
     });
 
     test('should confirm legacy publish file is removed', () => {
-      expect(existsSync('src/commands/publish.ts')).toBe(false);
+      expect(existsSync('../../src/commands/publish.ts')).toBe(false);
     });
 
     test('should use core publish handler in routing', async () => {
-      const indexContent = await readFile('src/index.ts', 'utf8');
+      const indexContent = await readFile('../../../../src/index.ts', 'utf8');
       
       // Should use core handler
       expect(indexContent).toContain('await handleCorePublishCommand(commandArgs');
@@ -32,7 +32,7 @@ describe('Publish Command Migration', () => {
 
   describe('Core Implementation Integration', () => {
     test('should have core publish handler exported', async () => {
-      const coreContent = await readFile('src/commands/core.ts', 'utf8');
+      const coreContent = await readFile('../../../../src/commands/core.ts', 'utf8');
       
       // Should export the core publish handler
       expect(coreContent).toContain('export async function handleCorePublishCommand');
@@ -42,7 +42,7 @@ describe('Publish Command Migration', () => {
     });
 
     test('should have proper imports for publish functionality', async () => {
-      const coreContent = await readFile('src/commands/core.ts', 'utf8');
+      const coreContent = await readFile('../../src/commands/core.ts', 'utf8');
       
       // Should import necessary dependencies
       expect(coreContent).toContain("import { readFile } from \"fs/promises\"");
@@ -51,7 +51,7 @@ describe('Publish Command Migration', () => {
     });
 
     test('should integrate with EnactCore for publishing', async () => {
-      const coreContent = await readFile('src/commands/core.ts', 'utf8');
+      const coreContent = await readFile('../../src/commands/core.ts', 'utf8');
       
       // Should use EnactCore for publishing
       expect(coreContent).toContain('const core = new EnactCore({');
@@ -61,7 +61,7 @@ describe('Publish Command Migration', () => {
 
   describe('Feature Migration Validation', () => {
     test('should maintain CLI interface compatibility', async () => {
-      const coreContent = await readFile('src/commands/core.ts', 'utf8');
+      const coreContent = await readFile('../../src/commands/core.ts', 'utf8');
       
       // Should accept same options as legacy command
       expect(coreContent).toContain('help?: boolean');
@@ -72,7 +72,7 @@ describe('Publish Command Migration', () => {
     });
 
     test('should have interactive file selection', async () => {
-      const coreContent = await readFile('src/commands/core.ts', 'utf8');
+      const coreContent = await readFile('../../src/commands/core.ts', 'utf8');
       
       // Should prompt for file if not provided
       expect(coreContent).toContain('Enter the path to the tool manifest');
@@ -80,7 +80,7 @@ describe('Publish Command Migration', () => {
     });
 
     test('should handle authentication', async () => {
-      const coreContent = await readFile('src/commands/core.ts', 'utf8');
+      const coreContent = await readFile('../../src/commands/core.ts', 'utf8');
       
       // Should handle token authentication
       expect(coreContent).toContain('await getAuthHeaders()');
@@ -88,7 +88,7 @@ describe('Publish Command Migration', () => {
     });
 
     test('should validate tool manifests', async () => {
-      const coreContent = await readFile('src/commands/core.ts', 'utf8');
+      const coreContent = await readFile('../../src/commands/core.ts', 'utf8');
       
       // Should validate required fields
       expect(coreContent).toContain('Tool manifest must have a "name" field');
@@ -96,7 +96,7 @@ describe('Publish Command Migration', () => {
     });
 
     test('should show confirmation before publishing', async () => {
-      const coreContent = await readFile('src/commands/core.ts', 'utf8');
+      const coreContent = await readFile('../../src/commands/core.ts', 'utf8');
       
       // Should ask for confirmation
       expect(coreContent).toContain('Publish this tool to the registry?');
@@ -104,7 +104,7 @@ describe('Publish Command Migration', () => {
     });
 
     test('should handle publish errors gracefully', async () => {
-      const coreContent = await readFile('src/commands/core.ts', 'utf8');
+      const coreContent = await readFile('../../src/commands/core.ts', 'utf8');
       
       // Should handle common error cases
       expect(coreContent).toContain('Authentication failed');
@@ -115,7 +115,7 @@ describe('Publish Command Migration', () => {
 
   describe('CLI Integration', () => {
     test('should support all command line options', async () => {
-      const indexContent = await readFile('src/index.ts', 'utf8');
+      const indexContent = await readFile('../../src/index.ts', 'utf8');
       
       // Should pass through all options
       expect(indexContent).toContain('help: values.help');
@@ -126,7 +126,7 @@ describe('Publish Command Migration', () => {
     });
 
     test('should be available in interactive mode', async () => {
-      const indexContent = await readFile('src/index.ts', 'utf8');
+      const indexContent = await readFile('../../src/index.ts', 'utf8');
       
       // Should include publish in interactive options
       expect(indexContent).toContain('value: "publish"');
@@ -137,12 +137,12 @@ describe('Publish Command Migration', () => {
   describe('Build and Integration', () => {
     test('should build successfully with core implementation', () => {
       // This test passes if the build system can process the migration
-      expect(existsSync('src/commands/core.ts')).toBe(true);
-      expect(existsSync('src/index.ts')).toBe(true);
+      expect(existsSync('../../src/commands/core.ts')).toBe(true);
+      expect(existsSync('../../src/index.ts')).toBe(true);
     });
 
     test('should maintain help text structure', async () => {
-      const coreContent = await readFile('src/commands/core.ts', 'utf8');
+      const coreContent = await readFile('../../src/commands/core.ts', 'utf8');
       
       // Should have comprehensive help text
       expect(coreContent).toContain('Usage: enact publish');
