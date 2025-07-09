@@ -103,10 +103,7 @@ const { values, positionals } = parseArgs({
 		"use-core-publish": {
 			type: "boolean",
 		},
-		"skip-verification": {
-			type: "boolean",
-		},
-		force: {
+		"dangerously-skip-verification": {
 			type: "boolean",
 		},
 		timeout: {
@@ -217,8 +214,7 @@ async function main() {
 					verifyPolicy: values.policy as
 						| ("permissive" | "enterprise" | "paranoid")
 						| undefined,
-					skipVerification: values["skip-verification"] as boolean | undefined,
-					force: values.force as boolean | undefined,
+					dangerouslySkipVerification: values["dangerously-skip-verification"] as boolean | undefined,
 				});
 				break;
 

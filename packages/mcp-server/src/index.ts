@@ -211,11 +211,10 @@ server.registerTool(
 				.enum(["permissive", "enterprise", "paranoid"])
 				.optional()
 				.describe("Verification policy"),
-			skipVerification: z
+			dangerouslySkipVerification: z
 				.boolean()
 				.optional()
-				.describe("Skip signature verification"),
-			force: z.boolean().optional().describe("Force execution"),
+				.describe("Skip all signature verification (DANGEROUS)"),
 			dryRun: z.boolean().optional().describe("Dry run mode"),
 			verbose: z.boolean().optional().describe("Verbose output"),
 			async: z
@@ -235,8 +234,7 @@ server.registerTool(
 			localFile = false,
 			timeout,
 			verifyPolicy,
-			skipVerification,
-			force,
+			dangerouslySkipVerification,
 			dryRun,
 			verbose,
 			async = false,
@@ -374,8 +372,8 @@ server.registerTool(
 					executionPromise = enactCore.executeRawTool(yamlContent, inputs, {
 						timeout: timeout || "300s",
 						verifyPolicy,
-						skipVerification: true, // Local files skip verification via centralized policy
-						force,
+						skipVerification: dangerouslySkipVerification || true, // Local files skip verification via centralized policy
+						force: dangerouslySkipVerification || true,
 						dryRun,
 						verbose,
 						isLocalFile: true, // Enable local file security policy
@@ -387,8 +385,8 @@ server.registerTool(
 						{
 							timeout: timeout || "300s",
 							verifyPolicy,
-							skipVerification,
-							force,
+							skipVerification: dangerouslySkipVerification,
+							force: dangerouslySkipVerification,
 							dryRun,
 							verbose,
 							isLocalFile: false, // Registry tools use strict policy
@@ -437,8 +435,8 @@ server.registerTool(
 					result = await enactCore.executeRawTool(yamlContent, inputs, {
 						timeout: timeout || "120s",
 						verifyPolicy,
-						skipVerification: true,
-						force,
+						skipVerification: dangerouslySkipVerification || true,
+						force: dangerouslySkipVerification || true,
 						dryRun,
 						verbose,
 					});
@@ -449,8 +447,8 @@ server.registerTool(
 						{
 							timeout: timeout || "120s",
 							verifyPolicy,
-							skipVerification,
-							force,
+							skipVerification: dangerouslySkipVerification,
+							force: dangerouslySkipVerification,
 							dryRun,
 							verbose,
 						},
@@ -722,7 +720,7 @@ server.registerTool(
 				.optional()
 				.describe("Input schema for the tool"),
 			env: z.record(z.any()).optional().describe("Environment variables"),
-			force: z
+			overwrite: z
 				.boolean()
 				.default(false)
 				.describe("Overwrite if tool already exists"),
@@ -736,7 +734,7 @@ server.registerTool(
 		timeout,
 		inputSchema,
 		env,
-		force = false,
+		overwrite = false,
 	}) => {
 		try {
 			const { promises: fs } = await import("fs");
@@ -748,14 +746,14 @@ server.registerTool(
 			const toolPath = join(toolsDir, `${name}.yaml`);
 
 			// Check if tool already exists
-			if (!force) {
+			if (!overwrite) {
 				try {
 					await fs.access(toolPath);
 					return {
 						content: [
 							{
 								type: "text",
-								text: `❌ Tool already exists: ${toolPath}\n\nUse force: true to overwrite, or choose a different name.`,
+								text: `❌ Tool already exists: ${toolPath}\n\nUse overwrite: true to overwrite, or choose a different name.`,
 							},
 						],
 						isError: true,

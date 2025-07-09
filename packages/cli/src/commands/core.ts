@@ -30,7 +30,7 @@ import stripAnsi from "strip-ansi";
 // Create core instance with configuration
 let core: EnactCore;
 
-async function getConfiguredCore(): Promise<EnactCore> {
+export async function getConfiguredCore(): Promise<EnactCore> {
 	if (!core) {
 		try {
 			const config = await getCurrentConfig();
@@ -77,8 +77,7 @@ interface CoreExecOptions {
 	dry?: boolean;
 	verbose?: boolean;
 	verifyPolicy?: "permissive" | "enterprise" | "paranoid";
-	skipVerification?: boolean;
-	force?: boolean;
+	dangerouslySkipVerification?: boolean;
 }
 
 // Core Publish Command Options
@@ -542,9 +541,8 @@ Options:
   --timeout <time>    Override tool timeout (Go duration format: 30s, 5m, 1h)
   --dry               Show command that would be executed without running it
   --verbose, -v       Show detailed execution information
-  --skip-verification Skip signature verification (not recommended)
+  --dangerously-skip-verification Skip all signature verification (DANGEROUS - not recommended for production)
   --verify-policy     Verification policy: permissive, enterprise, paranoid (default: permissive)
-  --force             Force execution even if signature verification fails
 
 Security Options:
   permissive          Require 1+ valid signatures from trusted keys (default)
@@ -555,7 +553,7 @@ Examples:
   enact exec enact/text/slugify --input "Hello World"
   enact exec org/ai/review --params '{"file": "README.md"}' --verify-policy enterprise
   enact exec ./my-tool.yaml --input "test data"
-  enact exec untrusted/tool --skip-verification  # Not recommended
+  enact exec untrusted/tool --dangerously-skip-verification  # DANGEROUS, not recommended
     `);
 		return;
 	}
@@ -638,8 +636,8 @@ Examples:
 		return;
 	}
 
-	// Signature verification (unless skipped)
-	if (!options.skipVerification) {
+	// Signature verification (unless dangerously skipped)
+	if (!options.dangerouslySkipVerification) {
 		spinner.start("Verifying tool signatures...");
 
 		try {
@@ -718,7 +716,7 @@ Examples:
 						return;
 					}
 				} else {
-					console.error(pc.yellow("⚠️  Proceeding due to --force flag"));
+					console.error(pc.yellow("⚠️  Proceeding due to --dangerously-skip-verification flag"));
 				}
 			}
 		} catch (error) {
@@ -972,8 +970,8 @@ Examples:
 	const executeOptions: ToolExecuteOptions = {
 		timeout: options.timeout,
 		verifyPolicy: options.verifyPolicy,
-		skipVerification: options.skipVerification,
-		force: options.force,
+		skipVerification: options.dangerouslySkipVerification,
+		force: options.dangerouslySkipVerification,
 		dryRun: options.dry,
 		verbose: options.verbose,
 		isLocalFile: isLocalFile,
@@ -1072,7 +1070,7 @@ Examples:
 						metadata: {
 							hasParams: Object.keys(params).length > 0,
 							timeout: options.timeout || toolDefinition.timeout || "30s",
-							verificationSkipped: options.skipVerification || false,
+							verificationSkipped: options.dangerouslySkipVerification || false,
 							verificationPolicy: options.verifyPolicy || "permissive",
 							timestamp: new Date().toISOString(),
 						},

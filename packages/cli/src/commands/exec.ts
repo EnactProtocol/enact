@@ -75,7 +75,7 @@ Options:
   --verbose, -v       Show detailed execution information
   --skip-verification Skip signature verification (not recommended)
   --verify-policy     Verification policy: permissive, enterprise, paranoid (default: permissive)
-  --force             Force execution even if signature verification fails
+  --dangerously-skip-verification Skip all signature verification (DANGEROUS - not recommended for production)
 
 Security Options:
   permissive          Require 1+ valid signatures from trusted keys (default)
@@ -86,6 +86,7 @@ Examples:
   enact exec enact/text/slugify --input "Hello World"
   enact exec org/ai/review --params '{"file": "README.md"}' --verify-policy enterprise
   enact exec ./my-tool.yaml --input "test data"
+  enact exec untrusted/tool --dangerously-skip-verification  # DANGEROUS - not recommended
   echo "Hello World" | enact exec enact/text/slugify --input -
 `);
 		return;
@@ -93,7 +94,7 @@ Examples:
 
 	// Auto-detect stdin input
 	if (!toolIdentifier && !process.stdin.isTTY) {
-		toolIdentifier = await p.text({
+		const response = await p.text({
 			message: "Enter tool name or path",
 			placeholder: "enact/text/slugify",
 			validate: (value) => {
@@ -102,10 +103,12 @@ Examples:
 			},
 		});
 
-		if (!toolIdentifier) {
+		if (p.isCancel(response)) {
 			p.outro(pc.yellow("Execution cancelled"));
 			return;
 		}
+
+		toolIdentifier = response as string;
 	}
 
 	// Determine if this is a local file or remote tool
@@ -160,8 +163,8 @@ Examples:
 			? await core.executeRawTool(readFileSync(toolIdentifier, "utf-8"), params, {
 					timeout: options.timeout,
 					verifyPolicy: options.verifyPolicy,
-					skipVerification: options.skipVerification,
-					force: options.force,
+					skipVerification: options.skipVerification || options.dangerouslySkipVerification,
+					force: options.force || options.dangerouslySkipVerification,
 					dryRun: options.dry,
 					verbose: options.verbose,
 					isLocalFile: true,
@@ -170,8 +173,8 @@ Examples:
 			: await core.executeToolByName(toolIdentifier, params, {
 					timeout: options.timeout,
 					verifyPolicy: options.verifyPolicy,
-					skipVerification: options.skipVerification,
-					force: options.force,
+					skipVerification: options.skipVerification || options.dangerouslySkipVerification,
+					force: options.force || options.dangerouslySkipVerification,
 					dryRun: options.dry,
 					verbose: options.verbose,
 					isLocalFile: false,

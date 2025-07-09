@@ -88,7 +88,8 @@ export interface EnactExecOptions {
 	timeout?: string;
 	dry?: boolean;
 	verbose?: boolean;
-	skipVerification?: boolean; // New option to skip signature verification
+	skipVerification?: boolean; // Skip signature verification (legacy)
 	verifyPolicy?: string; // Verification policy to use
-	force?: boolean; // Force execution even if verification fails
+	force?: boolean; // Force execution even if verification fails (legacy)
+	dangerouslySkipVerification?: boolean; // Skip all signature verification (DANGEROUS)
 }
