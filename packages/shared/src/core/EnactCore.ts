@@ -64,6 +64,8 @@ export interface ToolExecuteOptions {
 	force?: boolean;
 	dryRun?: boolean;
 	verbose?: boolean;
+	isLocalFile?: boolean; // Whether this is a local file (enables different security policies)
+	interactive?: boolean; // Whether to allow interactive prompts for verification failures
 }
 
 export class EnactCore {
@@ -399,6 +401,8 @@ export class EnactCore {
 				verifyPolicy: options.verifyPolicy,
 				force: options.force,
 				allowUnsigned: false, // Never allow unsigned tools in production
+				isLocalFile: options.isLocalFile, // Use centralized policy for local files
+				interactive: options.interactive, // Enable interactive prompts if needed
 			});
 
 			// Log security audit information

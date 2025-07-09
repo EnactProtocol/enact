@@ -7,11 +7,20 @@ import {
 import type { EnactTool, ExecutionResult } from "../types";
 import logger from "../exec/logger";
 
+export interface SecurityPolicy {
+	allowSkipVerification: boolean;
+	allowUnsigned: boolean;
+	requireInteractiveConfirmation: boolean;
+	defaultVerificationPolicy: "permissive" | "enterprise" | "paranoid";
+}
+
 export interface VerificationEnforcementOptions {
 	skipVerification?: boolean;
 	verifyPolicy?: "permissive" | "enterprise" | "paranoid";
 	force?: boolean;
 	allowUnsigned?: boolean; // Explicit flag for allowing unsigned tools (only for dev/testing)
+	isLocalFile?: boolean; // Whether this is a local file (for different security policies)
+	interactive?: boolean; // Whether to allow interactive prompts for verification failures
 }
 
 export interface VerificationEnforcementResult {
@@ -36,14 +45,40 @@ export interface VerificationEnforcementResult {
  * Enforce mandatory signature verification for tool execution
  * This is the central function that should be called before ANY tool execution
  */
+/**
+ * Get security policy based on execution context
+ */
+export function getSecurityPolicy(options: VerificationEnforcementOptions): SecurityPolicy {
+	// Local files have different security policies
+	if (options.isLocalFile) {
+		return {
+			allowSkipVerification: true,
+			allowUnsigned: true,
+			requireInteractiveConfirmation: false,
+			defaultVerificationPolicy: "permissive",
+		};
+	}
+
+	// Production/registry tools have strict policies
+	return {
+		allowSkipVerification: false,
+		allowUnsigned: false,
+		requireInteractiveConfirmation: !!options.interactive,
+		defaultVerificationPolicy: options.verifyPolicy || "permissive",
+	};
+}
+
 export async function enforceSignatureVerification(
 	tool: EnactTool,
 	options: VerificationEnforcementOptions = {},
 ): Promise<VerificationEnforcementResult> {
 	const toolName = tool.name || "unknown";
 
+	// Apply centralized security policy based on context
+	const securityPolicy = getSecurityPolicy(options);
+	
 	// Check if verification is explicitly skipped
-	if (options.skipVerification) {
+	if (options.skipVerification && securityPolicy.allowSkipVerification) {
 		logger.warn(
 			`🚨 SECURITY WARNING: Signature verification skipped for tool: ${toolName}`,
 		);
@@ -73,8 +108,8 @@ export async function enforceSignatureVerification(
 	if (!hasSignatures) {
 		logger.warn(`⚠️  Tool has no signatures: ${toolName}`);
 
-		// Only allow unsigned tools if explicitly permitted (for development/testing)
-		if (options.allowUnsigned) {
+		// Only allow unsigned tools if policy permits (for development/testing)
+		if (options.allowUnsigned || securityPolicy.allowUnsigned) {
 			logger.warn(
 				`   Allowing unsigned tool execution due to allowUnsigned flag (DEV/TEST ONLY)`,
 			);

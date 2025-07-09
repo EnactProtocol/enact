@@ -374,10 +374,11 @@ server.registerTool(
 					executionPromise = enactCore.executeRawTool(yamlContent, inputs, {
 						timeout: timeout || "300s",
 						verifyPolicy,
-						skipVerification: true, // Local files skip verification
+						skipVerification: true, // Local files skip verification via centralized policy
 						force,
 						dryRun,
 						verbose,
+						isLocalFile: true, // Enable local file security policy
 					});
 				} else {
 					executionPromise = enactCore.executeToolByName(
@@ -390,6 +391,7 @@ server.registerTool(
 							force,
 							dryRun,
 							verbose,
+							isLocalFile: false, // Registry tools use strict policy
 						},
 					);
 				}
