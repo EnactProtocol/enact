@@ -51,6 +51,30 @@ async function getConfiguredCore(): Promise<EnactCore> {
 	return core;
 }
 
+// Create core instance for non-execution operations (API calls, crypto, etc.)
+async function getNonExecutionCore(): Promise<EnactCore> {
+	try {
+		const config = await getCurrentConfig();
+
+		// Enable silent mode for CLI operations to reduce noise
+		process.env.ENACT_SILENT = "true";
+
+		const coreOptions = {
+			executionProvider: "direct" as const, // Always use direct for non-execution operations
+			defaultTimeout: config.defaultTimeout,
+			verificationPolicy: config.verificationPolicy,
+			apiUrl: config.apiUrl,
+			supabaseUrl: config.supabaseUrl,
+		};
+
+		return new EnactCore(coreOptions);
+	} catch (error) {
+		// Fallback to direct execution
+		process.env.ENACT_SILENT = "true";
+		return new EnactCore({ executionProvider: "direct" });
+	}
+}
+
 /**
  * Clean output text by removing ANSI escape codes for better readability
  */
@@ -97,6 +121,9 @@ export async function handleCoreSearchCommand(
 	args: string[],
 	options: CoreSearchOptions,
 ) {
+	// Enable silent mode for cleaner CLI output
+	process.env.ENACT_SILENT = "true";
+	
 	if (options.help) {
 		console.error(`
 ${pc.bold("enact search")} - Search for tools
@@ -231,8 +258,55 @@ ${pc.bold("EXAMPLES:")}
 			format: format as any,
 		};
 
-		const configuredCore = await getConfiguredCore();
-		const results = await configuredCore.searchTools(searchOptions);
+		// Use API client directly for search - no need for EnactCore
+		const apiClient = new EnactApiClient(
+			"https://enact.tools",
+			"https://xjnhhxwxovjifdxdwzih.supabase.co",
+		);
+		const searchResults = await apiClient.searchTools(searchOptions);
+		
+		// Convert API results to EnactTool format
+		const results: EnactTool[] = [];
+		for (const result of searchResults) {
+			if (result.name) {
+				try {
+					const tool = await apiClient.getTool(result.name);
+					if (tool) {
+						// Convert to EnactTool format
+						const enactTool: EnactTool = {
+							name: tool.name,
+							description: tool.description || "",
+							command: tool.command,
+							version: tool.version || "1.0.0",
+							timeout: tool.timeout,
+							tags: tool.tags || [],
+							inputSchema: tool.inputSchema,
+							outputSchema: tool.outputSchema,
+							env: tool.env_vars
+								? Object.fromEntries(
+										Object.entries(tool.env_vars).map(([key, config]) => [
+											key,
+											{ ...config, source: config.source || "env" },
+										]),
+									)
+								: undefined,
+							signature: tool.signature,
+							signatures: tool.signatures,
+							namespace: tool.namespace,
+							resources: tool.resources,
+							license: tool.license,
+							authors: tool.authors,
+							examples: tool.examples,
+							annotations: tool.annotations,
+						};
+						results.push(enactTool);
+					}
+				} catch (error) {
+					// Skip tools that can't be fetched
+					continue;
+				}
+			}
+		}
 
 		spinner.stop(
 			`Found ${results.length} tool${results.length === 1 ? "" : "s"}`,
@@ -257,6 +331,11 @@ ${pc.bold("EXAMPLES:")}
 			displayResultsList(results);
 		} else {
 			displayResultsTable(results);
+		}
+
+		// Exit immediately for non-interactive mode
+		if (!isInteractiveMode) {
+			process.exit(0);
 		}
 
 		// Interactive tool selection for detailed view
@@ -284,6 +363,8 @@ ${pc.bold("EXAMPLES:")}
 		if (isInteractiveMode) {
 			p.outro(pc.green("Search completed"));
 		}
+		// Non-interactive mode - exit cleanly without prompts
+		return;
 	} catch (error: any) {
 		spinner.stop("Search failed");
 
@@ -1104,6 +1185,9 @@ export async function handleCoreGetCommand(
 	args: string[],
 	options: { help?: boolean; format?: string },
 ) {
+	// Enable silent mode for cleaner CLI output
+	process.env.ENACT_SILENT = "true";
+	
 	if (options.help) {
 		console.error(`
 ${pc.bold("enact get")} - Get tool information
@@ -1144,8 +1228,46 @@ ${pc.bold("EXAMPLES:")}
 		const spinner = p.spinner();
 		spinner.start(`Fetching ${toolName}...`);
 
-		const configuredCore = await getConfiguredCore();
-		const tool = await configuredCore.getToolByName(toolName);
+		// Use API client directly - no need for EnactCore
+		const apiClient = new EnactApiClient(
+			"https://enact.tools",
+			"https://xjnhhxwxovjifdxdwzih.supabase.co",
+		);
+		const toolDefinition = await apiClient.getTool(toolName);
+		
+		if (!toolDefinition) {
+			spinner.stop("Tool not found");
+			p.outro(pc.red(`Tool not found: ${toolName}`));
+			process.exit(1);
+		}
+
+		// Convert to EnactTool format
+		const tool: EnactTool = {
+			name: toolDefinition.name,
+			description: toolDefinition.description || "",
+			command: toolDefinition.command,
+			version: toolDefinition.version || "1.0.0",
+			timeout: toolDefinition.timeout,
+			tags: toolDefinition.tags || [],
+			inputSchema: toolDefinition.inputSchema,
+			outputSchema: toolDefinition.outputSchema,
+			env: toolDefinition.env_vars
+				? Object.fromEntries(
+						Object.entries(toolDefinition.env_vars).map(([key, config]) => [
+							key,
+							{ ...config, source: config.source || "env" },
+						]),
+					)
+				: undefined,
+			signature: toolDefinition.signature,
+			signatures: toolDefinition.signatures,
+			namespace: toolDefinition.namespace,
+			resources: toolDefinition.resources,
+			license: toolDefinition.license,
+			authors: toolDefinition.authors,
+			examples: toolDefinition.examples,
+			annotations: toolDefinition.annotations,
+		};
 
 		spinner.stop("Fetch completed");
 
@@ -1244,6 +1366,11 @@ export async function handleCoreVerifyCommand(
 		verbose?: boolean;
 	},
 ) {
+	// Enable silent mode for cleaner CLI output (unless verbose is requested)
+	if (!options.verbose) {
+		process.env.ENACT_SILENT = "true";
+	}
+	
 	if (options.help) {
 		console.error(`
 ${pc.bold("enact verify")} - Verify tool signatures
@@ -1291,8 +1418,8 @@ ${pc.bold("EXAMPLES:")}
 		const spinner = p.spinner();
 		spinner.start(`Verifying ${toolName}...`);
 
-		const configuredCore = await getConfiguredCore();
-		const result = await configuredCore.verifyTool(toolName, policy);
+		const nonExecutionCore = await getNonExecutionCore();
+		const result = await nonExecutionCore.verifyTool(toolName, policy);
 
 		spinner.stop("Verification completed");
 
@@ -1425,7 +1552,8 @@ async function showToolDetailsFromCore(toolName: string): Promise<void> {
 	spinner.start(`Loading details for ${toolName}...`);
 
 	try {
-		const tool = await core.getToolByName(toolName);
+		const nonExecutionCore = await getNonExecutionCore();
+		const tool = await nonExecutionCore.getToolByName(toolName);
 
 		if (!tool) {
 			spinner.stop("Tool not found");

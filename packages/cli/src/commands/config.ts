@@ -51,7 +51,7 @@ async function loadConfig(global: boolean = false): Promise<EnactConfig> {
 
 	if (!existsSync(configPath)) {
 		return {
-			executionProvider: "dagger",
+			executionProvider: "dagger", // Default to Dagger for tool execution security
 			defaultTimeout: "30s",
 			verificationPolicy: "permissive",
 		};

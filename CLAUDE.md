@@ -1,4 +1,4 @@
-# Enact Protocol Documentation
+# Enact Protocol
 
 ![Status: Alpha](https://img.shields.io/badge/Status-Alpha-yellow) ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg) [![Discord](https://img.shields.io/badge/Discord-Enact_PROTOCOL-blue?logo=discord&logoColor=white)](https://discord.gg/mMfxvMtHyS)
 
@@ -24,7 +24,7 @@ That's it. This tool can now be:
 
 **Install:**
 ```bash
-npm install -g @enactprotocol/cli
+npm install -g enact-cli
 ```
 
 **Create your first tool:**
@@ -50,6 +50,7 @@ command: "npx text-stats@1.0.0 '${text}'"
 enact: "1.0.0"
 name: enact/markdown/converter
 description: "Converts markdown to HTML"
+from: "node:18-alpine"
 command: "npx markdown-it@14.0.0 '${input}'"
 timeout: "30s"
 license: "MIT"
@@ -85,20 +86,32 @@ command: "docker run pandoc/core:3.1.11 -f markdown -t html"
 
 # API calls
 command: "curl -s 'https://api.example.com/v1/process' -d '${json}'"
+
+# With container image specification
+from: "node:18-alpine"
+command: "npx prettier@3.3.3 --write '${file}'"
+
+# Python environment
+from: "python:3.11-slim"
+command: "python -m pip install requests && python -c 'import requests; print(requests.get(\"${url}\").text)'"
 ```
 
 ### Multi-Signature Security
 Tools can be signed by multiple parties:
 ```yaml
 signatures:
-  "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE...":
-    signer: "author"
-    role: "developer"
-    created: 2025-05-15T23:55:41.328Z
-  "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAF...":
-    signer: "security-team"
+  - signer: "71e02e2c-148c-4534-9900-bd9646e99333"
+    algorithm: "sha256"
+    type: "ecdsa-p256"
+    value: "drwaN6pjbV24JeGOPmQhe8mgQTD1f9LZ4qRsKAV5/8jODTzTbcyToQ36lt9uv06S0Y60IdchR/40WLtAUc3Bdg=="
+    created: "2025-07-08T18:42:15.501+00:00"
+    role: "author"
+  - signer: "security-team"
+    algorithm: "sha256"
+    type: "ecdsa-p256"
+    value: "MEUCIDxNLAzYZQAul2/uhPkdjxNrNwkFWy2qYOGV5pWIpdabAiEB..."
+    created: "2025-07-08T20:30:00.000+00:00"
     role: "reviewer"
-    created: 2025-05-16T08:30:00.000Z
 ```
 
 ### Shared Environment Variables
@@ -114,6 +127,27 @@ env:
 ```
 
 All Discord tools (`discord/webhook`, `discord/bot-manager`) share the same credentials stored in `~/.enact/env/acme-corp/discord/.env`.
+
+### Container Image Specification
+Specify the container image for command execution:
+```yaml
+name: "acme-corp/python/data-processor"
+from: "python:3.11-slim"
+command: "python -m pip install pandas numpy && python process.py '${data}'"
+
+# Or use custom images
+from: "ghcr.io/company/custom-env:v2.1.0"
+command: "analyze-data '${input}'"
+
+# Default behavior (no from field)
+command: "echo 'Hello World'"  # Runs on system shell
+```
+
+The `from` field provides:
+- **Reproducible environments** - Same runtime across different systems
+- **Dependency isolation** - Tools don't interfere with each other
+- **Version control** - Pin exact image versions for consistency
+- **Security** - Run tools in isolated containers
 
 ### Behavior Annotations
 Help AI models understand tool safety:
@@ -159,6 +193,8 @@ enact verify tool.yaml          # Check signatures
 4. **Add input schemas:** Help AI models use tools correctly
 5. **Set timeouts:** Match expected execution time
 6. **Tag appropriately:** `["text", "analysis", "nlp"]`
+7. **Pin container images:** Use specific tags like `python:3.11-slim` not `python:latest`
+8. **Use minimal images:** Prefer `alpine` or `slim` variants for faster startup
 
 ## Example Tools
 
@@ -180,6 +216,7 @@ inputSchema:
 enact: "1.0.0"
 name: enact/code/prettier
 description: "Formats JavaScript/TypeScript code"
+from: "node:18-alpine"
 command: "npx prettier@3.3.3 --write '${file}'"
 inputSchema:
   type: object
@@ -195,6 +232,7 @@ annotations:
 enact: "1.0.0"
 name: enact/web/markdown-crawler
 description: "Extracts content as markdown"
+from: "python:3.11-slim"
 command: "uvx markdown-crawler@2.1.0 '${url}'"
 inputSchema:
   type: object
@@ -228,7 +266,7 @@ annotations:
 
 ## Get Started
 
-1. **Install:** `npm install -g enact-cli`
+1. **Install:** `npm install -g @enactprotocol/cli`
 2. **Create:** `enact init my-first-tool`
 3. **Publish:** `enact publish tool.yaml`
 4. **Use:** AI models can now discover and execute your tool!
@@ -246,6 +284,7 @@ description: string  # Human-readable description (required)
 command: string      # Shell command to execute with versions (required)
 
 # RECOMMENDED FIELDS
+from: string         # Container image to run the command on (optional, defaults to system shell)
 timeout: string      # Go duration format: "30s", "5m", "1h" (default: "30s")
 tags: [string]       # Tags for search and categorization
 license: string      # SPDX License identifier (e.g., "MIT", "Apache-2.0", "GPL-3.0")
@@ -307,21 +346,34 @@ annotations:         # MCP-aligned behavior hints (all default to false)
 ### Multi-Signature Security
 
 ```yaml
-signatures:          # Cryptographic signatures (optional, supports multiple signers)
-  "PUBLIC_KEY_1":    # Base64-encoded public key as map key
-    algorithm: string    # Hash algorithm: "sha256" (required)
-    type: string         # Signature type: "ecdsa-p256" (required)
-    signer: string       # Human-readable signer identifier (required)
-    created: string      # ISO timestamp (required)
-    value: string        # Base64 encoded signature (required)
-    role: string         # Signer role: "author", "reviewer", "approver", etc. (optional)
-  "PUBLIC_KEY_2":    # Additional signers
-    algorithm: sha256
-    type: ecdsa-p256
-    signer: "security-team"
-    created: 2025-05-16T08:30:00.000Z
-    value: "MEUCIDxNLAzYZQAul2/uhPkdjxNrNwkFWy2qYOGV5pWIpdabAiEB..."
-    role: "security-reviewer"
+signatures:             # Cryptographic signatures (optional, supports multiple signers)
+  - signer: string      # Signer identifier (UUID or human-readable name) (required)
+    algorithm: string   # Hash algorithm: "sha256" (required)
+    type: string        # Signature type: "ecdsa-p256" (required)
+    value: string       # Base64 encoded signature (required)
+    created: string     # ISO timestamp (required)
+    role: string        # Signer role: "author", "reviewer", "approver", etc. (optional)
+  - signer: string      # Additional signers
+    algorithm: string
+    type: string
+    value: string
+    created: string
+    role: string
+```
+
+### Custom Extensions
+
+Use the `x-` prefix for custom fields:
+
+```yaml
+name: "company/tool/example"
+description: "Example tool"
+command: "echo 'Hello ${name}'"
+
+# Custom extensions
+x-internal-id: "tool-12345"
+x-team-owner: "platform-team"
+x-cost-center: "engineering"
 ```
 
 ## Community

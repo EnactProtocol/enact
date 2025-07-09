@@ -101,7 +101,7 @@ function createSilentMocks(): { console: ConsoleMock; process: ProcessMock } {
   process.exit = mock((code?: number) => {
     exitCalled = true;
     exitCode = code;
-    throw new ProcessExitError(code);
+    throw new ProcessExitError(`Process exited with code ${code}`, code || 0);
   }) as any;
   
   return {

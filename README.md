@@ -298,6 +298,39 @@ DEBUG=* bun src/index.ts <command>
 # See src/utils/logger.ts for LogLevel options
 ```
 
+## Execution Providers
+
+Enact uses different execution providers for different types of operations to balance security and performance:
+
+### **Dagger (Containerized) - Default for Tool Execution**
+- `enact exec <tool-name>` - External tools from registry
+- MCP server executing tools - AI-requested tool execution
+- **Why**: External tools are containerized for security isolation
+
+### **Direct (Host) - Used for CLI Operations**  
+- `enact search` - Registry API calls
+- `enact get` - Tool information retrieval
+- `enact verify` - Signature verification (crypto operations)
+- `enact publish` - Publishing to registry
+- `enact config`, `enact mcp`, `enact help` - Local operations
+- **Why**: Fast execution for operations that don't run external code
+
+### **Configuration**
+You can override the tool execution provider:
+
+```bash
+# Use direct execution (faster, less secure)
+enact config set executionProvider direct
+
+# Use Dagger execution (default, more secure)
+enact config set executionProvider dagger
+
+# Check current configuration
+enact config get executionProvider
+```
+
+**Note**: CLI operations always use direct execution regardless of this setting for performance.
+
 ### Contributing Guidelines
 
 - Follow TypeScript best practices

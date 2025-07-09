@@ -62,7 +62,7 @@ export class EnactApiClient {
 		const responseData = await response.json();
 
 		// Debug logging to help identify response structure issues
-		if (process.env.NODE_ENV === "development" || process.env.DEBUG) {
+		if ((process.env.NODE_ENV === "development" || process.env.DEBUG) && !process.env.ENACT_SILENT) {
 			console.error(`API Response for ${endpoint}:`, responseData);
 		}
 
@@ -141,7 +141,7 @@ export class EnactApiClient {
 
 		try {
 			// Log the request for debugging
-			if (process.env.NODE_ENV === "development" || process.env.DEBUG) {
+			if ((process.env.NODE_ENV === "development" || process.env.DEBUG) && !process.env.ENACT_SILENT) {
 				console.error(
 					`Search request to ${endpoint}:`,
 					JSON.stringify(query, null, 2),

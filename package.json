@@ -67,6 +67,7 @@
     "node": ">=18.0.0"
   },
   "devDependencies": {
+    "@types/bun": "^1.2.18",
     "@types/node": "^20.12.12",
     "bun-types": "latest",
     "typescript": "^5.4.5"
