@@ -271,28 +271,36 @@ export class EnactCore {
 				return null;
 			}
 
-			// Parse tool from response
+			// Parse tool from response - prefer raw_content for signature compatibility
 			let tool: EnactTool;
 
-			if (response.content && typeof response.content === "string") {
-				tool = yaml.parse(response.content);
-			} else if (
-				response.raw_content &&
-				typeof response.raw_content === "string"
-			) {
+			// Try raw_content first (contains original tool definition with correct field names for signatures)
+			if (response.raw_content && typeof response.raw_content === "string") {
 				try {
 					tool = JSON.parse(response.raw_content);
 				} catch {
 					tool = yaml.parse(response.raw_content);
 				}
 
-				// Merge signature information
-				if (response.signature || response.signatures) {
+				// Merge signature information from response if not already in raw content
+				if (!tool.signature && response.signature) {
 					tool.signature = response.signature;
+				}
+				if (!tool.signatures && response.signatures) {
+					tool.signatures = response.signatures;
+				}
+			} else if (response.content && typeof response.content === "string") {
+				tool = yaml.parse(response.content);
+				
+				// Merge signature information
+				if (!tool.signature && response.signature) {
+					tool.signature = response.signature;
+				}
+				if (!tool.signatures && response.signatures) {
 					tool.signatures = response.signatures;
 				}
 			} else {
-				// Map database fields to tool format
+				// Fallback: map database fields to tool format (may cause signature verification issues)
 				tool = {
 					name: response.name,
 					description: response.description,

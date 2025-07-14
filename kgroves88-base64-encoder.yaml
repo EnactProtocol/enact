@@ -1,0 +1,74 @@
+name: kgroves88/base64-encoder
+description: Encode and decode base64 strings
+command: |
+  if [ "${action:-encode}" = "encode" ]; then
+    # Encode to base64
+    encoded=$(printf "%s" "${input}" | base64)
+    printf '{"input": "%s", "output": "%s", "action": "encode"}' "${input}" "$encoded"
+  else
+    # Decode from base64
+    decoded=$(printf "%s" "${input}" | base64 -d)
+    printf '{"input": "%s", "output": "%s", "action": "decode"}' "${input}" "$decoded"
+  fi
+version: "1.0.0"
+enact: "1.0.0"
+timeout: "10s"
+tags:
+  - base64
+  - encoder
+  - decoder
+  - utility
+  - demo
+
+authors:
+  - name: Keith Groves
+    email: kgroves88@example.com
+
+inputSchema:
+  type: object
+  properties:
+    input:
+      type: string
+      description: String to encode or decode
+    action:
+      type: string
+      enum: ["encode", "decode"]
+      description: Action to perform
+      default: "encode"
+  required:
+    - input
+
+outputSchema:
+  type: object
+  properties:
+    input:
+      type: string
+      description: Original input string
+    output:
+      type: string
+      description: Encoded or decoded result
+    action:
+      type: string
+      description: Action performed
+
+annotations:
+  readOnlyHint: true
+  idempotentHint: true
+
+examples:
+  - input:
+      input: "Hello World!"
+      action: "encode"
+    output:
+      input: "Hello World!"
+      output: "SGVsbG8gV29ybGQh"
+      action: "encode"
+    description: "Encode a simple string to base64"
+  - input:
+      input: "SGVsbG8gV29ybGQh"
+      action: "decode"
+    output:
+      input: "SGVsbG8gV29ybGQh"
+      output: "Hello World!"
+      action: "decode"
+    description: "Decode a base64 string back to original text"

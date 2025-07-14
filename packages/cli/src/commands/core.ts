@@ -1009,6 +1009,7 @@ Examples:
 					)
 				: undefined,
 			signature: toolDefinition.signature,
+			signatures: toolDefinition.signatures,
 			namespace: toolDefinition.namespace,
 			resources: toolDefinition.resources,
 		};

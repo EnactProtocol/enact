@@ -1,4 +1,4 @@
-// enact-signer.ts - Exact webapp compatibility
+// enact-signer.ts - Critical field signing for focused security validation
 
 import * as crypto from "crypto";
 import { parse, stringify } from "yaml";
@@ -6,47 +6,37 @@ import * as fs from "fs";
 import * as path from "path";
 
 /**
- * EXACT copy of webapp's createCanonicalToolDefinition
- * This MUST match the webapp's cryptoService function exactly
+ * Crea	// Use canonical JSON creation with only critical fields
+	const canonicalJson = createCanonicalToolJson(toolForSigning);
+
+	console.error("=== SIGNING DEBUG (CRITICAL FIELDS ONLY) ===");
+	console.error("Tool for signing:", JSON.stringify(toolForSigning, null, 2));
+	console.error("Critical-fields-only canonical JSON:", canonicalJson);
+	console.error("Canonical JSON length:", canonicalJson.length);
+	console.error("==========================================");ical tool definition with ONLY critical security fields
+ * This signs only the fields that are critical for security and tool identity
  */
 function createCanonicalToolDefinition(
 	tool: Record<string, unknown>,
 ): Record<string, unknown> {
 	const canonical: Record<string, unknown> = {};
 
-	// CRITICAL: These must be in the exact same order as the webapp
-	const orderedFields = [
-		"name",
-		"description",
-		"command",
-		"protocol_version",
-		"version",
-		"timeout",
-		"tags",
-		"input_schema",
-		"output_schema",
-		"annotations",
-		"env_vars",
-		"examples",
-		"resources",
-		"doc",
-		"authors",
-		"enact",
+	// CRITICAL SECURITY FIELDS ONLY - these fields are signed to prevent tampering
+	const criticalFields = [
+		"enact",        // Protocol version security
+		"name",         // Identity - prevents tool impersonation  
+		"description",  // What the tool claims to do
+		"command",      // The actual execution payload
+		"from",         // Container image - critical for security
+		"env",          // Environment variables
+		"timeout",      // Prevents DoS attacks
+		"inputSchema",  // Defines the attack surface
+		"annotations",  // Security behavior hints
+		"version",      // Tool version for compatibility
 	];
 
-	// Add fields in the specific order
-	for (const field of orderedFields) {
-		if (tool[field] !== undefined) {
-			canonical[field] = tool[field];
-		}
-	}
-
-	// Add any remaining fields not in the ordered list (sorted)
-	const remainingFields = Object.keys(tool)
-		.filter((key) => !orderedFields.includes(key))
-		.sort();
-
-	for (const field of remainingFields) {
+	// Add only critical fields in the specific order
+	for (const field of criticalFields) {
 		if (tool[field] !== undefined) {
 			canonical[field] = tool[field];
 		}
@@ -56,38 +46,33 @@ function createCanonicalToolDefinition(
 }
 
 /**
- * Create canonical tool JSON EXACTLY like the webapp does
- * This mirrors the webapp's createCanonicalToolJson function
+ * Create canonical tool JSON with ONLY critical security fields
+ * This focuses the signature on security-critical fields only
  */
 function createCanonicalToolJson(toolData: any): string {
-	// Convert Tool to the format expected by createCanonicalToolDefinition
-	// CRITICAL: Use the exact same field mapping as the webapp
+	// Only include critical security fields in the canonical representation
 	const toolRecord: Record<string, unknown> = {
+		// Core identity and security fields
+		enact: toolData.enact || toolData.protocol_version || "1.0.0",
 		name: toolData.name,
 		description: toolData.description,
 		command: toolData.command,
-		// Map database fields to canonical fields (EXACT webapp mapping)
-		protocol_version: toolData.protocol_version,
-		version: toolData.version,
-		timeout: toolData.timeout,
-		tags: toolData.tags,
-		// Handle schema field mappings (use underscore versions like webapp)
-		input_schema: toolData.input_schema, // NOT inputSchema
-		output_schema: toolData.output_schema, // NOT outputSchema
-		annotations: toolData.annotations,
-		env_vars: toolData.env_vars, // NOT env
-		examples: toolData.examples,
-		resources: toolData.resources,
-		doc: toolData.doc, // Use direct field, not from raw_content
-		authors: toolData.authors, // Use direct field, not from raw_content
-		// Add enact field if missing (webapp behavior)
-		enact: toolData.enact || "1.0.0",
+		
+		// Security-critical optional fields (only if present)
+		...(toolData.from && { from: toolData.from }),
+		...(toolData.env && { env: toolData.env }),
+		...(toolData.env_vars && { env: toolData.env_vars }), // Handle both formats
+		...(toolData.timeout && { timeout: toolData.timeout }),
+		...(toolData.inputSchema && { inputSchema: toolData.inputSchema }),
+		...(toolData.input_schema && { inputSchema: toolData.input_schema }), // Handle both formats
+		...(toolData.annotations && { annotations: toolData.annotations }),
+		...(toolData.version && { version: toolData.version }),
 	};
 
-	// Use the standardized canonical function from cryptoService
+	// Use the canonical function that only includes critical fields
 	const canonical = createCanonicalToolDefinition(toolRecord);
 
-	// Return deterministic JSON with sorted keys EXACTLY like webapp
+	// Return deterministic JSON with sorted keys for consistent signatures
 	return JSON.stringify(canonical, Object.keys(canonical).sort());
 }
 
@@ -191,7 +176,7 @@ function base64ToPem(base64: string): string {
 
 /**
  * Sign an Enact tool and add to the signatures map
- * Uses EXACT same process as webapp for perfect compatibility
+ * Signs only critical security fields for focused and reliable validation
  */
 export async function signTool(
 	toolPath: string,
@@ -221,8 +206,11 @@ export async function signTool(
 	console.error("Canonical JSON length:", canonicalJson.length);
 	console.error("==========================================");
 
+	// Normalize the tool for hashing (convert to canonical field names)
+	const normalizedToolForSigning = normalizeToolForSigning(toolForSigning);
+
 	// Create tool hash exactly like webapp (SHA-256 hash of canonical JSON)
-	const toolHashBytes = await hashTool(toolForSigning);
+	const toolHashBytes = await hashTool(normalizedToolForSigning);
 
 	// Sign using Web Crypto API to match webapp exactly
 	const { webcrypto } = await import("node:crypto");
@@ -291,22 +279,59 @@ export async function signTool(
 }
 
 /**
- * Hash tool data for signing - EXACT copy of webapp's hashTool function
+ * Normalize tool object to contain only critical security fields for signing
+ * Maps between different field name formats and extracts only security-critical fields
+ */
+function normalizeToolForSigning(tool: Record<string, unknown>): Record<string, unknown> {
+	const normalized: Record<string, unknown> = {};
+	
+	// Core required fields
+	normalized.enact = tool.enact || tool.protocol_version || "1.0.0";
+	normalized.name = tool.name;
+	normalized.description = tool.description;
+	normalized.command = tool.command;
+	
+	// Optional critical security fields (only include if present)
+	if (tool.from) normalized.from = tool.from;
+	if (tool.version) normalized.version = tool.version;
+	if (tool.timeout) normalized.timeout = tool.timeout;
+	if (tool.annotations) normalized.annotations = tool.annotations;
+	
+	// Handle environment variables (both formats)
+	if (tool.env) {
+		normalized.env = tool.env;
+	} else if (tool.env_vars) {
+		normalized.env = tool.env_vars;
+	}
+	
+	// Handle input schema (both formats)
+	if (tool.inputSchema) {
+		normalized.inputSchema = tool.inputSchema;
+	} else if (tool.input_schema) {
+		normalized.inputSchema = tool.input_schema;
+	}
+	
+	return normalized;
+}
+
+/**
+ * Hash tool data for signing - only includes critical security fields
+ * Creates a deterministic hash of only the security-critical fields
  */
 async function hashTool(tool: Record<string, unknown>): Promise<Uint8Array> {
-	// Create canonical representation
+	// Create canonical representation with only critical fields
 	const canonical = createCanonicalToolDefinition(tool);
 
-	// Remove signature if present to avoid circular dependency
-	const { signature, ...toolForSigning } = canonical;
+	// Remove signature and signatures to avoid circular dependency
+	const { signature, signatures, ...toolForSigning } = canonical;
 
-	// Create deterministic JSON with sorted keys
+	// Create deterministic JSON with sorted keys for consistent hashing
 	const canonicalJson = JSON.stringify(
 		toolForSigning,
 		Object.keys(toolForSigning).sort(),
 	);
 
-	console.error("🔍 Canonical JSON for hashing:", canonicalJson);
+	console.error("🔍 Critical-fields-only canonical JSON for hashing:", canonicalJson);
 	console.error("🔍 Canonical JSON length:", canonicalJson.length);
 
 	// Hash the canonical JSON
@@ -328,8 +353,8 @@ async function hashTool(tool: Record<string, unknown>): Promise<Uint8Array> {
 }
 
 /**
- * Verify tool signature using EXACT same process as webapp
- * This mirrors the webapp's verifyToolSignature function exactly
+ * Verify tool signature using critical security fields only
+ * This verifies signatures against only the security-critical fields
  */
 export async function verifyToolSignature(
 	toolObject: Record<string, unknown>,
@@ -337,10 +362,13 @@ export async function verifyToolSignature(
 	publicKeyObj: CryptoKey,
 ): Promise<boolean> {
 	try {
-		// Hash the tool (same process as signing) - EXACT webapp logic
-		const toolHash = await hashTool(toolObject);
+		// Normalize the tool to match signing format (handle EnactTool vs canonical format)
+		const normalizedTool = normalizeToolForSigning(toolObject);
+		
+		// Hash the tool (same process as signing) - critical fields only
+		const toolHash = await hashTool(normalizedTool);
 
-		// Convert Base64 signature to bytes EXACTLY like webapp
+		// Convert Base64 signature to bytes 
 		const signatureBytes = new Uint8Array(
 			atob(signatureB64)
 				.split("")
@@ -358,7 +386,7 @@ export async function verifyToolSignature(
 			"(should be 64 for P-256)",
 		);
 
-		// Use Web Crypto API for verification (matches webapp exactly)
+		// Use Web Crypto API for verification
 		const { webcrypto } = await import("node:crypto");
 		const isValid = await webcrypto.subtle.verify(
 			{ name: "ECDSA", hash: { name: "SHA-256" } },
@@ -377,7 +405,7 @@ export async function verifyToolSignature(
 
 /**
  * Verify an Enact tool with embedded signatures against trusted keys
- * Uses the exact same canonical format and verification approach as the webapp
+ * Only verifies signatures against critical security fields for focused validation
  */
 export async function verifyTool(
 	toolYaml: string | EnactTool,
@@ -440,12 +468,15 @@ export async function verifyTool(
 		const toolForVerification: EnactTool = { ...tool };
 		delete toolForVerification.signatures;
 
+		// Normalize the tool to match signing format (handle EnactTool vs canonical format)
+		const normalizedToolForVerification = normalizeToolForSigning(toolForVerification);
+
 		// Use EXACT same canonical JSON creation as webapp
-		const toolHashBytes = await hashTool(toolForVerification);
+		const toolHashBytes = await hashTool(normalizedToolForVerification);
 
 		// Debug output for verification
 		if (process.env.NODE_ENV === "development" || process.env.DEBUG) {
-			console.error("=== VERIFICATION DEBUG (WEBAPP COMPATIBLE) ===");
+			console.error("=== VERIFICATION DEBUG (CRITICAL FIELDS ONLY) ===");
 			console.error(
 				"Original tool signature field:",
 				Object.keys(tool.signatures || {}),
@@ -528,7 +559,7 @@ export async function verifyTool(
 					}
 
 					if (signatureData.type === "ecdsa-p256") {
-						// Use Web Crypto API to match webapp exactly
+						// Use Web Crypto API for critical fields verification
 						const { webcrypto } = await import("node:crypto");
 
 						// Import the public key (convert PEM to raw key data like webapp)
@@ -548,23 +579,23 @@ export async function verifyTool(
 							["verify"],
 						);
 
-						// Use the centralized verification function (webapp compatible)
+						// Use the centralized verification function (critical fields only)
 						isValid = await verifyToolSignature(
-							toolForVerification,
+							normalizedToolForVerification,
 							signatureData.value,
 							publicKeyObj,
 						);
 
 						if (process.env.DEBUG) {
 							console.error(
-								"Web Crypto API verification result (webapp compatible):",
+								"Web Crypto API verification result (critical fields):",
 								isValid,
 							);
 						}
 					} else {
 						// Fallback for other signature types
 						const verify = crypto.createVerify("SHA256");
-						const canonicalJson = createCanonicalToolJson(toolForVerification);
+						const canonicalJson = createCanonicalToolJson(normalizedToolForVerification);
 						verify.update(canonicalJson, "utf8");
 						const signature = Buffer.from(signatureData.value, "base64");
 						isValid = verify.verify(publicKeyToUse, signature);
