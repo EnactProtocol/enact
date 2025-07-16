@@ -11,12 +11,6 @@ import {
 	generateConfigLink,
 } from "@enactprotocol/shared/utils";
 import { startEnvManagerServer } from "@enactprotocol/shared/web";
-import {
-	verifyTool,
-	VERIFICATION_POLICIES,
-	type VerificationPolicy,
-	enforceSignatureVerification,
-} from "@enactprotocol/shared/security";
 import { LocalToolResolver } from "@enactprotocol/shared";
 import { homedir } from "os";
 import { join } from "path";
@@ -44,7 +38,7 @@ const enactCore = new EnactCore({
 		process.env.ENACT_SUPABASE_URL ||
 		"https://xjnhhxwxovjifdxdwzih.supabase.co",
 	executionProvider: (process.env.ENACT_EXECUTION_PROVIDER as any) || "dagger",
-	verificationPolicy: (process.env.ENACT_VERIFY_POLICY as any) || "permissive",
+	// verificationPolicy removed - security outsourced to enact-security package
 	authToken: process.env.ENACT_AUTH_TOKEN,
 	defaultTimeout: "120s", // Increased timeout for MCP operations
 });
@@ -207,10 +201,6 @@ server.registerTool(
 				.optional()
 				.describe("Treat 'name' as a file path to local YAML tool"),
 			timeout: z.string().optional().describe("Execution timeout"),
-			verifyPolicy: z
-				.enum(["permissive", "enterprise", "paranoid"])
-				.optional()
-				.describe("Verification policy"),
 			dangerouslySkipVerification: z
 				.boolean()
 				.optional()
@@ -233,7 +223,6 @@ server.registerTool(
 			inputs = {},
 			localFile = false,
 			timeout,
-			verifyPolicy,
 			dangerouslySkipVerification,
 			dryRun,
 			verbose,
@@ -371,8 +360,6 @@ server.registerTool(
 					);
 					executionPromise = enactCore.executeRawTool(yamlContent, inputs, {
 						timeout: timeout || "300s",
-						verifyPolicy,
-						skipVerification: dangerouslySkipVerification || true, // Local files skip verification
 						force: dangerouslySkipVerification || true,
 						dryRun,
 						verbose,
@@ -383,8 +370,6 @@ server.registerTool(
 						inputs,
 						{
 							timeout: timeout || "300s",
-							verifyPolicy,
-							skipVerification: dangerouslySkipVerification,
 							force: dangerouslySkipVerification,
 							dryRun,
 							verbose,
@@ -432,8 +417,6 @@ server.registerTool(
 					);
 					result = await enactCore.executeRawTool(yamlContent, inputs, {
 						timeout: timeout || "120s",
-						verifyPolicy,
-						skipVerification: dangerouslySkipVerification || true,
 						force: dangerouslySkipVerification || true,
 						dryRun,
 						verbose,
@@ -444,8 +427,6 @@ server.registerTool(
 						inputs,
 						{
 							timeout: timeout || "120s",
-							verifyPolicy,
-							skipVerification: dangerouslySkipVerification,
 							force: dangerouslySkipVerification,
 							dryRun,
 							verbose,
@@ -1134,7 +1115,7 @@ server.registerTool(
 			output += `  • Mode: Direct Core Library\n`;
 			output += `  • Provider: ${status.executionProvider}\n`;
 			output += `  • API: ${status.apiUrl}\n`;
-			output += `  • Verification: ${status.verificationPolicy}\n`;
+			output += `  • Verification: Disabled\n`;
 			output += `  • Timeout: ${status.defaultTimeout}\n\n`;
 
 			output += `🔧 Local Tools:\n`;

@@ -162,7 +162,6 @@ server.tool(
 
 			const result = await mcpCoreService.executeRawTool(toolYaml, inputs, {
 				timeout: options.timeout,
-				skipVerification: options.skipVerification,
 				force: options.force,
 			});
 
@@ -229,12 +228,8 @@ server.tool(
 
 			// Add signature verification info if requested
 			if (includeSignatureInfo) {
-				try {
-					const verificationResult = await mcpCoreService.verifyTool(name);
-					(tool as any).signatureVerification = verificationResult;
-				} catch (verifyError) {
-					console.warn(`Could not verify signatures for ${name}:`, verifyError);
-				}
+				// Signature verification removed - security outsourced to enact-security package
+				(tool as any).signatureVerification = { verified: false, reason: "Security verification disabled" };
 			}
 
 			return {
@@ -318,7 +313,8 @@ server.tool(
 				`Verifying tool signatures via core library: ${name} with policy ${policy || "permissive"}`,
 			);
 
-			const verificationResult = await mcpCoreService.verifyTool(name, policy);
+			// Verification disabled - security outsourced to enact-security package
+		const verificationResult = { verified: false, policy: policy || "permissive", signatures: [], errors: ["Security verification disabled"] };
 
 			const statusText = verificationResult.verified ? "VERIFIED" : "FAILED";
 			let resultText = `Tool "${name}" signature verification: ${statusText}\n`;

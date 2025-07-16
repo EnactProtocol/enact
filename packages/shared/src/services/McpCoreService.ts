@@ -62,16 +62,12 @@ export class McpCoreService {
 		inputs: Record<string, any> = {},
 		options?: {
 			timeout?: string;
-			verifyPolicy?: "permissive" | "enterprise" | "paranoid";
-			skipVerification?: boolean;
 			force?: boolean;
 			dryRun?: boolean;
 		},
 	): Promise<ExecutionResult> {
 		const executeOptions: ToolExecuteOptions = {
 			timeout: options?.timeout,
-			verifyPolicy: options?.verifyPolicy,
-			skipVerification: options?.skipVerification,
 			force: options?.force,
 			dryRun: options?.dryRun,
 		};
@@ -87,14 +83,12 @@ export class McpCoreService {
 		inputs: Record<string, any> = {},
 		options?: {
 			timeout?: string;
-			skipVerification?: boolean;
 			force?: boolean;
 			dryRun?: boolean;
 		},
 	): Promise<ExecutionResult> {
 		const executeOptions: ToolExecuteOptions = {
 			timeout: options?.timeout,
-			skipVerification: options?.skipVerification,
 			force: options?.force,
 			dryRun: options?.dryRun,
 		};
@@ -102,20 +96,6 @@ export class McpCoreService {
 		return await this.core.executeRawTool(toolYaml, inputs, executeOptions);
 	}
 
-	/**
-	 * Verify a tool's signature
-	 */
-	async verifyTool(
-		name: string,
-		policy?: string,
-	): Promise<{
-		verified: boolean;
-		signatures: any[];
-		policy: string;
-		errors?: string[];
-	}> {
-		return await this.core.verifyTool(name, policy);
-	}
 
 	/**
 	 * Check if a tool exists

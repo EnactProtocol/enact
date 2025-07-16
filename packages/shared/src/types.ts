@@ -72,14 +72,14 @@ export interface EnactTool {
 	};
 
 	// Multi-signature support (array format)
-	signatures?: Array<{
+	signatures?: {
 		signer: string; // Signer identifier (UUID or human-readable name)
 		algorithm: string; // Hash algorithm: "sha256"
 		type: string; // Signature type: "ecdsa-p256"
 		value: string; // Base64 encoded signature
 		created: string; // ISO timestamp
 		role?: string; // Optional description of the signer (e.g., "author", "reviewer", "approver")
-	}>;
+	}[];
 
 	// Extensions pattern (x-prefixed fields)
 	[key: string]: any; // Allow x- prefixed extension fields

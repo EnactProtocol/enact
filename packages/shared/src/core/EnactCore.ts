@@ -17,8 +17,7 @@ import logger from "../exec/logger.js";
 import yaml from "yaml";
 import fs from "fs";
 import path from "path";
-import { SigningService, DEFAULT_SECURITY_CONFIG } from "@enactprotocol/security";
-import type { SecurityConfig } from "@enactprotocol/security";
+import { SigningService } from "@enactprotocol/security";
 
 export interface EnactCoreOptions {
 	apiUrl?: string;
@@ -403,19 +402,38 @@ export class EnactCore {
 		}
 
 		try {
+			// Convert EnactTool to the format expected by SigningService
+			const documentForVerification = {
+				...tool,
+				signatures: tool.signatures?.map(sig => ({
+					signature: sig.value,
+					publicKey: sig.signer,
+					algorithm: sig.algorithm,
+					timestamp: new Date(sig.created).getTime()
+				}))
+			};
+
 			// If tool has no signatures, check if local unsigned tools are allowed
 			if (!tool.signatures || tool.signatures.length === 0) {
-				const isValid = SigningService.verifyDocument(tool, {} as any, { useEnactDefaults: true });
+				const isValid = SigningService.verifyDocument(documentForVerification, {} as any, { useEnactDefaults: true });
 				if (!isValid) {
 					throw new Error(`Tool ${tool.name} is not signed and unsigned tools are not allowed`);
 				}
 				return;
 			}
 
+			// Convert first signature to expected format
+			const referenceSignature = {
+				signature: tool.signatures[0].value,
+				publicKey: tool.signatures[0].signer,
+				algorithm: tool.signatures[0].algorithm,
+				timestamp: new Date(tool.signatures[0].created).getTime()
+			};
+
 			// Verify using the first signature as reference
 			const isValid = SigningService.verifyDocument(
-				tool,
-				tool.signatures[0],
+				documentForVerification,
+				referenceSignature,
 				{ useEnactDefaults: true }
 			);
 
@@ -448,10 +466,9 @@ export class EnactCore {
 
 			// Validate inputs
 			const validatedInputs = validateInputs(tool, inputs);
-
+			
 			// Verify tool signatures (unless explicitly skipped)
 			await this.verifyTool(tool, options.dangerouslySkipVerification);
-
 
 			// Resolve environment variables
 			const { resolved: envVars } =

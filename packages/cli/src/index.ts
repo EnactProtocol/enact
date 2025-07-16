@@ -7,7 +7,6 @@ import { showHelp, showVersion } from "@enactprotocol/shared/utils";
 import { handleRemoteCommand } from "./commands/remote";
 import { handleInitCommand } from "./commands/init";
 import { handleUserCommand } from "./commands/user";
-import { handleSignCommand } from "./commands/sign";
 import { handleEnvCommand } from "./commands/env";
 import { handleMcpCommand } from "./commands/mcp";
 import { handleConfigCommand } from "./commands/config";
@@ -17,7 +16,6 @@ import {
 	handleCoreSearchCommand,
 	handleCoreExecCommand,
 	handleCoreGetCommand,
-	handleCoreVerifyCommand,
 	handleCorePublishCommand,
 } from "./commands/core";
 
@@ -211,23 +209,10 @@ async function main() {
 					timeout: values.timeout as string | undefined,
 					dry: values.dry as boolean | undefined,
 					verbose: values.verbose as boolean | undefined,
-					verifyPolicy: values.policy as
-						| ("permissive" | "enterprise" | "paranoid")
-						| undefined,
 					dangerouslySkipVerification: values["dangerously-skip-verification"] as boolean | undefined,
 				});
 				break;
 
-			case "sign": // New case for sign command
-				await handleSignCommand(commandArgs, {
-					help: values.help as boolean | undefined,
-					policy: values.policy as string | undefined,
-					privateKey: values["private-key"] as string | undefined,
-					role: values.role as string | undefined,
-					signer: values.signer as string | undefined,
-					verbose: values.verbose as boolean | undefined,
-				});
-				break;
 
 			case "get": // New case for get command (core library only)
 				await handleCoreGetCommand(commandArgs, {
@@ -236,13 +221,6 @@ async function main() {
 				});
 				break;
 
-			case "verify": // New case for verify command (core library only)
-				await handleCoreVerifyCommand(commandArgs, {
-					help: values.help as boolean | undefined,
-					policy: values.policy as string | undefined,
-					verbose: values.verbose as boolean | undefined,
-				});
-				break;
 
 			case "env": // New case for env command
 				await handleEnvCommand(commandArgs, {
@@ -279,10 +257,8 @@ async function main() {
 							{ value: "search", label: "🔍 Search for tools" },
 							{ value: "get", label: "📋 Get tool information" },
 							{ value: "exec", label: "⚡ Execute a tool" },
-							{ value: "verify", label: "🔒 Verify tool signatures" },
 							{ value: "publish", label: "📤 Publish a tool" },
 							{ value: "init", label: "📝 Create a new tool definition" },
-							{ value: "sign", label: "✍️ Sign & verify tools" },
 							{ value: "env", label: "🌍 Manage environment variables" },
 							{ value: "config", label: "🔧 Configure Enact settings" },
 							{ value: "auth", label: "🔐 Manage authentication" },
@@ -320,15 +296,6 @@ async function main() {
 						return;
 					}
 
-					if (action === "verify") {
-						await handleCoreVerifyCommand([], {});
-						return;
-					}
-
-					if (action === "sign") {
-						await handleSignCommand([], {});
-						return;
-					}
 
 					if (action === "env") {
 						// Show env submenu

@@ -1,6 +1,5 @@
 // src/commands/exec.ts - Execute Enact tools with centralized verification
 import { readFileSync, existsSync } from "fs";
-import { resolve } from "path";
 import * as p from "@clack/prompts";
 import pc from "picocolors";
 import * as yaml from "yaml";
@@ -163,23 +162,17 @@ Examples:
 		const result = isLocalFile
 			? await core.executeRawTool(readFileSync(toolIdentifier, "utf-8"), params, {
 					timeout: options.timeout,
-					verifyPolicy: options.verifyPolicy,
-					skipVerification: options.skipVerification || options.dangerouslySkipVerification,
 					force: options.force || options.dangerouslySkipVerification,
 					dryRun: options.dry,
 					verbose: options.verbose,
 					isLocalFile: true,
-					interactive: true,
 				})
 			: await core.executeToolByName(toolIdentifier, params, {
 					timeout: options.timeout,
-					verifyPolicy: options.verifyPolicy,
-					skipVerification: options.skipVerification || options.dangerouslySkipVerification,
 					force: options.force || options.dangerouslySkipVerification,
 					dryRun: options.dry,
 					verbose: options.verbose,
 					isLocalFile: false,
-					interactive: true,
 				});
 
 		spinner.stop("Tool execution completed");
