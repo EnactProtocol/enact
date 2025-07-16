@@ -1,0 +1,150 @@
+name: kgroves88/utilities/email-validator
+description: Validates email addresses and checks their format according to RFC standards
+version: 1.0.0
+enact: 1.0.0
+from: python:3.11-alpine
+
+# Command using Python's built-in email validation
+command: |
+  python -c '
+  import re
+  import json
+  import sys
+  
+  email = "${email}"
+  
+  # RFC 5322 compliant regex pattern (simplified)
+  pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+  
+  # Basic validation
+  is_valid = bool(re.match(pattern, email))
+  
+  # Additional checks
+  checks = {
+      "has_at_symbol": "@" in email,
+      "has_domain": "." in email.split("@")[-1] if "@" in email else False,
+      "length_ok": len(email) <= 254,
+      "local_length_ok": len(email.split("@")[0]) <= 64 if "@" in email else False,
+      "no_consecutive_dots": ".." not in email,
+      "no_leading_dot": not email.startswith("."),
+      "no_trailing_dot": not email.endswith(".")
+  }
+  
+  all_checks_pass = all(checks.values())
+  
+  result = {
+      "email": email,
+      "is_valid": is_valid and all_checks_pass,
+      "basic_format_valid": is_valid,
+      "detailed_checks": checks,
+      "message": "Valid email address" if (is_valid and all_checks_pass) else "Invalid email address"
+  }
+  
+  print(json.dumps(result, indent=2))
+  '
+
+tags:
+  - validation
+  - email
+  - utility
+  - rfc
+
+timeout: 5s
+
+# Input schema
+inputSchema:
+  type: object
+  properties:
+    email:
+      type: string
+      description: The email address to validate
+      pattern: "^.+$"
+  required:
+    - email
+
+# Output schema
+outputSchema:
+  type: object
+  properties:
+    email:
+      type: string
+      description: The email address that was validated
+    is_valid:
+      type: boolean
+      description: Whether the email is valid overall
+    basic_format_valid:
+      type: boolean
+      description: Whether the email matches basic format requirements
+    detailed_checks:
+      type: object
+      properties:
+        has_at_symbol:
+          type: boolean
+        has_domain:
+          type: boolean
+        length_ok:
+          type: boolean
+        local_length_ok:
+          type: boolean
+        no_consecutive_dots:
+          type: boolean
+        no_leading_dot:
+          type: boolean
+        no_trailing_dot:
+          type: boolean
+    message:
+      type: string
+      description: Human-readable validation result
+
+# Examples
+examples:
+  - description: Valid email address
+    input:
+      email: "user@example.com"
+    output: |
+      {
+        "email": "user@example.com",
+        "is_valid": true,
+        "basic_format_valid": true,
+        "detailed_checks": {
+          "has_at_symbol": true,
+          "has_domain": true,
+          "length_ok": true,
+          "local_length_ok": true,
+          "no_consecutive_dots": true,
+          "no_leading_dot": true,
+          "no_trailing_dot": true
+        },
+        "message": "Valid email address"
+      }
+  
+  - description: Invalid email address (missing domain)
+    input:
+      email: "user@"
+    output: |
+      {
+        "email": "user@",
+        "is_valid": false,
+        "basic_format_valid": false,
+        "detailed_checks": {
+          "has_at_symbol": true,
+          "has_domain": false,
+          "length_ok": true,
+          "local_length_ok": true,
+          "no_consecutive_dots": true,
+          "no_leading_dot": true,
+          "no_trailing_dot": true
+        },
+        "message": "Invalid email address"
+      }
+
+# Tool annotations
+annotations:
+  readOnlyHint: true
+  idempotentHint: true
+
+authors:
+  - name: Keith Groves
+    email: keith@example.com
+
+license: MIT

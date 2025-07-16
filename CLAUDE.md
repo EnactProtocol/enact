@@ -97,7 +97,7 @@ command: "python -m pip install requests && python -c 'import requests; print(re
 ```
 
 ### Multi-Signature Security
-Tools can be signed by multiple parties:
+Tools can be signed by multiple parties using an array format:
 ```yaml
 signatures:
   - signer: "71e02e2c-148c-4534-9900-bd9646e99333"
@@ -346,7 +346,7 @@ annotations:         # MCP-aligned behavior hints (all default to false)
 ### Multi-Signature Security
 
 ```yaml
-signatures:             # Cryptographic signatures (optional, supports multiple signers)
+signatures:             # Cryptographic signatures (optional, supports multiple signers - array format)
   - signer: string      # Signer identifier (UUID or human-readable name) (required)
     algorithm: string   # Hash algorithm: "sha256" (required)
     type: string        # Signature type: "ecdsa-p256" (required)

@@ -159,6 +159,7 @@ Examples:
 	spinner.start("Executing tool...");
 
 	try {
+		console.error("🔍 TRACE: exec.ts - isLocalFile:", isLocalFile);
 		const result = isLocalFile
 			? await core.executeRawTool(readFileSync(toolIdentifier, "utf-8"), params, {
 					timeout: options.timeout,

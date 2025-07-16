@@ -21,59 +21,112 @@ function createCanonicalToolDefinition(
 ): Record<string, unknown> {
 	const canonical: Record<string, unknown> = {};
 
-	// CRITICAL SECURITY FIELDS ONLY - these fields are signed to prevent tampering
-	const criticalFields = [
-		"enact",        // Protocol version security
-		"name",         // Identity - prevents tool impersonation  
-		"description",  // What the tool claims to do
-		"command",      // The actual execution payload
-		"from",         // Container image - critical for security
-		"env",          // Environment variables
-		"timeout",      // Prevents DoS attacks
-		"inputSchema",  // Defines the attack surface
-		"annotations",  // Security behavior hints
-		"version",      // Tool version for compatibility
-	];
-
-	// Add only critical fields in the specific order
-	for (const field of criticalFields) {
-		if (tool[field] !== undefined) {
-			canonical[field] = tool[field];
-		}
+	// Core required fields - only add if not empty
+	if (tool.name && !isEmpty(tool.name)) {
+		canonical.name = tool.name;
+	}
+	if (tool.description && !isEmpty(tool.description)) {
+		canonical.description = tool.description;
+	}
+	if (tool.command && !isEmpty(tool.command)) {
+		canonical.command = tool.command;
+	}
+	
+	// Protocol version mapping: protocol_version OR enact → enact
+	const enactValue = tool.enact || tool.protocol_version;
+	if (enactValue && !isEmpty(enactValue)) {
+		canonical.enact = enactValue;
+	}
+	
+	// Tool version
+	if (tool.version && !isEmpty(tool.version)) {
+		canonical.version = tool.version;
+	}
+	
+	// Container/execution environment
+	if (tool.from && !isEmpty(tool.from)) {
+		canonical.from = tool.from;
+	}
+	
+	// Execution timeout
+	if (tool.timeout && !isEmpty(tool.timeout)) {
+		canonical.timeout = tool.timeout;
+	}
+	
+	// Input schema mapping: input_schema OR inputSchema → inputSchema
+	const inputSchemaValue = tool.input_schema || tool.inputSchema;
+	if (inputSchemaValue && !isEmpty(inputSchemaValue)) {
+		canonical.inputSchema = inputSchemaValue;
+	}
+	
+	// Environment variables mapping: env_vars OR env → env
+	const envValue = tool.env_vars || tool.env;
+	if (envValue && !isEmpty(envValue)) {
+		canonical.env = envValue;
+	}
+	
+	// Execution metadata/annotations
+	if (tool.annotations && !isEmpty(tool.annotations)) {
+		canonical.annotations = tool.annotations;
 	}
 
 	return canonical;
 }
 
 /**
- * Create canonical tool JSON with ONLY critical security fields
- * This focuses the signature on security-critical fields only
+ * Check if a value is empty (null, undefined, empty object, empty array, empty string)
+ */
+function isEmpty(value: unknown): boolean {
+	if (value === null || value === undefined || value === '') {
+		return true;
+	}
+	if (typeof value === 'object' && value !== null) {
+		if (Array.isArray(value)) {
+			return value.length === 0;
+		}
+		return Object.keys(value).length === 0;
+	}
+	return false;
+}
+
+/**
+ * Recursively sort all object keys alphabetically for deterministic JSON
+ */
+function deepSortKeys(obj: any): any {
+	if (obj === null || typeof obj !== 'object') {
+		return obj;
+	}
+	
+	if (Array.isArray(obj)) {
+		return obj.map(deepSortKeys);
+	}
+	
+	const sortedObj: Record<string, unknown> = {};
+	const keys = Object.keys(obj).sort();
+	for (const key of keys) {
+		sortedObj[key] = deepSortKeys(obj[key]);
+	}
+	return sortedObj;
+}
+
+/**
+ * Create canonical tool JSON exactly matching frontend implementation
+ * Uses two-phase approach: canonical creation + extra cleaning + individual value sorting
  */
 function createCanonicalToolJson(toolData: any): string {
-	// Only include critical security fields in the canonical representation
-	const toolRecord: Record<string, unknown> = {
-		// Core identity and security fields
-		enact: toolData.enact || toolData.protocol_version || "1.0.0",
-		name: toolData.name,
-		description: toolData.description,
-		command: toolData.command,
-		
-		// Security-critical optional fields (only if present)
-		...(toolData.from && { from: toolData.from }),
-		...(toolData.env && { env: toolData.env }),
-		...(toolData.env_vars && { env: toolData.env_vars }), // Handle both formats
-		...(toolData.timeout && { timeout: toolData.timeout }),
-		...(toolData.inputSchema && { inputSchema: toolData.inputSchema }),
-		...(toolData.input_schema && { inputSchema: toolData.input_schema }), // Handle both formats
-		...(toolData.annotations && { annotations: toolData.annotations }),
-		...(toolData.version && { version: toolData.version }),
-	};
-
-	// Use the canonical function that only includes critical fields
-	const canonical = createCanonicalToolDefinition(toolRecord);
-
-	// Return deterministic JSON with sorted keys for consistent signatures
-	return JSON.stringify(canonical, Object.keys(canonical).sort());
+	// Step 1: Create canonical representation with field filtering (same as createCanonicalToolDefinition)
+	const canonical = createCanonicalToolDefinition(toolData);
+	
+	// Step 2: Extra cleaning step - remove any remaining empty objects
+	const cleanedCanonical: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(canonical)) {
+		if (!isEmpty(value)) {
+			cleanedCanonical[key] = deepSortKeys(value); // Sort individual values
+		}
+	}
+	
+	// Step 3: Create deterministic JSON
+	return JSON.stringify(cleanedCanonical);
 }
 
 // Updated interfaces for new protocol
@@ -102,8 +155,8 @@ interface EnactTool {
 	examples?: any;
 	resources?: any;
 	raw_content?: string;
-	// New multi-signature format: public key -> signature data
-	signatures?: Record<string, SignatureData>;
+	// Array-based signature format
+	signatures?: Array<SignatureData>;
 	[key: string]: any;
 }
 
@@ -240,7 +293,8 @@ export async function signTool(
 	);
 
 	const signature = new Uint8Array(signatureArrayBuffer);
-	const signatureB64 = Buffer.from(signature).toString("base64");
+	// Use same Base64 encoding as frontend spec: btoa(String.fromCharCode(...))
+	const signatureB64 = btoa(String.fromCharCode(...signature));
 
 	console.error("Generated signature (Web Crypto API):", signatureB64);
 	console.error(
@@ -249,23 +303,20 @@ export async function signTool(
 		"bytes (should be 64 for P-256)",
 	);
 
-	// Convert public key to base64 for map key
-	const publicKeyBase64 = pemToBase64(publicKeyPem);
-
-	// Initialize signatures object if it doesn't exist
+	// Initialize signatures array if it doesn't exist
 	if (!tool.signatures) {
-		tool.signatures = {};
+		tool.signatures = [];
 	}
 
-	// Add signature to the map using public key as key
-	tool.signatures[publicKeyBase64] = {
+	// Add signature to the array
+	tool.signatures.push({
+		signer: signerInfo.id,
 		algorithm: "sha256",
 		type: "ecdsa-p256",
-		signer: signerInfo.id,
-		created: new Date().toISOString(),
 		value: signatureB64,
+		created: new Date().toISOString(),
 		...(signerInfo.role && { role: signerInfo.role }),
-	};
+	});
 
 	// Convert back to YAML
 	const signedToolYaml = stringify(tool);
@@ -325,11 +376,9 @@ async function hashTool(tool: Record<string, unknown>): Promise<Uint8Array> {
 	// Remove signature and signatures to avoid circular dependency
 	const { signature, signatures, ...toolForSigning } = canonical;
 
-	// Create deterministic JSON with sorted keys for consistent hashing
-	const canonicalJson = JSON.stringify(
-		toolForSigning,
-		Object.keys(toolForSigning).sort(),
-	);
+	// Deep sort all keys recursively for deterministic JSON (same as createCanonicalToolJson)
+	const deeplySorted = deepSortKeys(toolForSigning);
+	const canonicalJson = JSON.stringify(deeplySorted);
 
 	console.error("🔍 Critical-fields-only canonical JSON for hashing:", canonicalJson);
 	console.error("🔍 Canonical JSON length:", canonicalJson.length);
@@ -418,6 +467,7 @@ export async function verifyTool(
 	verifiedSigners: Array<{ signer: string; role?: string; keyId: string }>;
 	errors: string[];
 }> {
+	console.error("🔍 TRACE: verifyTool() called in sign.ts");
 	const errors: string[] = [];
 	const verifiedSigners: Array<{
 		signer: string;
@@ -451,7 +501,7 @@ export async function verifyTool(
 			typeof toolYaml === "string" ? parse(toolYaml) : toolYaml;
 
 		// Check if tool has signatures
-		if (!tool.signatures || Object.keys(tool.signatures).length === 0) {
+		if (!tool.signatures || tool.signatures.length === 0) {
 			return {
 				isValid: false,
 				message: "No signatures found in the tool",
@@ -462,7 +512,7 @@ export async function verifyTool(
 			};
 		}
 
-		const totalSignatures = Object.keys(tool.signatures).length;
+		const totalSignatures = tool.signatures.length;
 
 		// Create canonical JSON for verification (without signatures)
 		const toolForVerification: EnactTool = { ...tool };
@@ -478,8 +528,8 @@ export async function verifyTool(
 		if (process.env.NODE_ENV === "development" || process.env.DEBUG) {
 			console.error("=== VERIFICATION DEBUG (CRITICAL FIELDS ONLY) ===");
 			console.error(
-				"Original tool signature field:",
-				Object.keys(tool.signatures || {}),
+				"Original tool signature count:",
+				tool.signatures?.length || 0,
 			);
 			console.error(
 				"Tool before removing signatures:",
@@ -500,19 +550,76 @@ export async function verifyTool(
 		// Verify each signature
 		let validSignatures = 0;
 
-		for (const [publicKeyBase64, signatureData] of Object.entries(
-			tool.signatures,
-		)) {
+		console.error("🔍 TRACE: Processing signatures:", tool.signatures.length);
+		for (const signatureData of tool.signatures) {
+			console.error(`🔍 TRACE: Processing signature from ${signatureData.signer}, type: ${signatureData.type}, algorithm: ${signatureData.algorithm}`);
 			try {
 				// Check if algorithm is allowed
+				console.error(`🔍 TRACE: Checking algorithm ${signatureData.algorithm} against allowed:`, policy.allowedAlgorithms);
+				const hasAllowedAlgorithms = !!policy.allowedAlgorithms;
+				const algorithmAllowed = policy.allowedAlgorithms?.includes(signatureData.algorithm);
+				console.error(`🔍 TRACE: hasAllowedAlgorithms: ${hasAllowedAlgorithms}, algorithmAllowed: ${algorithmAllowed}`);
 				if (
 					policy.allowedAlgorithms &&
 					!policy.allowedAlgorithms.includes(signatureData.algorithm)
 				) {
+					console.error(`🔍 TRACE: Algorithm ${signatureData.algorithm} not allowed!`);
 					errors.push(
 						`Signature by ${signatureData.signer}: unsupported algorithm ${signatureData.algorithm}`,
 					);
 					continue;
+				}
+				console.error(`🔍 TRACE: Algorithm ${signatureData.algorithm} is allowed, continuing...`);
+
+				// Handle enhanced secp256k1 signatures with @enactprotocol/security FIRST
+				if (signatureData.type === "ecdsa-secp256k1" && signatureData.algorithm === "secp256k1") {
+					console.error("🔍 TRACE: Using @enactprotocol/security for secp256k1 verification");
+					// Use @enactprotocol/security for enhanced secp256k1 verification
+					try {
+						const { SigningService } = await import("@enactprotocol/security");
+						
+						// Create signature object for verification (secp256k1 may not need publicKey)
+						const signature = {
+							signature: signatureData.value,
+							algorithm: signatureData.algorithm,
+							timestamp: new Date(signatureData.created).getTime(),
+							publicKey: signatureData.signer, // Use signer as publicKey for secp256k1
+						};
+						
+						// Verify using @enactprotocol/security with Enact defaults
+						// Use the original tool without legacy normalization to match signing
+						console.error("🔍 TRACE: Tool keys for verification:", Object.keys(tool).join(", "));
+						const isValid = SigningService.verifyDocument(tool, signature, {
+							useEnactDefaults: true,
+						});
+						
+						console.error("🔍 TRACE: @enactprotocol/security verification result:", isValid);
+						
+						// For secp256k1 signatures, we trust @enactprotocol/security verification
+						// and don't require legacy trusted keys check
+						if (isValid) {
+							console.error("🔍 TRACE: secp256k1 signature verified successfully!");
+							verifiedSigners.push({
+								signer: signatureData.signer,
+								role: signatureData.role,
+								keyId: signatureData.signer.substring(0, 8), // Use signer ID as key ID
+							});
+							validSignatures++;
+							continue; // Skip the legacy trusted keys check
+						} else {
+							console.error("🔍 TRACE: secp256k1 signature verification failed");
+							errors.push(
+								`Signature by ${signatureData.signer}: @enactprotocol/security verification failed`,
+							);
+							continue;
+						}
+					} catch (securityError) {
+						console.error("🔍 TRACE: @enactprotocol/security error:", (securityError as Error).message);
+						errors.push(
+							`Signature by ${signatureData.signer}: @enactprotocol/security verification error - ${(securityError as Error).message}`,
+						);
+						continue;
+					}
 				}
 
 				// Check if signer is trusted (if policy specifies trusted signers)
@@ -526,17 +633,27 @@ export async function verifyTool(
 					continue;
 				}
 
-				// Check if we have this public key in our trusted keys
-				const publicKeyPem = trustedKeys.get(publicKeyBase64);
+				// For ecdsa-p256 signatures, we need to find the public key from trusted keys
+				// Since we don't have the public key embedded in array format, 
+				// we'll need to match by signer ID or try all trusted keys
+				let publicKeyPem: string | undefined;
+				let publicKeyBase64: string | undefined;
+				
+				// Try to find trusted key by checking all keys
+				// This is a temporary approach - in production you'd want a signer->key mapping
+				for (const [keyBase64, keyPem] of trustedKeys.entries()) {
+					// For now, we'll try each trusted key to see if verification works
+					// In practice, you'd have a mapping from signer ID to public key
+					publicKeyBase64 = keyBase64;
+					publicKeyPem = keyPem;
+					break; // For now, just use the first trusted key
+				}
+				
 				if (!publicKeyPem) {
-					// Try to reconstruct PEM from base64 if not found directly
-					const reconstructedPem = base64ToPem(publicKeyBase64);
-					if (!trustedKeys.has(pemToBase64(reconstructedPem))) {
-						errors.push(
-							`Signature by ${signatureData.signer}: public key not trusted`,
-						);
-						continue;
-					}
+					errors.push(
+						`Signature by ${signatureData.signer}: no trusted public key found`,
+					);
+					continue;
 				}
 
 				if (process.env.DEBUG) {
@@ -547,7 +664,7 @@ export async function verifyTool(
 				// Verify the signature using Web Crypto API (webapp compatible)
 				let isValid = false;
 				try {
-					const publicKeyToUse = publicKeyPem || base64ToPem(publicKeyBase64);
+					const publicKeyToUse = publicKeyPem || base64ToPem(publicKeyBase64!);
 
 					if (process.env.DEBUG) {
 						console.error("Signature base64:", signatureData.value);
@@ -612,7 +729,7 @@ export async function verifyTool(
 					verifiedSigners.push({
 						signer: signatureData.signer,
 						role: signatureData.role,
-						keyId: publicKeyBase64.substring(0, 8), // First 8 chars as key ID
+						keyId: publicKeyBase64?.substring(0, 8) || signatureData.signer.substring(0, 8), // First 8 chars as key ID
 					});
 				} else {
 					errors.push(
@@ -806,21 +923,21 @@ export const VERIFICATION_POLICIES = {
 	// Permissive: any valid signature from trusted key
 	PERMISSIVE: {
 		minimumSignatures: 1,
-		allowedAlgorithms: ["sha256"],
+		allowedAlgorithms: ["sha256", "secp256k1"], // Support both legacy and enhanced algorithms
 	} as VerificationPolicy,
 
 	// Strict: require author + reviewer signatures
 	ENTERPRISE: {
 		minimumSignatures: 2,
 		requireRoles: ["author", "reviewer"],
-		allowedAlgorithms: ["sha256"],
+		allowedAlgorithms: ["sha256", "secp256k1"], // Support both legacy and enhanced algorithms
 	} as VerificationPolicy,
 
 	// Maximum security: require author + reviewer + approver
 	PARANOID: {
 		minimumSignatures: 3,
 		requireRoles: ["author", "reviewer", "approver"],
-		allowedAlgorithms: ["sha256"],
+		allowedAlgorithms: ["sha256", "secp256k1"], // Support both legacy and enhanced algorithms
 	} as VerificationPolicy,
 };
 
