@@ -365,7 +365,7 @@ describe('Enact Core with Dagger', () => {
       timeout: '10s'
     };
 
-    const result = await core.executeTool(mockTool, {}, { skipVerification: true });
+    const result = await core.executeTool(mockTool, {}, { dangerouslySkipVerification: true });
 
     expect(result.success).toBe(true);
     expect(result.output).toContain('EnactCore with Dagger works!');
@@ -438,7 +438,7 @@ describe('Text Processing with Dagger', () => {
       content: 'Hello world this is a test file with ten words'
     };
 
-    const result = await core.executeTool(textTool, inputs, { skipVerification: true });
+    const result = await core.executeTool(textTool, inputs, { dangerouslySkipVerification: true });
 
     expect(result.success).toBe(true);
     expect(result.output).toContain('10');
@@ -466,7 +466,7 @@ describe('Text Processing with Dagger', () => {
       data: '{"name": "Alice", "details": {"name": "nested"}, "items": [{"name": "item1"}]}'
     };
 
-    const result = await core.executeTool(jsonTool, inputs, { skipVerification: true });
+    const result = await core.executeTool(jsonTool, inputs, { dangerouslySkipVerification: true });
 
     expect(result.success).toBe(true);
     expect(String(result.output).trim()).toBe('3');
@@ -491,7 +491,7 @@ describe('Text Processing with Dagger', () => {
       timeout: '10s'
     };
 
-    const result = await core.executeTool(nodeTool, {}, { skipVerification: true });
+    const result = await core.executeTool(nodeTool, {}, { dangerouslySkipVerification: true });
 
     expect(result.success).toBe(true);
     expect(result.output).toContain('NodeTest');

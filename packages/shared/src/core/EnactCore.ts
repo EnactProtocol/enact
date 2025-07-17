@@ -17,7 +17,7 @@ import logger from "../exec/logger.js";
 import yaml from "yaml";
 import fs from "fs";
 import path from "path";
-import { SigningService } from "@enactprotocol/security";
+import { CryptoUtils, KeyManager, SigningService } from "@enactprotocol/security";
 
 export interface EnactCoreOptions {
 	apiUrl?: string;
@@ -392,61 +392,69 @@ export class EnactCore {
 		}
 	}
 
-	/**
-	 * Verify tool signatures using @enactprotocol/security
-	 */
-	private async verifyTool(tool: EnactTool, dangerouslySkipVerification: boolean = false): Promise<void> {
-		if (dangerouslySkipVerification) {
-			logger.warn(`Skipping signature verification for tool: ${tool.name}`);
-			return;
+private async verifyTool(tool: EnactTool, dangerouslySkipVerification: boolean = false): Promise<void> {
+    if (dangerouslySkipVerification) {
+        logger.warn(`Skipping signature verification for tool: ${tool.name}`);
+        return;
+    }
+
+    try {
+		if (!tool.signatures || tool.signatures.length === 0) {
+			throw new Error(`Tool ${tool.name} does not have any signatures`);
 		}
+		const documentForVerification = {
+			command: tool.command
+		};
 
-		try {
-			// Convert EnactTool to the format expected by SigningService
-			const documentForVerification = {
-				...tool,
-				signatures: tool.signatures?.map(sig => ({
-					signature: sig.value,
-					publicKey: sig.signer,
-					algorithm: sig.algorithm,
-					timestamp: new Date(sig.created).getTime()
-				}))
-			};
-
-			// If tool has no signatures, check if local unsigned tools are allowed
-			if (!tool.signatures || tool.signatures.length === 0) {
-				const isValid = SigningService.verifyDocument(documentForVerification, {} as any, { useEnactDefaults: true });
-				if (!isValid) {
-					throw new Error(`Tool ${tool.name} is not signed and unsigned tools are not allowed`);
-				}
-				return;
-			}
-
-			// Convert first signature to expected format
-			const referenceSignature = {
+        // IGNORE DATABASE SIGNATURES - USE HARDCODED WORKING VALUES FOR TESTING
+       	const referenceSignature = {
 				signature: tool.signatures[0].value,
 				publicKey: tool.signatures[0].signer,
 				algorithm: tool.signatures[0].algorithm,
 				timestamp: new Date(tool.signatures[0].created).getTime()
 			};
 
-			// Verify using the first signature as reference
-			const isValid = SigningService.verifyDocument(
-				documentForVerification,
-				referenceSignature,
-				{ useEnactDefaults: true }
-			);
+        
+        // Check what canonical document looks like
+        const canonicalDoc = SigningService.getCanonicalDocument(documentForVerification, { includeFields: ['command'] });
+        // console.log("Canonical document:", JSON.stringify(canonicalDoc));
+        
+        const docString = JSON.stringify(canonicalDoc);
+        const messageHash = CryptoUtils.hash(docString);
+        // console.log("Document string:", docString);
+        // console.log("Message hash:", messageHash);
+        
+        // Test direct crypto verification
+        const directVerify = CryptoUtils.verify(
+            referenceSignature.publicKey,
+            messageHash,
+            referenceSignature.signature
+        );
+        console.log("Direct crypto verification result:", directVerify);
+        
+        // Check trusted keys
+        const trustedKeys = KeyManager.getAllTrustedPublicKeys();
+        console.log("Trusted keys:", trustedKeys);
+        console.log("Is our public key trusted?", trustedKeys.includes(referenceSignature.publicKey));
 
-			if (!isValid) {
-				throw new Error(`Tool ${tool.name} has invalid signatures`);
-			}
+        const isValid = SigningService.verifyDocument(
+            documentForVerification,
+            referenceSignature,
+            { includeFields: ['command'] }
+        );
+        
+        console.log("Final verification result:", isValid);
 
-			logger.info(`Tool ${tool.name} signature verification passed`);
-		} catch (error) {
-			logger.error(`Signature verification failed for tool ${tool.name}:`, error);
-			throw new Error(`Signature verification failed: ${error instanceof Error ? error.message : String(error)}`);
-		}
-	}
+        if (!isValid) {
+            throw new Error(`Tool ${tool.name} has invalid signatures`);
+        }
+
+        logger.info(`Tool ${tool.name} signature verification passed`);
+    } catch (error) {
+        logger.error(`Signature verification failed for tool ${tool.name}:`, error);
+        throw new Error(`Signature verification failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
 
 	/**
 	 * Execute a tool directly

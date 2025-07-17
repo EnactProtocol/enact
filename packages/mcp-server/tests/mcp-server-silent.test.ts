@@ -256,7 +256,7 @@ describe('MCP Server Silent Operation Tests', () => {
       try {
         await enactCore.executeToolByName('test-tool', {}, {
           dryRun: true,
-          skipVerification: true,
+          dangerouslySkipVerification: true,
           verbose: false
         });
         assertSilent(mocks, 'executeToolByName()');
@@ -277,7 +277,7 @@ commands:
       try {
         await enactCore.executeRawTool(testYaml, {}, {
           dryRun: true,
-          skipVerification: true
+          dangerouslySkipVerification: true
         });
         assertSilent(mocks, 'executeRawTool()');
       } catch (error) {
@@ -314,7 +314,7 @@ commands:
       try {
         await enactCore.executeToolByName('interactive-tool', {}, {
           force: true,
-          skipVerification: true
+          dangerouslySkipVerification: true
         });
         
         // Verify no readline was used
@@ -333,7 +333,7 @@ commands:
         // Try to execute a tool without required inputs
         await enactCore.executeToolByName('tool-with-required-inputs', {}, {
           force: true,
-          skipVerification: true
+          dangerouslySkipVerification: true
         });
         assertSilent(mocks, 'missing inputs handling');
       } catch (error) {
