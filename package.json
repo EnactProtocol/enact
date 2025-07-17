@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/monorepo",
-  "version": "1.0.12",
+  "version": "1.2.0",
   "description": "Enact Protocol - AI tool ecosystem with CLI and MCP server",
   "private": true,
   "workspaces": [
