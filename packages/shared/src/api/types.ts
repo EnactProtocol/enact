@@ -38,7 +38,14 @@ export interface EnactToolDefinition {
 		value: string;
 		role?: string;
 	};
-	signatures?: Record<string, any>;
+	signatures?: {
+		signer: string;
+		algorithm: string;
+		type: string;
+		value: string;
+		created: string;
+		role?: string;
+	}[];
 	raw_content?: string;
 	namespace?: string;
 	enact?: string;
@@ -88,8 +95,6 @@ export interface EnactExecOptions {
 	timeout?: string;
 	dry?: boolean;
 	verbose?: boolean;
-	skipVerification?: boolean; // Skip signature verification (legacy)
-	verifyPolicy?: string; // Verification policy to use
 	force?: boolean; // Force execution even if verification fails (legacy)
 	dangerouslySkipVerification?: boolean; // Skip all signature verification (DANGEROUS)
 }

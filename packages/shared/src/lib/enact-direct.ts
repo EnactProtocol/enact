@@ -20,7 +20,6 @@ export class EnactDirect {
 			apiUrl?: string;
 			supabaseUrl?: string;
 			authToken?: string;
-			verificationPolicy?: "permissive" | "enterprise" | "paranoid";
 			defaultTimeout?: string;
 		} = {},
 	) {
@@ -33,7 +32,6 @@ export class EnactDirect {
 				"https://xjnhhxwxovjifdxdwzih.supabase.co",
 			executionProvider: "direct",
 			authToken: options.authToken || process.env.ENACT_AUTH_TOKEN,
-			verificationPolicy: options.verificationPolicy || "permissive",
 			defaultTimeout: options.defaultTimeout || "30s",
 		});
 	}
@@ -75,24 +73,6 @@ export class EnactDirect {
 		return this.core.getToolInfo(name, version);
 	}
 
-	/**
-	 * Verify a tool's cryptographic signatures
-	 *
-	 * @param name - Tool name
-	 * @param policy - Verification policy
-	 * @returns Verification result
-	 */
-	async verifyTool(
-		name: string,
-		policy?: "permissive" | "enterprise" | "paranoid",
-	): Promise<{
-		verified: boolean;
-		signatures: any[];
-		policy: string;
-		errors?: string[];
-	}> {
-		return this.core.verifyTool(name, policy);
-	}
 
 	/**
 	 * Execute a tool from raw YAML definition
@@ -173,7 +153,6 @@ export class EnactDirect {
 	async getStatus(): Promise<{
 		executionProvider: string;
 		apiUrl: string;
-		verificationPolicy: string;
 		defaultTimeout: string;
 		authenticated: boolean;
 	}> {

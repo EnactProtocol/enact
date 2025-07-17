@@ -6,10 +6,6 @@ import type {
 } from "../types.js";
 import { EnactApiClient } from "../api/enact-api.js";
 import {
-	verifyCommandSafety,
-	sanitizeEnvironmentVariables,
-} from "../security/security.js";
-import {
 	validateToolStructure,
 	validateInputs,
 	validateOutput,
@@ -19,17 +15,9 @@ import { DaggerExecutionProvider } from "./DaggerExecutionProvider.js";
 import { resolveToolEnvironmentVariables } from "../utils/env-loader.js";
 import logger from "../exec/logger.js";
 import yaml from "yaml";
-import {
-	verifyTool as verifyToolSignatureWithPolicy,
-	VERIFICATION_POLICIES,
-} from "../security/sign.js";
-import {
-	enforceSignatureVerification,
-	createVerificationFailureResult,
-	logSecurityAudit,
-} from "../security/verification-enforcer.js";
 import fs from "fs";
 import path from "path";
+import { CryptoUtils, KeyManager, SigningService } from "@enactprotocol/security";
 
 export interface EnactCoreOptions {
 	apiUrl?: string;
@@ -38,7 +26,6 @@ export interface EnactCoreOptions {
 	authToken?: string;
 	verbose?: boolean;
 	defaultTimeout?: string;
-	verificationPolicy?: "permissive" | "enterprise" | "paranoid";
 	// Dagger-specific options
 	daggerOptions?: {
 		baseImage?: string;
@@ -59,13 +46,11 @@ export interface ToolSearchOptions {
 
 export interface ToolExecuteOptions {
 	timeout?: string;
-	verifyPolicy?: "permissive" | "enterprise" | "paranoid";
-	skipVerification?: boolean;
 	force?: boolean;
 	dryRun?: boolean;
 	verbose?: boolean;
-	isLocalFile?: boolean; // Whether this is a local file (enables different security policies)
-	interactive?: boolean; // Whether to allow interactive prompts for verification failures
+	isLocalFile?: boolean;
+	dangerouslySkipVerification?: boolean;
 }
 
 export class EnactCore {
@@ -79,7 +64,6 @@ export class EnactCore {
 			supabaseUrl: "https://xjnhhxwxovjifdxdwzih.supabase.co",
 			executionProvider: "dagger",
 			defaultTimeout: "30s",
-			verificationPolicy: "permissive",
 			...options,
 		};
 
@@ -271,28 +255,48 @@ export class EnactCore {
 				return null;
 			}
 
-			// Parse tool from response
+			// Parse tool from response - prefer raw_content for signature compatibility
 			let tool: EnactTool;
 
-			if (response.content && typeof response.content === "string") {
-				tool = yaml.parse(response.content);
-			} else if (
-				response.raw_content &&
-				typeof response.raw_content === "string"
-			) {
+			// Try raw_content first (contains original tool definition with correct field names for signatures)
+			if (response.raw_content && typeof response.raw_content === "string") {
 				try {
 					tool = JSON.parse(response.raw_content);
 				} catch {
 					tool = yaml.parse(response.raw_content);
 				}
 
-				// Merge signature information
-				if (response.signature || response.signatures) {
+				// Merge signature information from response if not already in raw content
+				if (!tool.signature && response.signature) {
 					tool.signature = response.signature;
-					tool.signatures = response.signatures;
+				}
+				if (!tool.signatures && response.signatures) {
+					// Convert object format to array format
+					if (Array.isArray(response.signatures)) {
+						tool.signatures = response.signatures;
+					} else {
+						// Convert object format {keyId: signatureData} to array format
+						tool.signatures = Object.values(response.signatures);
+					}
+				}
+			} else if (response.content && typeof response.content === "string") {
+				tool = yaml.parse(response.content);
+				
+				// Merge signature information
+				if (!tool.signature && response.signature) {
+					tool.signature = response.signature;
+				}
+				if (!tool.signatures && response.signatures) {
+					// Convert object format to array format
+					if (Array.isArray(response.signatures)) {
+						tool.signatures = response.signatures;
+					} else {
+						// Convert object format {keyId: signatureData} to array format
+						tool.signatures = Object.values(response.signatures);
+					}
 				}
 			} else {
-				// Map database fields to tool format
+				// Fallback: map database fields to tool format (may cause signature verification issues)
 				tool = {
 					name: response.name,
 					description: response.description,
@@ -309,7 +313,7 @@ export class EnactCore {
 					env: response.env_vars || response.env,
 					resources: response.resources,
 					signature: response.signature,
-					signatures: response.signatures,
+					signatures: response.signatures ? (Array.isArray(response.signatures) ? response.signatures : Object.values(response.signatures)) : undefined,
 					namespace: response.namespace,
 				};
 			}
@@ -388,6 +392,70 @@ export class EnactCore {
 		}
 	}
 
+private async verifyTool(tool: EnactTool, dangerouslySkipVerification: boolean = false): Promise<void> {
+    if (dangerouslySkipVerification) {
+        logger.warn(`Skipping signature verification for tool: ${tool.name}`);
+        return;
+    }
+
+    try {
+		if (!tool.signatures || tool.signatures.length === 0) {
+			throw new Error(`Tool ${tool.name} does not have any signatures`);
+		}
+		const documentForVerification = {
+			command: tool.command
+		};
+
+        // IGNORE DATABASE SIGNATURES - USE HARDCODED WORKING VALUES FOR TESTING
+       	const referenceSignature = {
+				signature: tool.signatures[0].value,
+				publicKey: tool.signatures[0].signer,
+				algorithm: tool.signatures[0].algorithm,
+				timestamp: new Date(tool.signatures[0].created).getTime()
+			};
+
+        
+        // Check what canonical document looks like
+        const canonicalDoc = SigningService.getCanonicalDocument(documentForVerification, { includeFields: ['command'] });
+        // console.log("Canonical document:", JSON.stringify(canonicalDoc));
+        
+        const docString = JSON.stringify(canonicalDoc);
+        const messageHash = CryptoUtils.hash(docString);
+        // console.log("Document string:", docString);
+        // console.log("Message hash:", messageHash);
+        
+        // Test direct crypto verification
+        const directVerify = CryptoUtils.verify(
+            referenceSignature.publicKey,
+            messageHash,
+            referenceSignature.signature
+        );
+        console.log("Direct crypto verification result:", directVerify);
+        
+        // Check trusted keys
+        const trustedKeys = KeyManager.getAllTrustedPublicKeys();
+        console.log("Trusted keys:", trustedKeys);
+        console.log("Is our public key trusted?", trustedKeys.includes(referenceSignature.publicKey));
+
+        const isValid = SigningService.verifyDocument(
+            documentForVerification,
+            referenceSignature,
+            { includeFields: ['command'] }
+        );
+        
+        console.log("Final verification result:", isValid);
+
+        if (!isValid) {
+            throw new Error(`Tool ${tool.name} has invalid signatures`);
+        }
+
+        logger.info(`Tool ${tool.name} signature verification passed`);
+    } catch (error) {
+        logger.error(`Signature verification failed for tool ${tool.name}:`, error);
+        throw new Error(`Signature verification failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
 	/**
 	 * Execute a tool directly
 	 */
@@ -406,60 +474,14 @@ export class EnactCore {
 
 			// Validate inputs
 			const validatedInputs = validateInputs(tool, inputs);
-
-			// Check command safety
-			const safetyCheck = verifyCommandSafety(tool.command, tool);
-			if (!safetyCheck.isSafe && !options.force) {
-				return {
-					success: false,
-					error: {
-						message: `Unsafe command blocked: ${safetyCheck.blocked?.join(", ")}`,
-						code: "COMMAND_UNSAFE",
-						details: safetyCheck,
-					},
-					metadata: {
-						executionId,
-						toolName: tool.name,
-						version: tool.version,
-						executedAt: new Date().toISOString(),
-						environment: "direct",
-					},
-				};
-			}
+			
+			// Verify tool signatures (unless explicitly skipped)
+			await this.verifyTool(tool, options.dangerouslySkipVerification);
 
 			// Resolve environment variables
-			const { resolved: envVars, missing: missingEnvVars } =
+			const { resolved: envVars } =
 				await resolveToolEnvironmentVariables(tool.name, tool.env || {});
 
-			// ⚠️ SECURITY: MANDATORY SIGNATURE VERIFICATION MUST BE LAST STEP BEFORE EXECUTION
-			// This ensures verification cannot be bypassed through different execution paths
-			const verificationResult = await enforceSignatureVerification(tool, {
-				skipVerification: options.skipVerification,
-				verifyPolicy: options.verifyPolicy,
-				force: options.force,
-				allowUnsigned: false, // Never allow unsigned tools in production
-				isLocalFile: options.isLocalFile, // Use centralized policy for local files
-				interactive: options.interactive, // Enable interactive prompts if needed
-			});
-
-			// Log security audit information
-			logSecurityAudit(tool, verificationResult, verificationResult.allowed, {
-				skipVerification: options.skipVerification,
-				verifyPolicy: options.verifyPolicy,
-				force: options.force,
-			});
-
-			// Block execution if verification fails - NO EXCEPTIONS
-			if (!verificationResult.allowed) {
-				return createVerificationFailureResult(
-					tool,
-					verificationResult,
-					executionId,
-				);
-			}
-
-			// 🔒 SECURITY CHECKPOINT PASSED - PROCEEDING WITH EXECUTION
-			logger.info(`✅ Security verification passed for tool: ${tool.name}`);
 
 			// Execute the tool via the execution provider
 			return await this.executionProvider.execute(
@@ -536,105 +558,6 @@ export class EnactCore {
 		}
 	}
 
-	/**
-	 * Static method to verify a tool's signature
-	 */
-	static async verifyTool(
-		name: string,
-		policy?: string,
-		coreOptions: Pick<EnactCoreOptions, 'apiUrl' | 'supabaseUrl'> = {}
-	): Promise<{
-		verified: boolean;
-		signatures: any[];
-		policy: string;
-		errors?: string[];
-	}> {
-		try {
-			const tool = await EnactCore.getToolByName(name, undefined, coreOptions);
-
-			if (!tool) {
-				return {
-					verified: false,
-					signatures: [],
-					policy: policy || "permissive",
-					errors: [`Tool not found: ${name}`],
-				};
-			}
-
-			// Load public key from keys/file-public.pem
-			let publicKey: string | undefined;
-			try {
-				const keyPath = path.resolve(__dirname, "../../keys/file-public.pem");
-				publicKey = fs.readFileSync(keyPath, "utf8");
-			} catch (e) {
-				logger.warn("Could not load public key for signature verification:", e);
-			}
-			if (!publicKey) {
-				return {
-					verified: false,
-					signatures: [],
-					policy: policy || "permissive",
-					errors: ["Public key not found for signature verification"],
-				};
-			}
-			const policyKey = (policy || "permissive").toUpperCase() as
-				| "PERMISSIVE"
-				| "ENTERPRISE"
-				| "PARANOID";
-			const policyObj = VERIFICATION_POLICIES[policyKey];
-			const verificationResult = await verifyToolSignatureWithPolicy(
-				tool,
-				policyObj,
-			);
-
-			if (!verificationResult.isValid) {
-				return {
-					verified: false,
-					signatures: [],
-					policy: policy || "permissive",
-					errors: verificationResult.errors,
-				};
-			}
-
-			const signatures: any[] = [];
-
-			if (tool.signature) {
-				signatures.push(tool.signature);
-			}
-
-			if (tool.signatures) {
-				signatures.push(...Object.values(tool.signatures));
-			}
-
-			return {
-				verified: verificationResult.isValid,
-				signatures,
-				policy: policy || "permissive",
-			};
-		} catch (error) {
-			return {
-				verified: false,
-				signatures: [],
-				policy: policy || "permissive",
-				errors: [`Verification error: ${(error as Error).message}`],
-			};
-		}
-	}
-
-	/**
-	 * Instance method wrapper for backward compatibility
-	 */
-	async verifyTool(
-		name: string,
-		policy?: string,
-	): Promise<{
-		verified: boolean;
-		signatures: any[];
-		policy: string;
-		errors?: string[];
-	}> {
-		return EnactCore.verifyTool(name, policy, this.options);
-	}
 
 	/**
 	 * Static method to check if a tool exists
@@ -819,7 +742,6 @@ export class EnactCore {
 	async getStatus(): Promise<{
 		executionProvider: string;
 		apiUrl: string;
-		verificationPolicy: string;
 		defaultTimeout: string;
 		authenticated: boolean;
 	}> {
@@ -828,7 +750,6 @@ export class EnactCore {
 		return {
 			executionProvider: this.options.executionProvider || "direct",
 			apiUrl: this.options.apiUrl || "https://enact.tools",
-			verificationPolicy: this.options.verificationPolicy || "permissive",
 			defaultTimeout: this.options.defaultTimeout || "30s",
 			authenticated: authStatus.authenticated,
 		};

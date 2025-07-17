@@ -1,13 +1,7 @@
 // src/commands/env.ts - Environment variable management for Enact CLI with package namespace support
 import {
-	intro,
-	outro,
 	text,
-	select,
 	confirm,
-	spinner,
-	note,
-	password,
 } from "@clack/prompts";
 import pc from "picocolors";
 import { existsSync } from "fs";

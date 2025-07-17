@@ -22,11 +22,6 @@ export * from './utils/logger';
 export * from './utils/silent-monitor';
 export * from './utils/timeout';
 
-// Security
-export * from './security/security';
-export { verifyTool, shouldExecuteTool, VERIFICATION_POLICIES } from './security/sign';
-export type { VerificationPolicy as SecurityVerificationPolicy } from './security/sign';
-export * from './security/verification-enforcer';
 
 // Services
 export * from './services/McpCoreService';

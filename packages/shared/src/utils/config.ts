@@ -23,7 +23,7 @@ export async function ensureConfig(): Promise<void> {
 	}
 
 	if (!existsSync(CONFIG_FILE)) {
-		await writeConfig({ history: [] });
+		await writeFile(CONFIG_FILE, JSON.stringify({ history: [] }, null, 2));
 	}
 }
 

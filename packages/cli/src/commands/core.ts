@@ -10,13 +10,6 @@ import pc from "picocolors";
 import * as p from "@clack/prompts";
 import yaml from "yaml";
 import {
-	verifyTool,
-	shouldExecuteTool,
-	VERIFICATION_POLICIES,
-	VerificationPolicy,
-} from "@enactprotocol/shared/security";
-import { enforceSignatureVerification } from "@enactprotocol/shared/security";
-import {
 	resolveToolEnvironmentVariables,
 	validateRequiredEnvironmentVariables,
 	generateConfigLink,
@@ -38,7 +31,6 @@ export async function getConfiguredCore(): Promise<EnactCore> {
 			const coreOptions = {
 				executionProvider: config.executionProvider,
 				defaultTimeout: config.defaultTimeout,
-				verificationPolicy: config.verificationPolicy,
 				daggerOptions: config.daggerOptions,
 			};
 
@@ -76,7 +68,6 @@ interface CoreExecOptions {
 	timeout?: string;
 	dry?: boolean;
 	verbose?: boolean;
-	verifyPolicy?: "permissive" | "enterprise" | "paranoid";
 	dangerouslySkipVerification?: boolean;
 }
 
@@ -260,14 +251,15 @@ ${pc.bold("EXAMPLES:")}
 							outputSchema: tool.outputSchema,
 							env: tool.env_vars
 								? Object.fromEntries(
-										Object.entries(tool.env_vars).map(([key, config]) => [
+										Object.entries(tool.env_vars).map(([key, config]: [string, any]) => [
 											key,
 											{ ...config, source: config.source || "env" },
 										]),
 									)
 								: undefined,
 							signature: tool.signature,
-							signatures: tool.signatures,
+							signatures: Array.isArray(tool.signatures) ? tool.signatures : 
+								(tool.signatures ? Object.values(tool.signatures) : undefined),
 							namespace: tool.namespace,
 							resources: tool.resources,
 							license: tool.license,
@@ -636,112 +628,6 @@ Examples:
 		return;
 	}
 
-	// Signature verification (unless dangerously skipped)
-	if (!options.dangerouslySkipVerification) {
-		spinner.start("Verifying tool signatures...");
-
-		try {
-			// Determine verification policy
-			const policyName = (options.verifyPolicy || "permissive").toUpperCase();
-			const policy: VerificationPolicy =
-				VERIFICATION_POLICIES[
-					policyName as keyof typeof VERIFICATION_POLICIES
-				] || VERIFICATION_POLICIES.PERMISSIVE;
-
-			if (options.verbose) {
-				console.error(
-					pc.cyan(
-						`\n🔐 Using verification policy: ${policyName.toLowerCase()}`,
-					),
-				);
-				if (policy.minimumSignatures)
-					console.error(`  - Minimum signatures: ${policy.minimumSignatures}`);
-			}
-
-			// Create a tool object for verification
-			let toolForVerification;
-			if (isLocalFile) {
-				toolForVerification = toolDefinition.raw_content;
-			} else if (toolDefinition.raw_content && toolDefinition.signatures) {
-				const originalTool = JSON.parse(toolDefinition.raw_content);
-
-				if (!originalTool.enact) {
-					originalTool.enact = "1.0.0";
-				}
-
-				toolForVerification = {
-					...originalTool,
-					signatures: toolDefinition.signatures,
-				};
-			} else {
-				toolForVerification = toolDefinition;
-
-				if (!toolForVerification.enact) {
-					toolForVerification.enact = "1.0.0";
-				}
-			}
-
-			const verification = await verifyTool(toolForVerification, policy);
-			spinner.stop("Signature verification completed");
-
-			if (verification.isValid) {
-				console.error(pc.green(`✅ ${verification.message}`));
-
-				if (options.verbose && verification.verifiedSigners.length > 0) {
-					console.error(pc.cyan("\n🔒 Verified signers:"));
-					verification.verifiedSigners.forEach((signer: any) => {
-						console.error(
-							`  - ${signer.signer}${signer.role ? ` (${signer.role})` : ""} [${signer.keyId}]`,
-						);
-					});
-				}
-			} else {
-				console.error(pc.red(`❌ ${verification.message}`));
-
-				if (verification.errors.length > 0) {
-					console.error(pc.red("\nVerification errors:"));
-					verification.errors.forEach((error: any) => {
-						console.error(pc.red(`  - ${error}`));
-					});
-				}
-
-				if (!options.force) {
-					const shouldContinue = await p.confirm({
-						message: "Tool signature verification failed. Continue anyway?",
-						initialValue: false,
-					});
-
-					if (!shouldContinue) {
-						p.outro(pc.yellow("Execution cancelled for security"));
-						return;
-					}
-				} else {
-					console.error(pc.yellow("⚠️  Proceeding due to --dangerously-skip-verification flag"));
-				}
-			}
-		} catch (error) {
-			spinner.stop("Verification failed");
-			console.error(
-				pc.red(`❌ Signature verification error: ${(error as Error).message}`),
-			);
-
-			if (!options.force) {
-				const shouldContinue = await p.confirm({
-					message: "Signature verification failed with error. Continue anyway?",
-					initialValue: false,
-				});
-
-				if (!shouldContinue) {
-					p.outro(pc.yellow("Execution cancelled for security"));
-					return;
-				}
-			}
-		}
-	} else {
-		console.error(
-			pc.yellow("⚠️  Signature verification skipped - tool may be untrusted"),
-		);
-	}
 
 	// Show tool information
 	if (options.verbose) {
@@ -897,7 +783,7 @@ Examples:
 			if (toolDefinition.name) {
 				try {
 					const { extractPackageNamespace } = await import(
-						"../utils/env-loader"
+						"@enactprotocol/shared/utils"
 					);
 					const packageNamespace = extractPackageNamespace(toolDefinition.name);
 					const packageEnvPath = require("path").join(
@@ -969,9 +855,6 @@ Examples:
 	// Execute using core library
 	const executeOptions: ToolExecuteOptions = {
 		timeout: options.timeout,
-		verifyPolicy: options.verifyPolicy,
-		skipVerification: options.dangerouslySkipVerification,
-		force: options.dangerouslySkipVerification,
 		dryRun: options.dry,
 		verbose: options.verbose,
 		isLocalFile: isLocalFile,
@@ -1009,6 +892,8 @@ Examples:
 					)
 				: undefined,
 			signature: toolDefinition.signature,
+			signatures: Array.isArray(toolDefinition.signatures) ? toolDefinition.signatures : 
+				(toolDefinition.signatures ? Object.values(toolDefinition.signatures) : undefined),
 			namespace: toolDefinition.namespace,
 			resources: toolDefinition.resources,
 		};
@@ -1070,8 +955,6 @@ Examples:
 						metadata: {
 							hasParams: Object.keys(params).length > 0,
 							timeout: options.timeout || toolDefinition.timeout || "30s",
-							verificationSkipped: options.dangerouslySkipVerification || false,
-							verificationPolicy: options.verifyPolicy || "permissive",
 							timestamp: new Date().toISOString(),
 						},
 					});
@@ -1233,14 +1116,15 @@ ${pc.bold("EXAMPLES:")}
 			outputSchema: toolDefinition.outputSchema,
 			env: toolDefinition.env_vars
 				? Object.fromEntries(
-						Object.entries(toolDefinition.env_vars).map(([key, config]) => [
+						Object.entries(toolDefinition.env_vars).map(([key, config]: [string, any]) => [
 							key,
 							{ ...config, source: config.source || "env" },
 						]),
 					)
 				: undefined,
 			signature: toolDefinition.signature,
-			signatures: toolDefinition.signatures,
+			signatures: Array.isArray(toolDefinition.signatures) ? toolDefinition.signatures : 
+				(toolDefinition.signatures ? Object.values(toolDefinition.signatures) : undefined),
 			namespace: toolDefinition.namespace,
 			resources: toolDefinition.resources,
 			license: toolDefinition.license,
@@ -1339,120 +1223,6 @@ ${pc.bold("EXAMPLES:")}
 	}
 }
 
-/**
- * Handle verify command using core library
- */
-export async function handleCoreVerifyCommand(
-	args: string[],
-	options: {
-		help?: boolean;
-		policy?: string;
-		verbose?: boolean;
-	},
-) {
-	// Enable silent mode for cleaner CLI output (unless verbose is requested)
-	if (!options.verbose) {
-		process.env.ENACT_SILENT = "true";
-	}
-	
-	if (options.help) {
-		console.error(`
-${pc.bold("enact verify")} - Verify tool signatures
-
-${pc.bold("USAGE:")}
-  enact verify <tool-name> [policy]
-
-${pc.bold("POLICIES:")}
-  permissive   Allow unsigned tools (default)
-  enterprise   Require valid signatures
-  paranoid     Require multiple signatures
-
-${pc.bold("OPTIONS:")}
-  --policy <policy>   Verification policy
-  -v, --verbose       Verbose output
-  -h, --help          Show help
-
-${pc.bold("EXAMPLES:")}
-  enact verify text/analyzer
-  enact verify file/converter --policy enterprise
-    `);
-		return;
-	}
-
-	try {
-		let toolName = args[0];
-		let policy = args[1] || options.policy || "permissive";
-
-		if (!toolName) {
-			const response = await p.text({
-				message: "Enter tool name to verify:",
-				placeholder: 'e.g., "text/analyzer"',
-			});
-
-			if (p.isCancel(response)) {
-				p.outro("Verification cancelled");
-				return;
-			}
-
-			toolName = response;
-		}
-
-		p.intro(pc.bgYellow(pc.black(" Verifying Tool Signatures ")));
-
-		const spinner = p.spinner();
-		spinner.start(`Verifying ${toolName}...`);
-
-		const config = await getCurrentConfig();
-		const result = await EnactCore.verifyTool(toolName, policy, {
-			apiUrl: config.apiUrl,
-			supabaseUrl: config.supabaseUrl,
-		});
-
-		spinner.stop("Verification completed");
-
-		if (result.verified) {
-			console.error(`\n${pc.green("✓")} Tool signature verification passed`);
-		} else {
-			console.error(`\n${pc.red("✗")} Tool signature verification failed`);
-		}
-
-		console.error(`${pc.bold("Policy:")} ${policy}`);
-		console.error(
-			`${pc.bold("Signatures found:")} ${result.signatures.length}`,
-		);
-
-		if (options.verbose && result.signatures.length > 0) {
-			console.error("\n" + pc.bold("Signature Details:"));
-			result.signatures.forEach((sig, i) => {
-				console.error(`  ${i + 1}. ${sig.type} by ${sig.signer}`);
-				console.error(`     Algorithm: ${sig.algorithm}`);
-				console.error(`     Created: ${sig.created}`);
-				if (sig.role) {
-					console.error(`     Role: ${sig.role}`);
-				}
-			});
-		}
-
-		if (result.errors && result.errors.length > 0) {
-			console.error("\n" + pc.bold(pc.red("Errors:")));
-			result.errors.forEach((error) => console.error(`  • ${error}`));
-		}
-
-		if (result.verified) {
-			p.outro("Verification successful!");
-		} else {
-			p.outro(pc.red("Verification failed!"));
-			process.exit(1);
-		}
-	} catch (error) {
-		p.outro(
-			pc.red(
-				`Verification failed: ${error instanceof Error ? error.message : String(error)}`,
-			),
-		);
-		process.exit(1);
-	}
-}
 
 /**
  * Display results in a formatted table
@@ -1861,7 +1631,7 @@ File: ${filePath}
  */
 async function getFilePathInteractively(): Promise<string | null> {
 	try {
-		const { getHistory } = await import("../utils/config");
+		const { getHistory } = await import("@enactprotocol/shared/utils");
 		const history = await getHistory();
 
 		if (history.length > 0) {
@@ -1878,8 +1648,8 @@ async function getFilePathInteractively(): Promise<string | null> {
 
 			if (action === "select") {
 				const fileOptions = history
-					.filter((file) => existsSync(file) && isEnactFile(file))
-					.map((file) => ({
+					.filter((file: string) => existsSync(file) && isEnactFile(file))
+					.map((file: string) => ({
 						value: file,
 						label: file,
 					}));

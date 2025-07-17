@@ -1,0 +1,41 @@
+enact: 1.0.0
+name: kgroves88/hello-world
+version: 1.0.0
+description: A simple greeting tool that says hello to a person
+command: echo 'Hello, ${name}! Welcome to Enact Protocol.'
+timeout: 10s
+license: MIT
+tags:
+  - greeting
+  - hello
+  - example
+inputSchema:
+  type: object
+  properties:
+    name:
+      type: string
+      description: Name of the person to greet
+      default: World
+  required:
+    - name
+outputSchema:
+  type: string
+  description: A greeting message
+examples:
+  - input:
+      name: Alice
+    output: Hello, Alice! Welcome to Enact Protocol.
+    description: Basic greeting example
+annotations:
+  readOnlyHint: true
+  destructiveHint: false
+  idempotentHint: true
+  openWorldHint: false
+signatures:
+  -----BEGINPRIVATEKEY-----MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgeTOV3CjMfkErseH2XCMXvOo40jL/ZGnzK07FxfJzTPyhRANCAAQj21ze37nH1im27+OYvUFGsjjbubemWs3GShn8QTsx2CmlOcZLhQNZDZO3Ekkh6wkXTUew68tPKiTTYdckx+JZ-----ENDPRIVATEKEY-----:
+    algorithm: sha256
+    type: ecdsa-p256
+    signer: local-test
+    created: 2025-07-12T18:58:58.025Z
+    value: /qyii7/Ixtw9AiD3j0Goch2ldCjuseU8LuOG2gihQv6xGT6dXx+cVyls5yyxupgXInTFHrBGdPvZjjQUQ6maOQ==
+    role: author

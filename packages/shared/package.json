@@ -22,10 +22,6 @@
       "import": "./dist/utils/index.js",
       "types": "./dist/utils/index.d.ts"
     },
-    "./security": {
-      "import": "./dist/security/index.js",
-      "types": "./dist/security/index.d.ts"
-    },
     "./services": {
       "import": "./dist/services/index.js",
       "types": "./dist/services/index.d.ts"
@@ -65,6 +61,7 @@
   "license": "MIT",
   "dependencies": {
     "@dagger.io/dagger": "^0.9.11",
+    "@enactprotocol/security": "^0.2.5",
     "dotenv": "^16.5.0",
     "pino": "^9.7.0",
     "pino-pretty": "^13.0.0",
