@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/shared",
-  "version": "1.0.14",
+  "version": "1.2.0",
   "description": "Shared utilities and core functionality for Enact Protocol",
   "type": "module",
   "main": "./dist/index.js",
