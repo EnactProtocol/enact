@@ -344,7 +344,7 @@ loadDotenv();
  */
 export function getWebServerUrl(): string | null {
 	// For now, default to localhost:5555 as that's the standard port
-	// When running via MCP (npx -p enact-cli enact-mcp), the web server is automatically started
+	// When running via MCP (npx -p @enactprotocol/cli enact-mcp), the web server is automatically started
 	// TODO: In the future, we could check if the server is actually responding or get the port dynamically
 	return "http://localhost:5555";
 }

@@ -47,11 +47,11 @@ enact auth logout
 - `query` - Search query (keywords, tool names, descriptions)
 
 **Options**:
-- `--limit <number>` - Maximum number of results (default: 20)
+- `--limit <number>, -l <number>` - Maximum number of results (default: 20)
 - `--tags <tags>` - Filter by tags (comma-separated)
-- `--format <format>` - Output format: table, json, list (default: table)
+- `--format <format>, -f <format>` - Output format: table, json, list (default: table)
 - `--json` - Output results as JSON (shorthand for --format json)
-- `--author <author>` - Filter by author
+- `--author <author>, -a <author>` - Filter by author
 
 **Examples**:
 ```bash
@@ -72,28 +72,41 @@ enact search prettier --limit 5 --json
 - `tool-name-or-path` - Name of the tool (e.g., "enact/text/slugify") or path to local YAML file
 
 **Options**:
-- `--input <data>` - Input data as JSON string or stdin
+- `--input <data>, -i <data>` - Input data as JSON string or stdin
 - `--params <params>` - Parameters as JSON object  
 - `--timeout <time>` - Override tool timeout (Go duration format: 30s, 5m, 1h)
 - `--dry` - Show command that would be executed without running it
 - `--verbose, -v` - Show detailed execution information
 - `--dangerously-skip-verification` - Skip all signature verification (DANGEROUS, not recommended)
-- `--verify-policy <policy>` - Verification policy: permissive, enterprise, paranoid (default: permissive)
-
-**Security Policies**:
-- `permissive` - Require 1+ valid signatures from trusted keys (default)
-- `enterprise` - Require author + reviewer signatures
-- `paranoid` - Require author + reviewer + approver signatures
 
 **Examples**:
 ```bash
 enact exec enact/text/slugify --input "Hello World"
-enact exec org/ai/review --params '{"file": "README.md"}' --verify-policy enterprise
+enact exec org/ai/review --params '{"file": "README.md"}'
 enact exec ./my-tool.yaml --input "test data"
 enact exec untrusted/tool --dangerously-skip-verification  # DANGEROUS, not recommended
 ```
 
-### 4. init - Tool Creation
+### 4. get - Tool Information
+
+**Purpose**: Get detailed information about a tool from the registry.
+
+**Usage**: `enact get <tool-name> [options]`
+
+**Arguments**:
+- `tool-name` - Name of the tool (e.g., "enact/text/slugify")
+
+**Options**:
+- `--format <format>` - Output format: json, yaml, default (default: default)
+
+**Examples**:
+```bash
+enact get enact/text/slugify
+enact get org/ai/review --format json
+enact get my/tool --format yaml
+```
+
+### 5. init - Tool Creation
 
 **Purpose**: Creates a new Enact tool definition with interactive prompts.
 
@@ -103,7 +116,7 @@ enact exec untrusted/tool --dangerously-skip-verification  # DANGEROUS, not reco
 - `name` - Optional tool name (e.g., my-tool, text/analyzer)
 
 **Options**:
-- `--minimal` - Create a minimal tool definition (3 fields only)
+- `--minimal, -m` - Create a minimal tool definition (3 fields only)
 
 **Examples**:
 ```bash
@@ -113,7 +126,7 @@ enact init text/analyzer         # Create text/analyzer.yaml
 enact init --minimal             # Create minimal tool definition
 ```
 
-### 5. publish - Tool Publishing
+### 6. publish - Tool Publishing
 
 **Purpose**: Publish a tool to the Enact registry.
 
@@ -122,6 +135,8 @@ enact init --minimal             # Create minimal tool definition
 **Options**:
 - `--url <url>` - Specify custom registry URL
 - `--token <token>` - Provide authentication token directly
+- `--file <file>` - Specify tool file to publish
+- `--verbose, -v` - Show detailed publishing information
 
 **Features**:
 - Interactive file selection if no file specified
@@ -133,42 +148,89 @@ enact init --minimal             # Create minimal tool definition
 **Examples**:
 ```bash
 enact publish                    # Interactive mode
+enact publish --file my-tool.yaml
 enact publish --url https://custom-registry.com
 enact publish --token abc123
 ```
 
-### 6. sign - Cryptographic Signing
+### 7. env - Environment Variable Management
 
-**Purpose**: Manage tool signatures and verification for security.
+**Purpose**: Manage environment variables with package-based namespacing for tool execution.
 
-**Usage**: `enact sign <subcommand> [options]`
+**Usage**: `enact env <subcommand> [options]`
 
 **Subcommands**:
-- `verify <tool-path> [policy]` - Verify tool signatures
-- `list-keys` - List trusted public keys
-- `sign <tool-path>` - Sign a tool (requires private key)
+- `set <key> <value>` - Set an environment variable
+- `get <key>` - Get an environment variable value
+- `list` - List all environment variables
+- `delete <key>` - Delete an environment variable
+- `packages` - List all packages with environment variables
+- `export <package>` - Export variables for a package as shell commands
+- `clear <package>` - Clear all variables for a package
 
 **Options**:
-- `--policy <policy>` - Verification policy: permissive, enterprise, paranoid
-- `--private-key <path>` - Path to private key for signing
-- `--role <role>` - Role for signature: author, reviewer, approver
-- `--signer <name>` - Signer identifier
-- `--verbose, -v` - Show detailed information
-
-**Verification Policies**:
-- `permissive` - Require 1+ valid signatures from trusted keys (default)
-- `enterprise` - Require author + reviewer signatures
-- `paranoid` - Require author + reviewer + approver signatures
+- `--package <package>` - Specify package namespace (e.g., "acme-corp/api")
+- `--format <format>` - Output format: table, json, env (default: table)
+- `--show` - Show variable values (otherwise hidden for security)
 
 **Examples**:
 ```bash
-enact sign verify my-tool.yaml
-enact sign verify my-tool.yaml enterprise
-enact sign list-keys
-enact sign sign my-tool.yaml --private-key ~/.enact/private.pem --role author
+enact env set API_KEY secret123 --package acme-corp/api
+enact env get API_KEY --package acme-corp/api
+enact env list --package acme-corp/api --show
+enact env packages
+enact env export acme-corp/api
+enact env clear acme-corp/api
 ```
 
-### 7. remote - Server Management
+### 8. config - Configuration Management
+
+**Purpose**: Manage CLI configuration settings and setup.
+
+**Usage**: `enact config <subcommand> [options]`
+
+**Subcommands**:
+- `setup` - Interactive configuration setup
+- `list` - List all configuration settings
+- `get <key>` - Get a configuration value
+- `set <key> <value>` - Set a configuration value
+- `reset` - Reset configuration to defaults
+
+**Options**:
+- `--global` - Apply to global configuration
+
+**Examples**:
+```bash
+enact config setup
+enact config list
+enact config get default-server
+enact config set default-server https://my-server.com
+enact config reset
+```
+
+### 9. mcp - MCP Client Integration
+
+**Purpose**: Manage MCP (Model Context Protocol) client integrations for AI model access.
+
+**Usage**: `enact mcp <subcommand> [options]`
+
+**Subcommands**:
+- `install` - Install MCP client configuration
+- `list` - List available MCP clients
+- `status` - Show MCP integration status
+
+**Options**:
+- `--client <client>` - Specify MCP client: claude-desktop, claude-code, vscode, goose, gemini
+
+**Examples**:
+```bash
+enact mcp list
+enact mcp install --client claude-desktop
+enact mcp install --client vscode
+enact mcp status
+```
+
+### 10. remote - Server Management
 
 **Purpose**: Manages remote server configurations for publishing enact documents.
 
@@ -187,7 +249,7 @@ enact remote list
 enact remote remove staging
 ```
 
-### 8. user - User Operations
+### 11. user - User Operations
 
 **Purpose**: User-related operations and information retrieval.
 
@@ -220,7 +282,9 @@ enact
 - ⚡ Execute a tool
 - 📤 Publish a tool
 - 📝 Create a new tool definition
-- ✍️ Sign & verify tools
+- 🌍 Manage environment variables
+- ⚙️ Configuration setup
+- 🔌 MCP client integration
 - 🔐 Manage authentication
 - 🌐 Manage remote servers
 - 👤 User operations
@@ -232,22 +296,47 @@ enact
 The CLI stores configuration in `~/.enact/`:
 - `auth.json` - Authentication credentials
 - `config.json` - General configuration including remote servers
+- `env/` - Package-scoped environment variables directory
 
 ## Security Features
 
-- **Signature Verification**: Tools can be cryptographically signed and verified
-- **Multiple Verification Policies**: Choose security level based on requirements
-- **Trusted Key Management**: Maintain list of trusted public keys
+- **Signature Verification**: Basic signature verification during tool execution
 - **OAuth Authentication**: Secure authentication flow with remote servers
+- **Environment Variable Encryption**: Optional encryption for sensitive environment variables
+- **Package-based Isolation**: Environment variables scoped to tool packages
 
 ## Common Patterns
 
-1. **First-time setup**: `enact auth login`
+1. **First-time setup**: `enact config setup` or `enact auth login`
 2. **Find tools**: `enact search <query>`
-3. **Execute tools**: `enact exec <tool-name>`
-4. **Create new tool**: `enact init`
-5. **Publish tool**: `enact publish`
-6. **Verify security**: `enact sign verify <tool>`
+3. **Get tool info**: `enact get <tool-name>`
+4. **Execute tools**: `enact exec <tool-name>`
+5. **Create new tool**: `enact init`
+6. **Publish tool**: `enact publish`
+7. **Manage environment**: `enact env set KEY value --package my-package`
+8. **Setup MCP integration**: `enact mcp install --client claude-desktop`
+
+## Known Limitations
+
+### Commands Not Yet Implemented
+
+The following commands are referenced in help text but not yet implemented:
+
+1. **`sign` command** - Cryptographic signing and verification
+   - `enact sign verify <tool>` - Tool signature verification
+   - `enact sign list-keys` - List trusted public keys
+   - `enact sign sign <tool>` - Sign a tool with private key
+
+2. **`test` command** - Tool testing functionality
+   - Referenced in `init` command output but not implemented
+
+3. **`validate` command** - Tool definition validation
+   - May be planned for future releases
+
+### Partial Implementations
+
+- **Security policies**: The `--verify-policy` flag is documented but policy enforcement is basic
+- **Signature verification**: Basic verification exists but advanced multi-signature policies are not implemented
 
 ## Error Handling
 

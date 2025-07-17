@@ -67,7 +67,7 @@ ${pc.bold("More Help:")}
  */
 export function showVersion(): void {
 	const version = getVersion();
-	console.error(`enact-cli v${version}`);
+	console.error(`@enactprotocol/cli v${version}`);
 }
 
 /**

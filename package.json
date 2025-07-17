@@ -76,7 +76,6 @@
     "@clack/core": "^0.4.2",
     "@clack/prompts": "^0.10.1",
     "@dagger.io/dagger": "^0.9.11",
-    "@enactprotocol/cli": "^1.0.14",
     "@enactprotocol/security": "^0.2.1",
     "@modelcontextprotocol/sdk": "^1.13.0",
     "dotenv": "^16.5.0",

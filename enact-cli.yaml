@@ -1,7 +1,7 @@
 enact: "1.0.0"
 name: enact/cli
 description: "Official CLI for the Enact Protocol - package, secure, and discover AI tools with MCP integration"
-command: "npx enact-cli"
+command: "npx @enactprotocol/cli"
 version: "1.0.10"
 tags: ["cli", "enact", "enact-protocol", "ai-tools", "mcp", "model-context-protocol", "tool-discovery", "command-line-tool"]
 license: "MIT"
