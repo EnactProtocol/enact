@@ -72,19 +72,12 @@ Options:
   --timeout <time>    Override tool timeout (Go duration format: 30s, 5m, 1h)
   --dry               Show command that would be executed without running it
   --verbose, -v       Show detailed execution information
-  --skip-verification Skip signature verification (not recommended)
-  --verify-policy     Verification policy: permissive, enterprise, paranoid (default: permissive)
   --dangerously-skip-verification Skip all signature verification (DANGEROUS - not recommended for production)
-
-Security Options:
-  permissive          Require 1+ valid signatures from trusted keys (default)
-  enterprise          Require author + reviewer signatures  
-  paranoid            Require author + reviewer + approver signatures
 
 Examples:
   enact exec enact/text/slugify --input "Hello World"
-  enact exec org/ai/review --params '{"file": "README.md"}' --verify-policy enterprise
-  enact exec ./my-tool.yaml --input "test data"
+  enact exec org/ai/review --params '{"file": "README.md"}'
+  enact exec ./my-tool.yaml --input "test data"  # Local tools automatically skip verification
   enact exec untrusted/tool --dangerously-skip-verification  # DANGEROUS - not recommended
   echo "Hello World" | enact exec enact/text/slugify --input -
 `);

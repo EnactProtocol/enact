@@ -17,7 +17,7 @@ import logger from "../exec/logger.js";
 import yaml from "yaml";
 import fs from "fs";
 import path from "path";
-import { CryptoUtils, KeyManager, SigningService } from "@enactprotocol/security";
+import { CryptoUtils, KeyManager, SecurityConfigManager, SigningService } from "@enactprotocol/security";
 
 export interface EnactCoreOptions {
 	apiUrl?: string;
@@ -406,7 +406,6 @@ private async verifyTool(tool: EnactTool, dangerouslySkipVerification: boolean =
 			command: tool.command
 		};
 
-        // IGNORE DATABASE SIGNATURES - USE HARDCODED WORKING VALUES FOR TESTING
        	const referenceSignature = {
 				signature: tool.signatures[0].value,
 				publicKey: tool.signatures[0].signer,
@@ -474,9 +473,17 @@ private async verifyTool(tool: EnactTool, dangerouslySkipVerification: boolean =
 
 			// Validate inputs
 			const validatedInputs = validateInputs(tool, inputs);
-			
+			const config = SecurityConfigManager.loadConfig(); 
+		
+			if( options.isLocalFile && config.allowLocalUnsigned){
+				logger.warn(`Executing local file without signature verification: ${tool.name} (you can disallow in your security config)`);
+			}
+			if( options.dangerouslySkipVerification) {
+				logger.warn(`Skipping signature verification for tool: ${tool.name} because of dangerouslySkipVerification option`);
+			}
+			const skipVerification = (options.isLocalFile && config.allowLocalUnsigned) || Boolean(options.dangerouslySkipVerification);
 			// Verify tool signatures (unless explicitly skipped)
-			await this.verifyTool(tool, options.dangerouslySkipVerification);
+			await this.verifyTool(tool, skipVerification);
 
 			// Resolve environment variables
 			const { resolved: envVars } =
