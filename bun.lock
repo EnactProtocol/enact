@@ -7,8 +7,7 @@
         "@clack/core": "^0.4.2",
         "@clack/prompts": "^0.10.1",
         "@dagger.io/dagger": "^0.9.11",
-        "@enactprotocol/cli": "^1.0.14",
-        "@enactprotocol/security": "^0.2.1",
+        "@enactprotocol/security": "0.2.7",
         "@modelcontextprotocol/sdk": "^1.13.0",
         "dotenv": "^16.5.0",
         "picocolors": "^1.1.1",
@@ -27,14 +26,14 @@
     },
     "packages/cli": {
       "name": "@enactprotocol/cli",
-      "version": "1.0.14",
+      "version": "1.2.1",
       "bin": {
         "enact": "./dist/index.js",
       },
       "dependencies": {
         "@clack/core": "^0.4.2",
         "@clack/prompts": "^0.10.1",
-        "@enactprotocol/shared": "^1.0.14",
+        "@enactprotocol/shared": "1.2.0",
         "picocolors": "^1.1.1",
       },
       "devDependencies": {
@@ -45,12 +44,12 @@
     },
     "packages/mcp-server": {
       "name": "@enactprotocol/mcp-server",
-      "version": "1.0.14",
+      "version": "1.2.0",
       "bin": {
         "enact-mcp": "./dist/index.js",
       },
       "dependencies": {
-        "@enactprotocol/shared": "^1.0.14",
+        "@enactprotocol/shared": "1.2.0",
         "@modelcontextprotocol/sdk": "^1.13.0",
         "zod": "^3.25.67",
       },
@@ -62,10 +61,10 @@
     },
     "packages/shared": {
       "name": "@enactprotocol/shared",
-      "version": "1.0.14",
+      "version": "1.2.1",
       "dependencies": {
         "@dagger.io/dagger": "^0.9.11",
-        "@enactprotocol/security": "^0.2.5",
+        "@enactprotocol/security": "0.2.7",
         "dotenv": "^16.5.0",
         "pino": "^9.7.0",
         "pino-pretty": "^13.0.0",
@@ -90,7 +89,7 @@
 
     "@enactprotocol/mcp-server": ["@enactprotocol/mcp-server@workspace:packages/mcp-server"],
 
-    "@enactprotocol/security": ["@enactprotocol/security@0.2.1", "", { "dependencies": { "@noble/curves": "^1.4.0", "@noble/hashes": "^1.4.0" } }, "sha512-q7YA4plmAbWV3kXI/5qdNdIPXGiKUnCdKt/0uyxZqcVLKqGaDG2ergTANw37Q3FQmYrnRKT37HFocRGbF42GNA=="],
+    "@enactprotocol/security": ["@enactprotocol/security@0.2.7", "", { "dependencies": { "@noble/curves": "^1.4.0", "@noble/hashes": "^1.4.0" } }, "sha512-z7f6zDr9pJ1oxkYKt7W9ZEEFP6CmmAEeHK9nej6YSSGeOgCcUDhfV1k2qzzO3+lKsj2FyzrUpgY/knXPFp+jgA=="],
 
     "@enactprotocol/shared": ["@enactprotocol/shared@workspace:packages/shared"],
 
@@ -436,11 +435,13 @@
 
     "zod-to-json-schema": ["zod-to-json-schema@3.24.6", "", { "peerDependencies": { "zod": "^3.24.1" } }, "sha512-h/z3PKvcTcTetyjl1fkj79MHNEjm+HpD6NXheWjzOekY7kV+lwDYnHw+ivHkijnCSMz1yJaWBD9vu/Fcmk+vEg=="],
 
+    "@enactprotocol/cli/@enactprotocol/shared": ["@enactprotocol/shared@1.2.0", "", { "dependencies": { "@dagger.io/dagger": "^0.9.11", "@enactprotocol/security": "^0.2.5", "dotenv": "^16.5.0", "pino": "^9.7.0", "pino-pretty": "^13.0.0", "strip-ansi": "^7.1.0", "yaml": "^2.8.0", "zod": "^3.25.67" } }, "sha512-VvT6B4tuExm9QEAFR/WCTL6/gALXupDiWjrG157PpXLrIMRiBWsVsmEemYkIpFYqj37v9LhxEGKOnTqR+JncHg=="],
+
     "@enactprotocol/cli/bun-types": ["bun-types@1.2.18", "", { "dependencies": { "@types/node": "*" }, "peerDependencies": { "@types/react": "^19" } }, "sha512-04+Eha5NP7Z0A9YgDAzMk5PHR16ZuLVa83b26kH5+cp1qZW4F6FmAURngE7INf4tKOvCE69vYvDEwoNl1tGiWw=="],
 
-    "@enactprotocol/mcp-server/bun-types": ["bun-types@1.2.18", "", { "dependencies": { "@types/node": "*" }, "peerDependencies": { "@types/react": "^19" } }, "sha512-04+Eha5NP7Z0A9YgDAzMk5PHR16ZuLVa83b26kH5+cp1qZW4F6FmAURngE7INf4tKOvCE69vYvDEwoNl1tGiWw=="],
+    "@enactprotocol/mcp-server/@enactprotocol/shared": ["@enactprotocol/shared@1.2.0", "", { "dependencies": { "@dagger.io/dagger": "^0.9.11", "@enactprotocol/security": "^0.2.5", "dotenv": "^16.5.0", "pino": "^9.7.0", "pino-pretty": "^13.0.0", "strip-ansi": "^7.1.0", "yaml": "^2.8.0", "zod": "^3.25.67" } }, "sha512-VvT6B4tuExm9QEAFR/WCTL6/gALXupDiWjrG157PpXLrIMRiBWsVsmEemYkIpFYqj37v9LhxEGKOnTqR+JncHg=="],
 
-    "@enactprotocol/shared/@enactprotocol/security": ["@enactprotocol/security@0.2.5", "", { "dependencies": { "@noble/curves": "^1.4.0", "@noble/hashes": "^1.4.0" } }, "sha512-F8n77tAVz/jAWVqdjntK9DShBdxpLrq7DB22VnfxO7M48jC0aAuTGpM4+vh5N0/cXhj18JHBfbuWqKNlzPOW9A=="],
+    "@enactprotocol/mcp-server/bun-types": ["bun-types@1.2.18", "", { "dependencies": { "@types/node": "*" }, "peerDependencies": { "@types/react": "^19" } }, "sha512-04+Eha5NP7Z0A9YgDAzMk5PHR16ZuLVa83b26kH5+cp1qZW4F6FmAURngE7INf4tKOvCE69vYvDEwoNl1tGiWw=="],
 
     "@types/bun/bun-types": ["bun-types@1.2.18", "", { "dependencies": { "@types/node": "*" }, "peerDependencies": { "@types/react": "^19" } }, "sha512-04+Eha5NP7Z0A9YgDAzMk5PHR16ZuLVa83b26kH5+cp1qZW4F6FmAURngE7INf4tKOvCE69vYvDEwoNl1tGiWw=="],
 
@@ -455,6 +456,10 @@
     "minizlib/minipass": ["minipass@3.3.6", "", { "dependencies": { "yallist": "^4.0.0" } }, "sha512-DxiNidxSEK+tHG6zOIklvNOwm3hvCrbUrdtzY74U6HKTJxvIDfOUL5W5P2Ghd3DTkhhKPYGqeNUIh5qcM4YBfw=="],
 
     "npm-run-path/path-key": ["path-key@4.0.0", "", {}, "sha512-haREypq7xkM7ErfgIyA0z+Bj4AGKlMSdlQE2jvJo6huWD1EdkKYV+G/T4nq0YEF2vgTT8kqMFKo1uHn950r4SQ=="],
+
+    "@enactprotocol/cli/@enactprotocol/shared/@enactprotocol/security": ["@enactprotocol/security@0.2.6", "", { "dependencies": { "@noble/curves": "^1.4.0", "@noble/hashes": "^1.4.0" } }, "sha512-QfdSjFFteEYBUiuk4MZsfm4t9ZmL1lCzzJgcVS6M1+3r5+ipQEO+SM2J+2tQMBKZRnfM67ar9sc/oQIiq6mwnA=="],
+
+    "@enactprotocol/mcp-server/@enactprotocol/shared/@enactprotocol/security": ["@enactprotocol/security@0.2.6", "", { "dependencies": { "@noble/curves": "^1.4.0", "@noble/hashes": "^1.4.0" } }, "sha512-QfdSjFFteEYBUiuk4MZsfm4t9ZmL1lCzzJgcVS6M1+3r5+ipQEO+SM2J+2tQMBKZRnfM67ar9sc/oQIiq6mwnA=="],
 
     "form-data/mime-types/mime-db": ["mime-db@1.52.0", "", {}, "sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg=="],
   }

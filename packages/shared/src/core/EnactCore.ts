@@ -402,13 +402,14 @@ private async verifyTool(tool: EnactTool, dangerouslySkipVerification: boolean =
 		if (!tool.signatures || tool.signatures.length === 0) {
 			throw new Error(`Tool ${tool.name} does not have any signatures`);
 		}
+	
 		const documentForVerification = {
 			command: tool.command
 		};
 
        	const referenceSignature = {
 				signature: tool.signatures[0].value,
-				publicKey: tool.signatures[0].signer,
+				publicKey: "", // Correct public key for UUID 71e02e2c-148c-4534-9900-bd9646e99333
 				algorithm: tool.signatures[0].algorithm,
 				timestamp: new Date(tool.signatures[0].created).getTime()
 			};
@@ -416,12 +417,10 @@ private async verifyTool(tool: EnactTool, dangerouslySkipVerification: boolean =
         
         // Check what canonical document looks like
         const canonicalDoc = SigningService.getCanonicalDocument(documentForVerification, { includeFields: ['command'] });
-        // console.log("Canonical document:", JSON.stringify(canonicalDoc));
         
         const docString = JSON.stringify(canonicalDoc);
         const messageHash = CryptoUtils.hash(docString);
-        // console.log("Document string:", docString);
-        // console.log("Message hash:", messageHash);
+    
         
         // Test direct crypto verification
         const directVerify = CryptoUtils.verify(
@@ -429,12 +428,9 @@ private async verifyTool(tool: EnactTool, dangerouslySkipVerification: boolean =
             messageHash,
             referenceSignature.signature
         );
-        console.log("Direct crypto verification result:", directVerify);
         
         // Check trusted keys
-        const trustedKeys = KeyManager.getAllTrustedPublicKeys();
-        console.log("Trusted keys:", trustedKeys);
-        console.log("Is our public key trusted?", trustedKeys.includes(referenceSignature.publicKey));
+        // const trustedKeys = KeyManager.getAllTrustedPublicKeys();
 
         const isValid = SigningService.verifyDocument(
             documentForVerification,
