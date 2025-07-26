@@ -1232,8 +1232,8 @@ function displayResultsTable(results: EnactTool[]): void {
 	console.error("═".repeat(100));
 
 	// Header
-	const nameWidth = 25;
-	const descWidth = 50;
+	const nameWidth = 40;
+	const descWidth = 45;
 	const tagsWidth = 20;
 
 	console.error(
