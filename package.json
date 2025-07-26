@@ -39,6 +39,7 @@
     "deploy:dry": "./scripts/deploy-npm.sh --dry-run",
     "deploy:cli": "./scripts/deploy-npm.sh --package cli",
     "deploy:mcp": "./scripts/deploy-npm.sh --package mcp-server",
+    "deploy:mcp-dev": "./scripts/deploy-npm.sh --package mcp-dev-server",
     "deploy:shared": "./scripts/deploy-npm.sh --package shared",
     "version:patch": "./scripts/version-bump.sh patch",
     "version:minor": "./scripts/version-bump.sh minor",

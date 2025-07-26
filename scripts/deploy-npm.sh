@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # deploy-npm.sh - Comprehensive NPM deployment script for Enact Protocol monorepo
-# Publishes @enactprotocol/shared, @enactprotocol/mcp-server, and @enactprotocol/cli packages
+# Publishes @enactprotocol/shared, @enactprotocol/mcp-server, @enactprotocol/mcp-dev-server, and @enactprotocol/cli packages
 
 set -e  # Exit on any error
 
@@ -13,7 +13,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-PACKAGES=("shared" "mcp-server" "cli")
+PACKAGES=("shared" "mcp-server" "mcp-dev-server" "cli")
 DRY_RUN=false
 SKIP_TESTS=false
 SKIP_BUILD=false
