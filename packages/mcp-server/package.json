@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/mcp-server",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "MCP server for the Enact Protocol - enables AI tools integration via Model Context Protocol",
   "type": "module",
   "main": "./dist/index.js",
