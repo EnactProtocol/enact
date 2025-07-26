@@ -97,7 +97,7 @@ command: "python -m pip install requests && python -c 'import requests; print(re
 ```
 
 ### Multi-Signature Security
-Tools can be signed by multiple parties using an array format:
+Tools can be signed by multiple parties:
 ```yaml
 signatures:
   - signer: "71e02e2c-148c-4534-9900-bd9646e99333"
@@ -185,6 +185,38 @@ enact search "text analysis"    # Find tools
 enact verify tool.yaml          # Check signatures
 ```
 
+### Dagger-Powered Containerized Execution
+
+While the Enact protocol is implementation-agnostic, the reference CLI uses [Dagger](https://dagger.io) for secure containerized execution:
+
+```yaml
+# When you specify a container image
+from: "python:3.11-slim"
+command: "uvx black@24.4.2 '${file}'"
+```
+
+**Behind the scenes:**
+1. **Dagger pipeline** creates an isolated container from the specified image
+2. **Code execution** happens entirely within the container boundary
+3. **File system isolation** prevents tools from accessing host system
+4. **Network policies** can be applied per-tool for additional security
+5. **Resource limits** are enforced at the container level
+
+**Security benefits:**
+- ✅ **Zero host access** - Tools can't modify your system
+- ✅ **Dependency isolation** - No version conflicts between tools
+- ✅ **Reproducible environments** - Same runtime across all machines
+- ✅ **Resource containment** - Memory/CPU limits prevent resource exhaustion
+- ✅ **Audit trail** - All execution happens in logged, traceable containers
+
+**Why Dagger specifically:**
+- **Programmable** - Define execution pipelines in code
+- **Portable** - Works across different container runtimes
+- **Cacheable** - Efficient layer caching for fast execution
+- **Composable** - Easy to chain multiple tools together
+
+This architecture ensures that even untrusted tools can be executed safely, making Enact suitable for enterprise environments where security is paramount.
+
 ## Best Practices
 
 1. **Use exact versions:** `npx prettier@3.3.3` not `npx prettier`
@@ -254,15 +286,15 @@ annotations:
 
 **For AI Applications:**
 - Discover tools semantically (`search "image resize"`)
-- Execute safely in isolated environments
-- Trust verified tools with signatures
-- Scale without managing infrastructure
+- Execute safely in Dagger-powered containers
+- Trust verified tools with cryptographic signatures
+- Scale without managing infrastructure or security concerns
 
 **For Enterprises:**
 - Control tool approval with multi-party signatures
 - Audit all tool usage and versions
-- Ensure reproducible environments
-- Manage security policies centrally
+- Ensure reproducible, containerized environments
+- Manage security policies with Dagger-based isolation
 
 ## Get Started
 
@@ -303,7 +335,7 @@ resources:           # Resource requirements
 
 ```yaml
 env:
-  VARIABLE_NAME:
+  SOME_VARIABLE_NAME:
     description: string  # What this variable is for (required)
     source: string       # Where to get this value (required)
     required: boolean    # Whether this is required (required)
@@ -326,9 +358,9 @@ authors:             # Tool creators (optional)
     email: string    # Author email (optional)
     url: string      # Author website (optional)
 
-examples:            # Test cases and expected outputs
-  - input: object    # Input parameters
-    output: any      # Expected output
+examples:            # Test cases and expected outputs (optional)
+  - input: object    # Input parameters (optional, omit for tools with no inputs)
+    output: any      # Expected output (optional)
     description: string # Test description (optional)
 ```
 
@@ -346,8 +378,9 @@ annotations:         # MCP-aligned behavior hints (all default to false)
 ### Multi-Signature Security
 
 ```yaml
-signatures:             # Cryptographic signatures (optional, supports multiple signers - array format)
+signatures:             # Cryptographic signatures (optional, supports multiple signers)
   - signer: string      # Signer identifier (UUID or human-readable name) (required)
+    publicKey: string   # public key
     algorithm: string   # Hash algorithm: "sha256" (required)
     type: string        # Signature type: "ecdsa-p256" (required)
     value: string       # Base64 encoded signature (required)
@@ -375,6 +408,51 @@ x-internal-id: "tool-12345"
 x-team-owner: "platform-team"
 x-cost-center: "engineering"
 ```
+
+
+## 🔐 Canonical Security Fields & Signature Logic
+
+Enact cryptographically signs only a subset of **critical security fields** to prevent tampering and ensure deterministic, reproducible signatures. These fields are now:
+
+- Listed **alphabetically** for deterministic ordering
+- **Empty values are excluded** (null, empty string, empty object/array)
+
+**Critical fields included in the signature:**
+
+- `annotations`  — Security behavior hints
+- `command`      — The actual execution payload
+- `description`  — What the tool claims to do
+- `enact`        — Protocol version security
+- `env`          — Environment variables
+- `from`         — Container image (critical for security)
+- `inputSchema`  — Defines the attack surface
+- `name`         — Tool identity (prevents impersonation)
+- `timeout`      — Prevents DoS attacks
+- `version`      — Tool version for compatibility
+
+> **Note:** Only non-empty values are included in the canonical JSON for signing. This ensures signatures are consistent and not affected by empty or missing fields.
+
+**Example (deterministic, critical-fields-only, sorted JSON):**
+
+```json
+{
+  "annotations": { ... },
+  "command": "npx prettier@3.3.3 --write '${file}'",
+  "description": "Formats JavaScript/TypeScript code",
+  "enact": "1.0.0",
+  "env": { ... },
+  "from": "node:18-alpine",
+  "inputSchema": { ... },
+  "name": "enact/code/prettier",
+  "timeout": "30s",
+  "version": "1.2.3"
+}
+```
+
+- The signature is computed over this canonical JSON, with keys sorted alphabetically.
+- Any field that is empty or missing is omitted from the signed data.
+
+
 
 ## Community
 

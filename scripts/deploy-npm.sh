@@ -273,9 +273,17 @@ main() {
     check_npm_auth
     check_git_status
     
-    # Build and test
-    run_tests
-    build_packages
+    # Prepare workspace for publishing (unlink, sync versions, etc.)
+    log_info "Preparing workspace for publishing..."
+    if ! ./scripts/pre-publish.sh; then
+        log_error "Pre-publish preparation failed!"
+        exit 1
+    fi
+    log_success "Workspace prepared for publishing"
+    
+    # Note: pre-publish.sh already runs tests and builds, but we can run them again if needed
+    # run_tests  # Uncomment if you want to run tests again
+    # build_packages  # Uncomment if you want to build again
     
     # Show what will be published
     log_info "Package versions that will be published:"

@@ -1,0 +1,49 @@
+{
+  "name": "@enactprotocol/mcp-dev-server",
+  "version": "1.0.0",
+  "description": "MCP server for Enact tool development workflow - create, test, validate, sign, and publish tools",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "test": "vitest",
+    "clean": "rm -rf dist",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "enact",
+    "mcp",
+    "tools",
+    "development",
+    "workflow",
+    "ai"
+  ],
+  "author": "Enact Protocol",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "@enactprotocol/shared": "workspace:*",
+    "zod": "^3.24.1",
+    "yaml": "^2.6.1",
+    "fs-extra": "^11.2.0",
+    "inquirer": "^12.0.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/inquirer": "^9.0.7",
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.3",
+    "tsx": "^4.19.2",
+    "vitest": "^2.1.8",
+    "eslint": "^9.18.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

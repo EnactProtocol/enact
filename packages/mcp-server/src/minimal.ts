@@ -998,20 +998,44 @@ server.registerTool(
 	"launch-env-manager-server",
 	{
 		title: "Launch Environment Manager",
-		description: "Start the web-based environment variable manager server",
+		description: "Start the web-based environment variable manager server. Supports URL parameters to pre-select package and variables for bulk configuration. Use 'package' to pre-select a namespace and 'vars' (string or array) to open bulk edit modal with specific variables.",
 		inputSchema: {
-			port: z.number().default(5555).describe("Port to run the server on"),
-			async: z.boolean().default(true).describe("Run in background"),
+			port: z.number().default(5555).describe("Port to run the server on (default: 5555)"),
+			async: z.boolean().default(true).describe("Run in background (default: true)"),
+			package: z.string().optional().describe("Pre-select package namespace (e.g., 'demo/test'). Opens directly to this package's variables."),
+			vars: z.union([z.string(), z.array(z.string())]).optional().describe("Pre-select variables for bulk editing. Single variable: 'API_KEY' or multiple: ['API_KEY', 'DB_URL']. Opens bulk edit modal automatically."),
 		},
 	},
-	async ({ port = 5555, async = true }) => {
+	async ({ port = 5555, async = true, package: packageName, vars }) => {
 		try {
+			// Helper function to build URL with parameters
+			const buildUrl = (basePort: number) => {
+				const baseUrl = `http://localhost:${basePort}`;
+				const params = new URLSearchParams();
+				
+				if (packageName) {
+					params.set('package', packageName);
+				}
+				
+				if (vars) {
+					if (Array.isArray(vars)) {
+						// Encode array as JSON string for client-side parsing
+						params.set('vars', JSON.stringify(vars));
+					} else {
+						params.set('vars', vars);
+					}
+				}
+				
+				return params.toString() ? `${baseUrl}/?${params.toString()}` : baseUrl;
+			};
+
 			if (webServerInstance) {
+				const url = buildUrl(webServerPort!);
 				return {
 					content: [
 						{
 							type: "text",
-							text: `🌐 Environment Manager already running on port ${webServerPort}\n\nURL: http://localhost:${webServerPort}\n\nUse this interface to manage environment variables for your tools.`,
+							text: `🌐 Environment Manager already running on port ${webServerPort}\n\nURL: ${url}\n\nUse this interface to manage environment variables for your tools.`,
 						},
 					],
 				};
@@ -1051,11 +1075,12 @@ server.registerTool(
 						operation.error = error;
 					});
 
+				const futureUrl = buildUrl(port);
 				return {
 					content: [
 						{
 							type: "text",
-							text: `🚀 Starting Environment Manager on port ${port}\n\nOperation ID: ${operationId}\n\n⏳ Use "check-operation-status" with ID "${operationId}" to see when ready.\n\nOnce running: http://localhost:${port}`,
+							text: `🚀 Starting Environment Manager on port ${port}\n\nOperation ID: ${operationId}\n\n⏳ Use "check-operation-status" with ID "${operationId}" to see when ready.\n\nOnce running: ${futureUrl}`,
 						},
 					],
 				};
@@ -1066,11 +1091,12 @@ server.registerTool(
 				webServerInstance = webServer;
 				webServerPort = actualPort;
 
+				const url = buildUrl(actualPort);
 				return {
 					content: [
 						{
 							type: "text",
-							text: `✅ Environment Manager started!\n\nURL: http://localhost:${actualPort}\n\nManage environment variables for your Enact tools through the web interface.`,
+							text: `✅ Environment Manager started!\n\nURL: ${url}\n\nManage environment variables for your Enact tools through the web interface.`,
 						},
 					],
 				};

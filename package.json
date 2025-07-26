@@ -39,7 +39,12 @@
     "version:patch": "./scripts/version-bump.sh patch",
     "version:minor": "./scripts/version-bump.sh minor",
     "version:major": "./scripts/version-bump.sh major",
-    "version:dry": "./scripts/version-bump.sh patch --dry-run"
+    "version:dry": "./scripts/version-bump.sh patch --dry-run",
+    "sync-versions": "./scripts/sync-versions.sh",
+    "link": "./scripts/link-workspaces.sh",
+    "unlink": "./scripts/unlink-workspaces.sh",
+    "pre-publish": "./scripts/pre-publish.sh",
+    "post-publish": "./scripts/post-publish.sh"
   },
   "keywords": [
     "cli",

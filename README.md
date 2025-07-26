@@ -340,6 +340,9 @@ enact config get executionProvider
 - Ensure the binary builds successfully before submitting PRs
 - Run the test suite to verify MCP configuration generation works correctly
 
+**For detailed development workflow, workspace linking, and publishing processes, see [DEVELOPMENT.md](./DEVELOPMENT.md).**
+- Run the test suite to verify MCP configuration generation works correctly
+
 ### Troubleshooting
 
 **Binary not found after build:**
