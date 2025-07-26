@@ -234,6 +234,7 @@ async function main() {
 				await handleMcpCommand(commandArgs, {
 					help: values.help as boolean | undefined,
 					client: values.client as string | undefined,
+					server: values.server as string | undefined,
 				});
 				break;
 

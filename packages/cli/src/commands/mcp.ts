@@ -22,6 +22,7 @@ const execAsync = promisify(exec);
 interface McpOptions {
 	help?: boolean;
 	client?: string;
+	server?: string;
 }
 
 // MCP client configurations
@@ -77,6 +78,25 @@ const MCP_CLIENTS = {
 	},
 };
 
+// MCP server configurations
+const MCP_SERVERS = {
+	"main": {
+		name: "Enact MCP Server",
+		description: "Main server for tool execution, search, and environment management",
+		package: "@enactprotocol/mcp-server",
+	},
+	"dev": {
+		name: "Enact MCP Dev Server", 
+		description: "Development server for creating, testing, validating, and publishing tools",
+		package: "@enactprotocol/mcp-dev-server",
+	},
+	"both": {
+		name: "Both Servers",
+		description: "Install both main and development servers",
+		package: "both",
+	},
+};
+
 export async function handleMcpCommand(
 	args: string[],
 	options: McpOptions,
@@ -88,13 +108,14 @@ Usage: enact mcp <subcommand> [options]
 Manages MCP (Model Context Protocol) client integrations.
 
 Subcommands:
-  install             Install Enact MCP server to MCP clients
+  install             Install Enact MCP server(s) to MCP clients
   list                List detected MCP clients
   status              Show MCP integration status
 
 Options:
   --help, -h          Show this help message
   --client <name>     Target specific client (claude-desktop, claude-code, vscode, goose, gemini)
+  --server <type>     Choose server type (main, dev, both) - default: main
 `);
 		return;
 	}
@@ -136,6 +157,24 @@ async function handleInstallCommand(options: McpOptions): Promise<void> {
 		}
 
 		let targetClient = options.client;
+		let serverType = options.server || "main";
+
+		// Validate server type
+		if (!MCP_SERVERS[serverType as keyof typeof MCP_SERVERS]) {
+			console.error(pc.red(`Invalid server type: ${serverType}. Valid options: main, dev, both`));
+			process.exit(1);
+		}
+
+		// Server selection if not specified
+		if (!options.server) {
+			serverType = (await select({
+				message: "Which MCP server(s) would you like to install?",
+				options: Object.entries(MCP_SERVERS).map(([key, config]) => ({
+					value: key,
+					label: `${config.name} - ${config.description}`,
+				})),
+			})) as string;
+		}
 
 		if (!targetClient) {
 			if (detectedClients.length === 1) {
@@ -169,10 +208,11 @@ async function handleInstallCommand(options: McpOptions): Promise<void> {
 		}
 
 		// Check if already installed
-		const isAlreadyInstalled = await checkMcpServerInstalled(selectedClient);
+		const isAlreadyInstalled = await checkMcpServerInstalled(selectedClient, serverType);
 		if (isAlreadyInstalled) {
+			const serverConfig = MCP_SERVERS[serverType as keyof typeof MCP_SERVERS];
 			const shouldReinstall = await confirm({
-				message: `Enact MCP server is already installed in ${selectedClient.name}. Do you want to reinstall it?`,
+				message: `${serverConfig.name} is already installed in ${selectedClient.name}. Do you want to reinstall it?`,
 			});
 
 			if (!shouldReinstall) {
@@ -182,16 +222,21 @@ async function handleInstallCommand(options: McpOptions): Promise<void> {
 		}
 
 		const s = spinner();
-		s.start("Installing Enact MCP server...");
+		const serverConfig = MCP_SERVERS[serverType as keyof typeof MCP_SERVERS];
+		s.start(`Installing ${serverConfig.name}...`);
 
-		await installMcpServer(selectedClient);
+		await installMcpServer(selectedClient, serverType);
 
-		s.stop("✓ Enact MCP server installation process completed");
+		s.stop(`✓ ${serverConfig.name} installation process completed`);
+
+		const successMessage = serverType === "both" 
+			? `✓ Added both 'enact' and 'enact-dev' MCP servers to ${selectedClient.name}\n`
+			: `✓ Added '${serverType === "main" ? "enact" : "enact-dev"}' MCP server to ${selectedClient.name}\n`;
 
 		note(
-			pc.green(`✓ Added 'enact' MCP server to ${selectedClient.name}\n`) +
+			pc.green(successMessage) +
 				pc.cyan(
-					`→ Please restart ${selectedClient.name} to enable the Enact MCP server\n`,
+					`→ Please restart ${selectedClient.name} to enable the MCP server(s)\n`,
 				) +
 				pc.cyan(`→ Look for the MCP tools icon in the chat interface`),
 			"Installation complete",
@@ -237,10 +282,19 @@ async function handleStatusCommand(): Promise<void> {
 	}
 
 	for (const client of detectedClients) {
-		const isInstalled = await checkMcpServerInstalled(client);
-		const status = isInstalled
-			? pc.green("✓ Installed")
-			: pc.yellow("○ Not installed");
+		const mainInstalled = await checkMcpServerInstalled(client, "main");
+		const devInstalled = await checkMcpServerInstalled(client, "dev");
+		
+		let status = "";
+		if (mainInstalled && devInstalled) {
+			status = pc.green("✓ Main + Dev servers");
+		} else if (mainInstalled) {
+			status = pc.green("✓ Main server") + pc.yellow(" (Dev server not installed)");
+		} else if (devInstalled) {
+			status = pc.green("✓ Dev server") + pc.yellow(" (Main server not installed)");
+		} else {
+			status = pc.yellow("○ Not installed");
+		}
 
 		note(`${status}\nConfig: ${client.configPath}`, client.name);
 	}
@@ -298,12 +352,10 @@ export async function installMcpServer(client: {
 	id: string;
 	name: string;
 	configPath: string;
-}): Promise<void> {
+}, serverType: string = "main"): Promise<void> {
 	if (client.id === "goose") {
 		// For Goose, write directly to the config.yaml file
 		try {
-			const extensionName = "Enact Tools";
-
 			// Write directly to Goose config.yaml
 			const yaml = await import("yaml");
 			const configPath = client.configPath;
@@ -333,22 +385,36 @@ export async function installMcpServer(client: {
 				config.extensions = {};
 			}
 
-			// Add Enact extension configuration following Goose's config.yaml format
-			config.extensions.enact = {
-				name: "enact",
-				cmd: "npx",
-				args: ["-y", "@enactprotocol/mcp-server"],
-				enabled: true,
-				type: "stdio",
-				timeout: 300,
-			};
+			// Add server configurations based on serverType
+			if (serverType === "main" || serverType === "both") {
+				config.extensions.enact = {
+					name: "enact",
+					cmd: "npx",
+					args: ["-y", "@enactprotocol/mcp-server"],
+					enabled: true,
+					type: "stdio",
+					timeout: 300,
+				};
+			}
+
+			if (serverType === "dev" || serverType === "both") {
+				config.extensions["enact-dev"] = {
+					name: "enact-dev",
+					cmd: "npx",
+					args: ["-y", "@enactprotocol/mcp-dev-server"],
+					enabled: true,
+					type: "stdio",
+					timeout: 300,
+				};
+			}
 
 			// Write updated config
 			await writeFile(configPath, yaml.stringify(config), "utf-8");
 
+			const serverConfig = MCP_SERVERS[serverType as keyof typeof MCP_SERVERS];
 			note(
 				pc.green(
-					`✓ Successfully added 'Enact Tools' extension to Goose configuration\n`,
+					`✓ Successfully added '${serverConfig.name}' extension to Goose configuration\n`,
 				) +
 					pc.cyan(
 						`→ The extension is now available in your Goose AI sessions\n`,
@@ -387,11 +453,22 @@ export async function installMcpServer(client: {
 		}
 	}
 
-	// Prepare MCP server configuration
-	const mcpServerConfig = {
-		command: "npx",
-		args: ["-y", "@enactprotocol/mcp-server"],
-	};
+	// Prepare MCP server configuration(s)
+	const serverConfigs: Record<string, any> = {};
+
+	if (serverType === "main" || serverType === "both") {
+		serverConfigs.enact = {
+			command: "npx",
+			args: ["-y", "@enactprotocol/mcp-server"],
+		};
+	}
+
+	if (serverType === "dev" || serverType === "both") {
+		serverConfigs["enact-dev"] = {
+			command: "npx",
+			args: ["-y", "@enactprotocol/mcp-dev-server"],
+		};
+	}
 
 	// Handle different client configuration formats
 	if (client.id === "claude-desktop" || client.id === "claude-code" || client.id === "gemini") {
@@ -399,13 +476,13 @@ export async function installMcpServer(client: {
 		if (!config.mcpServers) {
 			config.mcpServers = {};
 		}
-		config.mcpServers.enact = mcpServerConfig;
+		Object.assign(config.mcpServers, serverConfigs);
 	} else if (client.id === "vscode") {
 		// VS Code format
 		if (!config["mcp.servers"]) {
 			config["mcp.servers"] = {};
 		}
-		config["mcp.servers"].enact = mcpServerConfig;
+		Object.assign(config["mcp.servers"], serverConfigs);
 	}
 
 	// Write updated config
@@ -416,7 +493,7 @@ export async function checkMcpServerInstalled(client: {
 	id: string;
 	name: string;
 	configPath: string;
-}): Promise<boolean> {
+}, serverType: string = "main"): Promise<boolean> {
 	if (client.id === "goose") {
 		try {
 			const yaml = await import("yaml");
@@ -428,8 +505,17 @@ export async function checkMcpServerInstalled(client: {
 			const configContent = await readFile(client.configPath, "utf-8");
 			const config = yaml.parse(configContent);
 
-			// Check if enact extension exists and is enabled in config.yaml format
-			return config?.extensions?.enact?.enabled === true;
+			// Check based on serverType
+			if (serverType === "main") {
+				return config?.extensions?.enact?.enabled === true;
+			} else if (serverType === "dev") {
+				return config?.extensions?.["enact-dev"]?.enabled === true;
+			} else if (serverType === "both") {
+				return config?.extensions?.enact?.enabled === true && 
+					   config?.extensions?.["enact-dev"]?.enabled === true;
+			}
+			
+			return false;
 		} catch (error) {
 			return false;
 		}
@@ -444,9 +530,23 @@ export async function checkMcpServerInstalled(client: {
 		const config = JSON.parse(configContent);
 
 		if (client.id === "claude-desktop" || client.id === "claude-code" || client.id === "gemini") {
-			return config.mcpServers && config.mcpServers.enact;
+			const servers = config.mcpServers || {};
+			if (serverType === "main") {
+				return Boolean(servers.enact);
+			} else if (serverType === "dev") {
+				return Boolean(servers["enact-dev"]);
+			} else if (serverType === "both") {
+				return Boolean(servers.enact) && Boolean(servers["enact-dev"]);
+			}
 		} else if (client.id === "vscode") {
-			return config["mcp.servers"] && config["mcp.servers"].enact;
+			const servers = config["mcp.servers"] || {};
+			if (serverType === "main") {
+				return Boolean(servers.enact);
+			} else if (serverType === "dev") {
+				return Boolean(servers["enact-dev"]);
+			} else if (serverType === "both") {
+				return Boolean(servers.enact) && Boolean(servers["enact-dev"]);
+			}
 		}
 
 		return false;
