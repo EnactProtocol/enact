@@ -18,6 +18,7 @@ import yaml from "yaml";
 import fs from "fs";
 import path from "path";
 import { CryptoUtils, KeyManager, SecurityConfigManager, SigningService } from "@enactprotocol/security";
+import { getFrontendUrl, getApiUrl } from "../utils/config";
 
 export interface EnactCoreOptions {
 	apiUrl?: string;
@@ -60,20 +61,34 @@ export class EnactCore {
 
 	constructor(options: EnactCoreOptions = {}) {
 		this.options = {
-			apiUrl: "https://enact.tools",
-			supabaseUrl: "https://xjnhhxwxovjifdxdwzih.supabase.co",
+			apiUrl: "https://enact.tools", // Default, will be overridden by factory
+			supabaseUrl: "https://xjnhhxwxovjifdxdwzih.supabase.co", // Default, will be overridden by factory
 			executionProvider: "dagger",
 			defaultTimeout: "30s",
 			...options,
 		};
 
 		this.apiClient = new EnactApiClient(
-			this.options.apiUrl,
-			this.options.supabaseUrl,
+			this.options.apiUrl!,
+			this.options.supabaseUrl!,
 		);
 
 		// Initialize the appropriate execution provider
 		this.executionProvider = this.createExecutionProvider();
+	}
+
+	/**
+	 * Create EnactCore with config-based URLs
+	 */
+	static async create(options: EnactCoreOptions = {}): Promise<EnactCore> {
+		const frontendUrl = options.apiUrl || await getFrontendUrl();
+		const apiUrl = options.supabaseUrl || await getApiUrl();
+		
+		return new EnactCore({
+			...options,
+			apiUrl: frontendUrl,
+			supabaseUrl: apiUrl,
+		});
 	}
 	/**
 	 * Set authentication token for API operations

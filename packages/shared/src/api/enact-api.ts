@@ -5,17 +5,30 @@ import {
 	CLITokenCreate,
 	OAuthTokenExchange,
 } from "./types";
+import { getFrontendUrl, getApiUrl } from "../utils/config";
 
 export class EnactApiClient {
 	baseUrl: string;
 	supabaseUrl: string;
 
 	constructor(
-		baseUrl: string = "https://enact.tools",
-		supabaseUrl: string = "https://xjnhhxwxovjifdxdwzih.supabase.co",
+		baseUrl: string,
+		supabaseUrl: string,
 	) {
 		this.baseUrl = baseUrl.replace(/\/$/, ""); // Remove trailing slash
 		this.supabaseUrl = supabaseUrl.replace(/\/$/, "");
+	}
+
+	/**
+	 * Create API client with config-based URLs
+	 */
+	static async create(
+		baseUrl?: string,
+		supabaseUrl?: string,
+	): Promise<EnactApiClient> {
+		const frontendUrl = baseUrl || await getFrontendUrl();
+		const apiUrl = supabaseUrl || await getApiUrl();
+		return new EnactApiClient(frontendUrl, apiUrl);
 	}
 
 	// Helper method to make authenticated requests
@@ -545,8 +558,13 @@ export class EnactApiClient {
 	}
 }
 
-// Export a default instance
-export const enactApi = new EnactApiClient();
+// Export a default instance factory
+export async function createDefaultApiClient(): Promise<EnactApiClient> {
+	return await EnactApiClient.create();
+}
+
+// Keep backward compatibility with sync usage
+export const enactApi = new EnactApiClient("https://enact.tools", "https://xjnhhxwxovjifdxdwzih.supabase.co");
 
 // Export error types for better error handling
 export class EnactApiError extends Error {
@@ -565,5 +583,7 @@ export function createEnactApiClient(
 	baseUrl?: string,
 	supabaseUrl?: string,
 ): EnactApiClient {
-	return new EnactApiClient(baseUrl, supabaseUrl);
+	const defaultFrontend = "https://enact.tools";
+	const defaultApi = "https://xjnhhxwxovjifdxdwzih.supabase.co";
+	return new EnactApiClient(baseUrl || defaultFrontend, supabaseUrl || defaultApi);
 }

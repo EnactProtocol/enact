@@ -12,6 +12,7 @@ import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 import { spawn, spawnSync } from "child_process";
+import { exit } from "process";
 
 export interface DaggerExecutionOptions {
 	baseImage?: string; // Default container image
@@ -457,7 +458,8 @@ export class DaggerExecutionProvider extends ExecutionProvider {
 						logger.debug(`Waiting ${waitTime}ms before retry...`);
 						await new Promise((resolve) => setTimeout(resolve, waitTime));
 					}
-				}
+				} 
+
 			}
 
 			// All retries failed
@@ -623,6 +625,7 @@ export class DaggerExecutionProvider extends ExecutionProvider {
 			throw error;
 		} finally {
 			this.abortController = null;
+
 		}
 	}
 
@@ -1240,50 +1243,7 @@ export class DaggerExecutionProvider extends ExecutionProvider {
 		}
 	}
 
-	/**
-	 * Enhanced force cleanup for synchronous exit handlers
-	 */
-	private forceCleanup(): void {
-		if (this.isShuttingDown) return;
-
-		try {
-			logger.info("🔄 Force cleaning up Dagger engines...");
-
-			const result = spawnSync(
-				"docker",
-				[
-					"ps",
-					"--all",
-					"--filter",
-					"name=dagger-engine",
-					"--format",
-					"{{.Names}}",
-				],
-				{
-					encoding: "utf8",
-					timeout: 5000,
-				},
-			);
-
-			if (result.stdout) {
-				const names = result.stdout
-					.trim()
-					.split("\n")
-					.filter((n: string) => n.trim());
-				if (names.length > 0) {
-					logger.info(
-						`Found ${names.length} engine containers, force removing...`,
-					);
-					for (const name of names) {
-						spawnSync("docker", ["rm", "-f", name.trim()], { timeout: 3000 });
-					}
-					logger.info("✅ Force cleanup completed");
-				}
-			}
-		} catch (error) {
-			logger.debug("Force cleanup failed (this is usually fine):", error);
-		}
-	}
+	
 
 	/**
 	 * Get current engine status for debugging

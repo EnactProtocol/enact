@@ -5,6 +5,18 @@ import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import os from "os";
+import { 
+	getFrontendUrl, 
+	getApiUrl, 
+	setFrontendUrl, 
+	setApiUrl, 
+	resetUrls, 
+	getUrlConfig,
+	getTrustedKeys,
+	addTrustedKey,
+	removeTrustedKey,
+	getTrustedKey
+} from "@enactprotocol/shared/utils";
 
 interface EnactConfig {
 	executionProvider: "direct" | "dagger";
@@ -292,6 +304,13 @@ function showConfigHelp(): void {
 	console.log("  get <key>           Get specific configuration value");
 	console.log("  set <key> <value>   Set configuration value");
 	console.log("  reset               Reset to default configuration");
+	console.log("  urls                Show current URL configuration");
+	console.log("  set-frontend-url    Set frontend URL (for OAuth, registry)");
+	console.log("  set-api-url         Set API URL (for backend calls)");
+	console.log("  reset-urls          Reset URLs to defaults");
+	console.log("  keys                Show trusted public keys");
+	console.log("  add-key             Add a trusted public key");
+	console.log("  remove-key <id>     Remove a trusted public key");
 	console.log("\nOptions:");
 	console.log(
 		"  --global            Use global configuration (~/.enact-config.json)",
@@ -313,6 +332,192 @@ function showConfigHelp(): void {
 	console.log("  enact config set daggerOptions.baseImage ubuntu:22.04");
 	console.log("  enact config get executionProvider");
 	console.log("  enact config list --global");
+	console.log("  enact config urls");
+	console.log("  enact config set-frontend-url https://my-instance.example.com");
+	console.log("  enact config set-api-url https://api.example.com");
+	console.log("  enact config keys");
+	console.log("  enact config add-key");
+	console.log("  enact config remove-key my-org-key");
+}
+
+/**
+ * Show URL configuration
+ */
+async function showUrls(): Promise<void> {
+	const urlConfig = await getUrlConfig();
+	
+	console.log(pc.cyan("\n🌐 URL Configuration:\n"));
+	console.log(pc.white("Frontend URL:"));
+	console.log(`  ${pc.green(urlConfig.frontend.value)} ${pc.gray(`(${urlConfig.frontend.source})`)}`);
+	console.log(pc.white("API URL:"));
+	console.log(`  ${pc.green(urlConfig.api.value)} ${pc.gray(`(${urlConfig.api.source})`)}`);
+	
+	console.log(pc.gray("\nSources: default < config < environment"));
+}
+
+/**
+ * Set URL configuration
+ */
+async function setUrl(type: 'frontend' | 'api', url: string): Promise<void> {
+	try {
+		if (type === 'frontend') {
+			await setFrontendUrl(url);
+			console.log(pc.green(`✅ Frontend URL set to: ${url}`));
+		} else {
+			await setApiUrl(url);
+			console.log(pc.green(`✅ API URL set to: ${url}`));
+		}
+		console.log(pc.gray("Use 'enact config urls' to view current configuration"));
+	} catch (error) {
+		console.error(pc.red(`Error setting ${type} URL: ${error}`));
+		process.exit(1);
+	}
+}
+
+/**
+ * Reset URLs to defaults
+ */
+async function resetUrlsConfig(): Promise<void> {
+	try {
+		await resetUrls();
+		console.log(pc.green("✅ URLs reset to defaults"));
+		await showUrls();
+	} catch (error) {
+		console.error(pc.red(`Error resetting URLs: ${error}`));
+		process.exit(1);
+	}
+}
+
+/**
+ * Show trusted keys
+ */
+async function showTrustedKeys(): Promise<void> {
+	try {
+		const keys = await getTrustedKeys();
+		
+		console.log(pc.cyan("\n🔐 Trusted Keys:\n"));
+		
+		if (keys.length === 0) {
+			console.log(pc.gray("No trusted keys found"));
+			return;
+		}
+		
+		for (const key of keys) {
+			const sourceColor = key.source === 'default' ? pc.blue : 
+							   key.source === 'organization' ? pc.yellow : pc.green;
+			
+			console.log(pc.white(`${key.name} (${key.id})`));
+			console.log(`  ${sourceColor(`[${key.source}]`)} ${pc.gray(`Added: ${new Date(key.addedAt).toLocaleDateString()}`)}`);
+			if (key.description) {
+				console.log(`  ${pc.gray(key.description)}`);
+			}
+			console.log(`  ${pc.gray(`Key: ${key.publicKey.substring(0, 50)}...`)}`);
+			console.log();
+		}
+	} catch (error) {
+		console.error(pc.red(`Error reading trusted keys: ${error}`));
+		process.exit(1);
+	}
+}
+
+/**
+ * Add a trusted key
+ */
+async function addTrustedKeyInteractive(): Promise<void> {
+	try {
+		console.log(pc.cyan("\n🔐 Add Trusted Key\n"));
+		
+		const id = await p.text({
+			message: "Key ID (unique identifier):",
+			placeholder: "my-org-key",
+			validate: (value) => {
+				if (!value) return "ID is required";
+				if (!/^[a-zA-Z0-9-_]+$/.test(value)) return "ID must contain only letters, numbers, hyphens, and underscores";
+			}
+		});
+		
+		const name = await p.text({
+			message: "Key name (display name):",
+			placeholder: "My Organization Key",
+			validate: (value) => value ? undefined : "Name is required"
+		});
+		
+		const description = await p.text({
+			message: "Description (optional):",
+			placeholder: "Key for verifying my organization's tools"
+		});
+		
+		const publicKey = await p.text({
+			message: "Public key (PEM format):",
+			placeholder: "-----BEGIN PUBLIC KEY-----\\n...\\n-----END PUBLIC KEY-----",
+			validate: (value) => {
+				if (!value) return "Public key is required";
+				if (!value.includes("BEGIN PUBLIC KEY")) return "Invalid PEM format";
+			}
+		});
+		
+		const source = await p.select({
+			message: "Key source:",
+			options: [
+				{ value: "user", label: "Personal key" },
+				{ value: "organization", label: "Organization key" }
+			]
+		}) as "user" | "organization";
+		
+		const keyData = {
+			id: id as string,
+			name: name as string,
+			publicKey: (publicKey as string).replace(/\\n/g, '\n'),
+			description: description as string || undefined,
+			source,
+		};
+		
+		await addTrustedKey(keyData);
+		console.log(pc.green(`✅ Trusted key '${keyData.name}' added successfully`));
+		
+	} catch (error) {
+		console.error(pc.red(`Error adding trusted key: ${error}`));
+		process.exit(1);
+	}
+}
+
+/**
+ * Remove a trusted key
+ */
+async function removeTrustedKeyById(keyId: string): Promise<void> {
+	try {
+		const key = await getTrustedKey(keyId);
+		if (!key) {
+			console.error(pc.red(`Trusted key '${keyId}' not found`));
+			process.exit(1);
+		}
+		
+		// Show warning for default Enact key but allow removal
+		let confirmMessage = `Remove trusted key '${key.name}' (${keyId})?`;
+		if (keyId === "enact-protocol-official") {
+			confirmMessage = `${pc.yellow("⚠️  Warning:")} You are about to remove the default Enact Protocol key. This may prevent verification of official tools.\n\nRemove trusted key '${key.name}' (${keyId})?`;
+		}
+		
+		const confirm = await p.confirm({
+			message: confirmMessage,
+		});
+		
+		if (!confirm) {
+			console.log(pc.yellow("Operation cancelled"));
+			return;
+		}
+		
+		await removeTrustedKey(keyId);
+		console.log(pc.green(`✅ Trusted key '${key.name}' removed successfully`));
+		
+		if (keyId === "enact-protocol-official") {
+			console.log(pc.yellow("💡 You can re-add the Enact Protocol key anytime with 'enact config add-key'"));
+		}
+		
+	} catch (error) {
+		console.error(pc.red(`Error removing trusted key: ${error}`));
+		process.exit(1);
+	}
 }
 
 /**
@@ -359,6 +564,49 @@ export async function handleConfigCommand(
 
 		case "reset":
 			await resetConfig(global);
+			break;
+
+		case "urls":
+			await showUrls();
+			break;
+
+		case "set-frontend-url":
+			if (!args[1]) {
+				console.error(pc.red("Error: Missing URL"));
+				console.log("Usage: enact config set-frontend-url <url>");
+				process.exit(1);
+			}
+			await setUrl('frontend', args[1]);
+			break;
+
+		case "set-api-url":
+			if (!args[1]) {
+				console.error(pc.red("Error: Missing URL"));
+				console.log("Usage: enact config set-api-url <url>");
+				process.exit(1);
+			}
+			await setUrl('api', args[1]);
+			break;
+
+		case "reset-urls":
+			await resetUrlsConfig();
+			break;
+
+		case "keys":
+			await showTrustedKeys();
+			break;
+
+		case "add-key":
+			await addTrustedKeyInteractive();
+			break;
+
+		case "remove-key":
+			if (!args[1]) {
+				console.error(pc.red("Error: Missing key ID"));
+				console.log("Usage: enact config remove-key <key-id>");
+				process.exit(1);
+			}
+			await removeTrustedKeyById(args[1]);
 			break;
 
 		default:

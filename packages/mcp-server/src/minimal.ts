@@ -14,6 +14,7 @@ import { startEnvManagerServer } from "@enactprotocol/shared/web";
 import { LocalToolResolver } from "@enactprotocol/shared";
 import { homedir } from "os";
 import { join } from "path";
+// Use hardcoded defaults for MCP servers to avoid async config loading
 
 // Set required environment variables for silent operation first
 process.env.CI = process.env.CI || "true";
@@ -33,10 +34,8 @@ if (process.env.NODE_ENV !== "test") {
 
 // Initialize core library with extended timeout for long-running operations
 const enactCore = new EnactCore({
-	apiUrl: process.env.ENACT_API_URL || "https://enact.tools",
-	supabaseUrl:
-		process.env.ENACT_SUPABASE_URL ||
-		"https://xjnhhxwxovjifdxdwzih.supabase.co",
+	apiUrl: process.env.ENACT_FRONTEND_URL || "https://enact.tools",
+	supabaseUrl: process.env.ENACT_API_URL || "https://xjnhhxwxovjifdxdwzih.supabase.co",
 	executionProvider: (process.env.ENACT_EXECUTION_PROVIDER as any) || "dagger",
 	// verificationPolicy removed - security outsourced to enact-security package
 	authToken: process.env.ENACT_AUTH_TOKEN,

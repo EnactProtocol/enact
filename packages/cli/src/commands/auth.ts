@@ -19,6 +19,7 @@ import { randomBytes, createHash } from "crypto";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { enactApi, EnactApiError } from "@enactprotocol/shared/api";
+import { getFrontendUrl } from "@enactprotocol/shared/utils";
 
 const execAsync = promisify(exec);
 
@@ -31,12 +32,13 @@ interface AuthOptions {
 // Configuration file setup
 const CONFIG_DIR = join(homedir(), ".enact");
 const AUTH_FILE = join(CONFIG_DIR, "auth.json");
-const DEFAULT_SERVER = "https://enact.tools";
 
 export async function handleAuthCommand(
 	args: string[],
 	options: AuthOptions,
 ): Promise<void> {
+	const defaultServer = await getFrontendUrl();
+	
 	if (options.help || !args[0]) {
 		console.error(`
 Usage: enact auth <subcommand> [options]
@@ -51,14 +53,14 @@ Subcommands:
 
 Options:
   --help, -h          Show this help message
-  --server <url>      Specify the enact server URL (default: ${DEFAULT_SERVER})
+  --server <url>      Specify the enact server URL (default: ${defaultServer})
   --port <number>     Local callback port for OAuth (default: 8080)
 `);
 		return;
 	}
 
 	const subCommand = args[0];
-	const serverUrl = options.server || DEFAULT_SERVER;
+	const serverUrl = options.server || defaultServer;
 	const callbackPort = options.port || 8080;
 
 	// Initialize auth config if it doesn't exist

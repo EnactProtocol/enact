@@ -2,6 +2,7 @@
 import { EnactCore } from "../core/EnactCore";
 import type { EnactTool, ExecutionResult } from "../types";
 import type { ToolSearchOptions, ToolExecuteOptions } from "../core/EnactCore";
+import { getFrontendUrl, getApiUrl } from "../utils/config";
 
 export class McpCoreService {
 	private core: EnactCore;
@@ -13,9 +14,26 @@ export class McpCoreService {
 	}) {
 		this.core = new EnactCore({
 			apiUrl: options?.apiUrl || "https://enact.tools",
-			supabaseUrl:
-				options?.supabaseUrl || "https://xjnhhxwxovjifdxdwzih.supabase.co",
+			supabaseUrl: options?.supabaseUrl || "https://xjnhhxwxovjifdxdwzih.supabase.co",
 			authToken: options?.authToken,
+		});
+	}
+
+	/**
+	 * Create McpCoreService with config-based URLs
+	 */
+	static async create(options?: {
+		apiUrl?: string;
+		supabaseUrl?: string;
+		authToken?: string;
+	}): Promise<McpCoreService> {
+		const frontendUrl = options?.apiUrl || await getFrontendUrl();
+		const apiUrl = options?.supabaseUrl || await getApiUrl();
+		
+		return new McpCoreService({
+			...options,
+			apiUrl: frontendUrl,
+			supabaseUrl: apiUrl,
 		});
 	}
 

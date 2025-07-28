@@ -14,6 +14,7 @@ import * as yaml from "yaml";
 import * as fs from "fs-extra";
 import * as path from "path";
 import { homedir } from "os";
+// Use hardcoded defaults for MCP servers to avoid async config loading
 
 // Helper function for safe JSON stringification
 function safeJsonStringify(
@@ -48,10 +49,8 @@ if (process.env.NODE_ENV !== "test") {
 
 // Initialize core library with extended timeout for long-running operations
 const enactCore = new EnactCore({
-	apiUrl: process.env.ENACT_API_URL || "https://enact.tools",
-	supabaseUrl:
-		process.env.ENACT_SUPABASE_URL ||
-		"https://xjnhhxwxovjifdxdwzih.supabase.co",
+	apiUrl: process.env.ENACT_FRONTEND_URL || "https://enact.tools",
+	supabaseUrl: process.env.ENACT_API_URL || "https://xjnhhxwxovjifdxdwzih.supabase.co",
 	executionProvider: (process.env.ENACT_EXECUTION_PROVIDER as any) || "dagger",
 	authToken: process.env.ENACT_AUTH_TOKEN,
 	defaultTimeout: "120s", // Increased timeout for MCP operations

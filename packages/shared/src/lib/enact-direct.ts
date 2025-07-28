@@ -5,6 +5,7 @@ import {
 	type ToolExecuteOptions,
 } from "../core/EnactCore";
 import type { EnactTool, ExecutionResult } from "../types";
+import { getFrontendUrl, getApiUrl } from "../utils/config";
 
 /**
  * Direct Enact Library Interface
@@ -23,16 +24,32 @@ export class EnactDirect {
 			defaultTimeout?: string;
 		} = {},
 	) {
+		// We need to handle async config loading in a factory method
 		this.core = new EnactCore({
-			apiUrl:
-				options.apiUrl || process.env.ENACT_API_URL || "https://enact.tools",
-			supabaseUrl:
-				options.supabaseUrl ||
-				process.env.ENACT_SUPABASE_URL ||
-				"https://xjnhhxwxovjifdxdwzih.supabase.co",
+			apiUrl: options.apiUrl || process.env.ENACT_FRONTEND_URL || "https://enact.tools",
+			supabaseUrl: options.supabaseUrl || process.env.ENACT_API_URL || "https://xjnhhxwxovjifdxdwzih.supabase.co",
 			executionProvider: "direct",
 			authToken: options.authToken || process.env.ENACT_AUTH_TOKEN,
 			defaultTimeout: options.defaultTimeout || "30s",
+		});
+	}
+
+	/**
+	 * Create EnactDirect with config-based URLs
+	 */
+	static async create(options: {
+		apiUrl?: string;
+		supabaseUrl?: string;
+		authToken?: string;
+		defaultTimeout?: string;
+	} = {}): Promise<EnactDirect> {
+		const frontendUrl = options.apiUrl || process.env.ENACT_FRONTEND_URL || await getFrontendUrl();
+		const apiUrl = options.supabaseUrl || process.env.ENACT_API_URL || await getApiUrl();
+		
+		return new EnactDirect({
+			...options,
+			apiUrl: frontendUrl,
+			supabaseUrl: apiUrl,
 		});
 	}
 

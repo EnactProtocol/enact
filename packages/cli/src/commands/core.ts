@@ -16,7 +16,7 @@ import {
 } from "@enactprotocol/shared/utils";
 import { EnactApiClient, EnactApiError } from "@enactprotocol/shared/api";
 import { getAuthHeaders } from "./auth";
-import { addToHistory } from "@enactprotocol/shared/utils";
+import { addToHistory, getFrontendUrl, getApiUrl } from "@enactprotocol/shared/utils";
 import { getCurrentConfig } from "./config";
 import stripAnsi from "strip-ansi";
 
@@ -225,10 +225,7 @@ ${pc.bold("EXAMPLES:")}
 		};
 
 		// Use API client directly for search - no need for EnactCore
-		const apiClient = new EnactApiClient(
-			"https://enact.tools",
-			"https://xjnhhxwxovjifdxdwzih.supabase.co",
-		);
+		const apiClient = await EnactApiClient.create();
 		const searchResults = await apiClient.searchTools(searchOptions);
 		
 		// Convert API results to EnactTool format
@@ -598,10 +595,7 @@ Examples:
 			spinner.stop("Local tool definition loaded");
 		} else {
 			// Use the API to get tool
-			const apiClient = new EnactApiClient(
-				"https://enact.tools",
-				"https://xjnhhxwxovjifdxdwzih.supabase.co",
-			);
+			const apiClient = await EnactApiClient.create();
 			toolDefinition = await apiClient.getTool(toolIdentifier);
 			spinner.stop("Tool definition fetched");
 		}
@@ -946,10 +940,7 @@ Examples:
 			// Log usage (include verification status) - only for remote tools
 			if (!isLocalFile) {
 				try {
-					const apiClient = new EnactApiClient(
-						"https://enact.tools",
-						"https://xjnhhxwxovjifdxdwzih.supabase.co",
-					);
+					const apiClient = await EnactApiClient.create();
 					await apiClient.logToolUsage(toolIdentifier, {
 						action: "execute",
 						metadata: {
@@ -1091,10 +1082,7 @@ ${pc.bold("EXAMPLES:")}
 		spinner.start(`Fetching ${toolName}...`);
 
 		// Use API client directly - no need for EnactCore
-		const apiClient = new EnactApiClient(
-			"https://enact.tools",
-			"https://xjnhhxwxovjifdxdwzih.supabase.co",
-		);
+		const apiClient = await EnactApiClient.create();
 		const toolDefinition = await apiClient.getTool(toolName);
 		
 		if (!toolDefinition) {

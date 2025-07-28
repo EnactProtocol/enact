@@ -3,6 +3,8 @@ export { EnactCore } from './core/EnactCore';
 export { DirectExecutionProvider } from './core/DirectExecutionProvider';
 export { DaggerExecutionProvider } from './core/DaggerExecutionProvider';
 
+// Constants - now handled in config utils
+
 // Types and utilities
 export type { EnactTool } from './types';
 export type { EnactToolDefinition } from './api/types';

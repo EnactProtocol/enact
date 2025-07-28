@@ -454,6 +454,33 @@ Enact cryptographically signs only a subset of **critical security fields** to p
 
 
 
+## URL Configuration
+
+Enact uses two distinct URLs that can be configured:
+
+- **Frontend URL**: `https://enact.tools` (OAuth redirects, registry browsing)
+- **API URL**: `https://xjnhhxwxovjifdxdwzih.supabase.co` (backend API calls)
+
+### Configuration Priority
+1. **Environment variables** (highest)
+   - `ENACT_FRONTEND_URL` - overrides frontend URL
+   - `ENACT_API_URL` - overrides API URL
+2. **Config file** (`~/.enact/config.json`)
+3. **Defaults** (lowest)
+
+### CLI Commands
+```bash
+# View current URLs
+enact config urls
+
+# Set custom URLs
+enact config set-frontend-url https://my-enact.example.com
+enact config set-api-url https://my-api.example.com
+
+# Reset to defaults
+enact config reset-urls
+```
+
 ## Community
 
 - 💬 [Discord](https://discord.gg/mMfxvMtHyS) - Chat with developers

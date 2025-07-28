@@ -30,7 +30,7 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.13.0",
-    "@enactprotocol/shared": "1.2.2",
+    "@enactprotocol/shared": "1.2.3",
     "zod": "^3.24.1",
     "yaml": "^2.6.1",
     "fs-extra": "^11.2.0",
