@@ -3,16 +3,50 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { EnactCore } from "@enactprotocol/shared/core";
 import { logger } from "@enactprotocol/shared/exec";
+import {
+	silentMcpTool,
+	validateSilentEnvironment,
+	resolveToolEnvironmentVariables,
+	validateRequiredEnvironmentVariables,
+	generateConfigLink,
+} from "@enactprotocol/shared/utils";
 import * as yaml from "yaml";
 import * as fs from "fs-extra";
 import * as path from "path";
 import { homedir } from "os";
 
-// Set environment for development operations
-process.env.CI = process.env.CI || "true";
-process.env.ENACT_SKIP_INTERACTIVE = process.env.ENACT_SKIP_INTERACTIVE || "true";
+// Helper function for safe JSON stringification
+function safeJsonStringify(
+	obj: any,
+	fallback: string = "Unable to stringify object",
+): string {
+	try {
+		return JSON.stringify(obj, null, 2);
+	} catch (error) {
+		logger.error(
+			`JSON stringify failed: ${error instanceof Error ? error.message : String(error)}`,
+		);
+		return fallback;
+	}
+}
 
-// Initialize core library for development operations
+// Set required environment variables for silent operation first
+process.env.CI = process.env.CI || "true";
+process.env.ENACT_SKIP_INTERACTIVE =
+	process.env.ENACT_SKIP_INTERACTIVE || "true";
+
+// Only validate and report environment issues when not in test mode
+if (process.env.NODE_ENV !== "test") {
+	const envValidation = validateSilentEnvironment();
+	if (!envValidation.valid) {
+		// Log to stderr for debugging purposes (only in non-test environments)
+		process.stderr.write(
+			`⚠️ MCP Environment Issues: ${envValidation.issues.join(", ")}\n`,
+		);
+	}
+}
+
+// Initialize core library with extended timeout for long-running operations
 const enactCore = new EnactCore({
 	apiUrl: process.env.ENACT_API_URL || "https://enact.tools",
 	supabaseUrl:
@@ -20,13 +54,13 @@ const enactCore = new EnactCore({
 		"https://xjnhhxwxovjifdxdwzih.supabase.co",
 	executionProvider: (process.env.ENACT_EXECUTION_PROVIDER as any) || "dagger",
 	authToken: process.env.ENACT_AUTH_TOKEN,
-	defaultTimeout: "60s",
+	defaultTimeout: "120s", // Increased timeout for MCP operations
 });
 
 const server = new McpServer(
 	{
-		name: "enact-dev-server",
-		version: "1.0.0",
+		name: "enact-mcp-dev-server",
+		version: "1.2.2",
 	},
 	{
 		capabilities: {

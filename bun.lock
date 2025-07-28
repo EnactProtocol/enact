@@ -26,14 +26,14 @@
     },
     "packages/cli": {
       "name": "@enactprotocol/cli",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "bin": {
         "enact": "./dist/index.js",
       },
       "dependencies": {
         "@clack/core": "^0.4.2",
         "@clack/prompts": "^0.10.1",
-        "@enactprotocol/shared": "1.2.1",
+        "@enactprotocol/shared": "1.2.2",
         "picocolors": "^1.1.1",
       },
       "devDependencies": {
@@ -44,9 +44,9 @@
     },
     "packages/mcp-dev-server": {
       "name": "@enactprotocol/mcp-dev-server",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "dependencies": {
-        "@enactprotocol/shared": "1.2.1",
+        "@enactprotocol/shared": "1.2.2",
         "@modelcontextprotocol/sdk": "^1.0.4",
         "fs-extra": "^11.2.0",
         "inquirer": "^12.0.0",
@@ -65,12 +65,12 @@
     },
     "packages/mcp-server": {
       "name": "@enactprotocol/mcp-server",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "bin": {
         "enact-mcp": "./dist/index.js",
       },
       "dependencies": {
-        "@enactprotocol/shared": "1.2.1",
+        "@enactprotocol/shared": "1.2.2",
         "@modelcontextprotocol/sdk": "^1.13.0",
         "zod": "^3.25.67",
       },
@@ -82,7 +82,7 @@
     },
     "packages/shared": {
       "name": "@enactprotocol/shared",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "dependencies": {
         "@dagger.io/dagger": "^0.9.11",
         "@enactprotocol/security": "0.2.7",
