@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/monorepo",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Enact Protocol - AI tool ecosystem with CLI and MCP server",
   "private": true,
   "workspaces": [
@@ -32,7 +32,7 @@
     "build:windows": "bun --cwd packages/cli run build:windows",
     "release": "./scripts/release-simple.sh",
     "release:patch": "./scripts/release-simple.sh patch",
-    "release:minor": "./scripts/release-simple.sh minor", 
+    "release:minor": "./scripts/release-simple.sh minor",
     "release:major": "./scripts/release-simple.sh major",
     "deploy": "./scripts/deploy-npm.sh",
     "deploy:dry": "./scripts/deploy-npm.sh --dry-run",
