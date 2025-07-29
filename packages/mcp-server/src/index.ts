@@ -214,6 +214,10 @@ server.registerTool(
 				.boolean()
 				.optional()
 				.describe("Skip local resolution and go straight to registry"),
+			mount: z
+				.string()
+				.optional()
+				.describe("Mount local directory to container (format: 'localPath' or 'localPath:containerPath')"),
 		},
 	},
 	async (params) => {
@@ -227,6 +231,7 @@ server.registerTool(
 			verbose,
 			async = false,
 			forceRegistry = false,
+			mount,
 		} = params;
 
 		try {
@@ -349,7 +354,7 @@ server.registerTool(
 
 			if (isLongRunning) {
 				// Background execution
-				const operationId = `${toolToExecute.name}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+				const operationId = `${toolToExecute.name}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
 				let executionPromise;
 
@@ -362,6 +367,7 @@ server.registerTool(
 						force: dangerouslySkipVerification || true,
 						dryRun,
 						verbose,
+						mount,
 						isLocalFile: true, // Enable local file security policy
 					});
 				} else {
@@ -373,6 +379,7 @@ server.registerTool(
 							force: dangerouslySkipVerification,
 							dryRun,
 							verbose,
+							mount,
 							isLocalFile: false, // Registry tools use strict policy
 						},
 					);
@@ -421,6 +428,7 @@ server.registerTool(
 						force: dangerouslySkipVerification || true,
 						dryRun,
 						verbose,
+						mount,
 					});
 				} else {
 					result = await enactCore.executeToolByName(
@@ -431,6 +439,7 @@ server.registerTool(
 							force: dangerouslySkipVerification,
 							dryRun,
 							verbose,
+							mount,
 						},
 					);
 				}
