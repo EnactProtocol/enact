@@ -41,7 +41,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@enactprotocol/shared": "1.2.4",
+    "@enactprotocol/shared": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.13.0",
     "zod": "^3.25.67"
   },

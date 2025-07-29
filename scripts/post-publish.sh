@@ -25,7 +25,24 @@ bun install
 echo "🔗 Restoring workspace links..."
 ./scripts/link-workspaces.sh
 
-# 4. Verify links are working
+# 4. Convert dependencies back to workspace references (after linking to avoid sync-versions overwriting)
+echo "🔄 Converting dependencies to workspace references..."
+PACKAGES=(
+  "packages/cli/package.json"
+  "packages/mcp-server/package.json"
+  "packages/mcp-dev-server/package.json"
+)
+
+for package_file in "${PACKAGES[@]}"; do
+  if [ -f "$package_file" ]; then
+    echo "  📝 Updating $package_file"
+    # Convert @enactprotocol/shared version to workspace reference
+    sed -i.bak 's/"@enactprotocol\/shared": "[^"]*"/"@enactprotocol\/shared": "workspace:*"/g' "$package_file"
+    rm -f "$package_file.bak"
+  fi
+done
+
+# 5. Verify links are working
 echo "🔍 Verifying workspace links..."
 EXPECTED_LINKS="packages/cli/node_modules/@enactprotocol/shared packages/mcp-server/node_modules/@enactprotocol/shared packages/mcp-dev-server/node_modules/@enactprotocol/shared"
 
@@ -43,6 +60,7 @@ echo ""
 echo "📋 Post-publish checklist completed:"
 echo "  ✅ Node modules cleaned"
 echo "  ✅ Dependencies reinstalled"
+echo "  ✅ Dependencies converted to workspace references"
 echo "  ✅ Workspace links restored"
 echo "  ✅ Ready for development"
 echo ""

@@ -124,6 +124,10 @@ const { values, positionals } = parseArgs({
 		client: {
 			type: "string",
 		},
+		// Mount options for exec command
+		mount: {
+			type: "string",
+		},
 	},
 	allowPositionals: true,
 	strict: false,
@@ -210,6 +214,7 @@ async function main() {
 					dry: values.dry as boolean | undefined,
 					verbose: values.verbose as boolean | undefined,
 					dangerouslySkipVerification: values["dangerously-skip-verification"] as boolean | undefined,
+					mount: values.mount as string | undefined,
 				});
 				break;
 

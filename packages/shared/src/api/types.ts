@@ -97,4 +97,5 @@ export interface EnactExecOptions {
 	verbose?: boolean;
 	force?: boolean; // Force execution even if verification fails (legacy)
 	dangerouslySkipVerification?: boolean; // Skip all signature verification (DANGEROUS)
+	mount?: string; // Mount local directory to container (format: "local:container")
 }

@@ -69,6 +69,7 @@ interface CoreExecOptions {
 	dry?: boolean;
 	verbose?: boolean;
 	dangerouslySkipVerification?: boolean;
+	mount?: string;
 }
 
 // Core Publish Command Options
@@ -530,6 +531,7 @@ Options:
   --timeout <time>    Override tool timeout (Go duration format: 30s, 5m, 1h)
   --dry               Show command that would be executed without running it
   --verbose, -v       Show detailed execution information
+  --mount <path>      Mount local directory to container (format: "local:container")
   --dangerously-skip-verification Skip all signature verification (DANGEROUS - not recommended for production)
   --verify-policy     Verification policy: permissive, enterprise, paranoid (default: permissive)
 
@@ -542,6 +544,7 @@ Examples:
   enact exec enact/text/slugify --input "Hello World"
   enact exec org/ai/review --params '{"file": "README.md"}' --verify-policy enterprise
   enact exec ./my-tool.yaml --input "test data"
+  enact exec kgroves/tools/prettier --mount ./src:/workspace/src
   enact exec untrusted/tool --dangerously-skip-verification  # DANGEROUS, not recommended
     `);
 		return;
@@ -852,6 +855,7 @@ Examples:
 		dryRun: options.dry,
 		verbose: options.verbose,
 		isLocalFile: isLocalFile,
+		mount: options.mount,
 	};
 
 	try {

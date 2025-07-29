@@ -42,7 +42,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@enactprotocol/shared": "1.2.4",
+    "@enactprotocol/shared": "workspace:*",
     "@clack/core": "^0.4.2",
     "@clack/prompts": "^0.10.1",
     "picocolors": "^1.1.1"

@@ -703,6 +703,77 @@ export class DaggerExecutionProvider extends ExecutionProvider {
 	}
 
 	/**
+	 * Setup directory mounting for the container
+	 */
+	private async setupDirectoryMount(
+		client: Client,
+		container: Container,
+		mountSpec: string,
+	): Promise<Container> {
+		try {
+			// Parse mount specification (format: "localPath" or "localPath:containerPath")
+			let localPath: string;
+			let containerPath: string;
+
+			// Handle Windows drive letters (e.g., C:\path) vs mount separator (:)
+			const colonIndex = mountSpec.indexOf(':');
+			
+			if (colonIndex > 0) {
+				// Check if this might be a Windows drive letter (single letter followed by colon)
+				const potentialDriveLetter = mountSpec.substring(0, colonIndex);
+				const isWindowsDrive = potentialDriveLetter.length === 1 && /[A-Za-z]/.test(potentialDriveLetter);
+				
+				if (isWindowsDrive) {
+					// Look for the next colon that separates local from container path
+					const nextColonIndex = mountSpec.indexOf(':', colonIndex + 1);
+					if (nextColonIndex > 0) {
+						localPath = mountSpec.substring(0, nextColonIndex);
+						containerPath = mountSpec.substring(nextColonIndex + 1);
+					} else {
+						// No container path specified, use default
+						localPath = mountSpec;
+						containerPath = '/workspace/src';
+					}
+				} else {
+					// Regular path:container split
+					localPath = mountSpec.substring(0, colonIndex);
+					containerPath = mountSpec.substring(colonIndex + 1);
+				}
+			} else if (colonIndex === 0) {
+				// Starts with colon (e.g., ":/app")
+				localPath = '';
+				containerPath = mountSpec.substring(1);
+			} else {
+				localPath = mountSpec;
+				containerPath = '/workspace/src'; // Default container path
+			}
+
+			// Resolve local path to absolute path
+			const path = require('path');
+			const resolvedLocalPath = path.resolve(localPath);
+
+			// Check if local directory exists
+			const fs = require('fs');
+			if (!fs.existsSync(resolvedLocalPath)) {
+				throw new Error(`Mount source directory does not exist: ${resolvedLocalPath}`);
+			}
+
+			// Create Directory object from local path
+			const hostDirectory = client.host().directory(resolvedLocalPath);
+
+			// Mount directory in container using withMountedDirectory for better performance
+			container = container.withMountedDirectory(containerPath, hostDirectory);
+
+			logger.debug(`📂 Mounted ${resolvedLocalPath} -> ${containerPath}`);
+			
+			return container;
+		} catch (error) {
+			logger.error(`Failed to setup directory mount: ${error}`);
+			throw error;
+		}
+	}
+
+	/**
 	 * Enhanced container setup with better tool detection and installation
 	 */
 	private async setupContainer(
@@ -725,6 +796,11 @@ export class DaggerExecutionProvider extends ExecutionProvider {
 		// Set working directory
 		container = container.withWorkdir(this.options.workdir!);
 		logger.debug(`📁 Working directory set to: ${this.options.workdir}`);
+
+		// Handle directory mounting if specified
+		if (environment.mount) {
+			container = await this.setupDirectoryMount(client, container, environment.mount);
+		}
 
 		// Add environment variables from Enact tool env config
 		for (const [key, value] of Object.entries(environment.vars)) {

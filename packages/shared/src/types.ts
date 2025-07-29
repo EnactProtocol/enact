@@ -162,6 +162,7 @@ export interface ExecutionEnvironment {
 		timeout?: string;
 	};
 	namespace?: string; // Environment variable namespace
+	mount?: string; // Mount local directory to container (format: "localPath" or "localPath:containerPath")
 }
 
 // Updated execution provider interface

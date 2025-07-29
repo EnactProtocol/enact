@@ -52,6 +52,7 @@ export interface ToolExecuteOptions {
 	verbose?: boolean;
 	isLocalFile?: boolean;
 	dangerouslySkipVerification?: boolean;
+	mount?: string; // Mount local directory to container (format: "localPath" or "localPath:containerPath")
 }
 
 export class EnactCore {
@@ -453,7 +454,7 @@ private async verifyTool(tool: EnactTool, dangerouslySkipVerification: boolean =
             { includeFields: ['command'] }
         );
         
-        console.log("Final verification result:", isValid);
+        // console.log("Final verification result:", isValid);
 
         if (!isValid) {
             throw new Error(`Tool ${tool.name} has invalid signatures`);
@@ -510,6 +511,7 @@ private async verifyTool(tool: EnactTool, dangerouslySkipVerification: boolean =
 					resources: {
 						timeout: options.timeout || tool.timeout || this.options.defaultTimeout,
 					},
+					mount: options.mount,
 				},
 			);
 		} catch (error) {

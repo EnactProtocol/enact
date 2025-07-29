@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { EnactCore } from "@enactprotocol/shared/core";
+import { EnactCore } from "@enactprotocol/shared";
 import { logger } from "@enactprotocol/shared/exec";
 import {
 	silentMcpTool,
@@ -14,7 +14,7 @@ import * as yaml from "yaml";
 import * as fs from "fs-extra";
 import * as path from "path";
 import { homedir } from "os";
-// Use hardcoded defaults for MCP servers to avoid async config loading
+// Use config-based URLs with fallbacks for MCP servers
 
 // Helper function for safe JSON stringification
 function safeJsonStringify(
@@ -47,7 +47,8 @@ if (process.env.NODE_ENV !== "test") {
 	}
 }
 
-// Initialize core library with extended timeout for long-running operations
+// Initialize core library with config-based URLs and extended timeout for long-running operations
+// Uses environment variables that can be overridden by config system
 const enactCore = new EnactCore({
 	apiUrl: process.env.ENACT_FRONTEND_URL || "https://enact.tools",
 	supabaseUrl: process.env.ENACT_API_URL || "https://xjnhhxwxovjifdxdwzih.supabase.co",
