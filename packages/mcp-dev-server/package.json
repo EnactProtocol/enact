@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/mcp-dev-server",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "MCP server for Enact tool development workflow - create, test, validate, sign, and publish tools",
   "main": "dist/index.js",
   "bin": {
