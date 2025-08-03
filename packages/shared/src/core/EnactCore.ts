@@ -420,7 +420,10 @@ private async verifyTool(tool: EnactTool, dangerouslySkipVerification: boolean =
 		}
 	
 		const documentForVerification = {
-			command: tool.command
+			command: tool.command,
+			description: tool.description,
+			from: tool.from,
+			name: tool.name,
 		};
 
        	const referenceSignature = {
@@ -432,7 +435,8 @@ private async verifyTool(tool: EnactTool, dangerouslySkipVerification: boolean =
 
         
         // Check what canonical document looks like
-        const canonicalDoc = SigningService.getCanonicalDocument(documentForVerification, { includeFields: ['command'] });
+        const canonicalDoc = SigningService.getCanonicalDocument(documentForVerification,     { includeFields:  ['command', 'description', 'from', 'name'] } 
+);
         
         const docString = JSON.stringify(canonicalDoc);
         const messageHash = CryptoUtils.hash(docString);
@@ -451,7 +455,7 @@ private async verifyTool(tool: EnactTool, dangerouslySkipVerification: boolean =
         const isValid = SigningService.verifyDocument(
             documentForVerification,
             referenceSignature,
-            { includeFields: ['command'] }
+    		{ includeFields: ['command', 'description', 'from', 'name'] }
         );
         
         // console.log("Final verification result:", isValid);

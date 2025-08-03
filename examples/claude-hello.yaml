@@ -1,0 +1,39 @@
+enact: "1.0.0"
+name: kgroves88/ai/claude-hello
+version: "1.8.0"
+description: "Simple Hello World tool using Claude API"
+from: "curlimages/curl:latest"
+command: |
+  echo "Hello from Claude API!"
+  echo "Using API key: ${ANTHROPIC_API_KEY:0:10}...${ANTHROPIC_API_KEY: -4}"
+  echo
+  
+  MESSAGE="${message:-Say hello in a friendly way}"
+  echo "Sending: $MESSAGE"
+  echo
+  
+  RESPONSE=$(curl -s \
+    --header "x-api-key: $ANTHROPIC_API_KEY" \
+    --header "anthropic-version: 2023-06-01" \
+    --header "content-type: application/json" \
+    --data "{\"model\":\"claude-sonnet-4-20250514\",\"max_tokens\":200,\"messages\":[{\"role\":\"user\",\"content\":\"$MESSAGE\"}]}" \
+    https://api.anthropic.com/v1/messages)
+  
+  echo "Claude says:"
+  echo "$RESPONSE" | sed -n 's/.*"text":"\([^"]*\)".*/\1/p'
+timeout: "30s"
+
+inputSchema:
+  type: object
+  properties:
+    message:
+      type: string
+      description: "Message to send to Claude"
+      default: "Say hello in a friendly way"
+  required: []
+
+env:
+  ANTHROPIC_API_KEY:
+    description: "Anthropic API key for Claude access"
+    source: "https://console.anthropic.com/settings/keys"
+    required: true
