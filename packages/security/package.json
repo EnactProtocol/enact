@@ -1,0 +1,38 @@
+{
+  "name": "@enactprotocol/security",
+  "version": "0.2.7",
+  "description": "Backend security library for signing enact documents",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target node --format esm && tsc --emitDeclarationOnly --outDir dist",
+    "test": "bun test",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "bun run build"
+  },
+  "dependencies": {
+    "@noble/curves": "^1.4.0",
+    "@noble/hashes": "^1.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  },
+  "keywords": [
+    "enact",
+    "security",
+    "signing",
+    "cryptography",
+    "backend",
+    "node"
+  ],
+  "author": "Enact Protocol",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/enactprotocol/security"
+  }
+}

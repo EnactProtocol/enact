@@ -8,10 +8,12 @@
   ],
   "type": "module",
   "scripts": {
-    "build": "bun run build:shared && bun run build:cli && bun run build:mcp",
+    "build": "bun run build:security && bun run build:shared && bun run build:mcp && bun run build:cli && bun run build:security-web",
     "build:shared": "cd packages/shared && bun run build",
     "build:cli": "cd packages/cli && bun run build",
     "build:mcp": "cd packages/mcp-server && bun run build",
+    "build:security": "cd packages/security && bun run build",
+    "build:security-web": "cd packages/security-web && bun run build",
     "dev": "bun --cwd packages/cli run dev",
     "dev:cli": "bun --cwd packages/cli run dev",
     "dev:mcp": "bun --cwd packages/mcp-server run dev",

@@ -1,0 +1,36 @@
+{
+  "name": "@enactprotocol/security-web",
+  "version": "0.1.4",
+  "description": "Frontend security library for signing enact documents",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target browser --format esm --splitting && tsc --emitDeclarationOnly --outDir dist",
+    "test": "bun test",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "bun run build"
+  },
+  "dependencies": {
+    "@noble/curves": "^1.4.0",
+    "@noble/hashes": "^1.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "enact",
+    "security",
+    "signing",
+    "cryptography",
+    "frontend"
+  ],
+  "author": "Enact Protocol",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/enactprotocol/security"
+  }
+}

@@ -26,7 +26,7 @@
     },
     "packages/cli": {
       "name": "@enactprotocol/cli",
-      "version": "1.2.4",
+      "version": "1.2.6",
       "bin": {
         "enact": "./dist/index.js",
       },
@@ -44,7 +44,7 @@
     },
     "packages/mcp-dev-server": {
       "name": "@enactprotocol/mcp-dev-server",
-      "version": "1.2.4",
+      "version": "1.2.6",
       "bin": {
         "enact-mcp-dev": "./dist/index.js",
       },
@@ -66,7 +66,7 @@
     },
     "packages/mcp-server": {
       "name": "@enactprotocol/mcp-server",
-      "version": "1.2.4",
+      "version": "1.2.6",
       "bin": {
         "enact-mcp": "./dist/index.js",
       },
@@ -81,9 +81,32 @@
         "typescript": "^5.4.5",
       },
     },
+    "packages/security": {
+      "name": "@enactprotocol/security",
+      "version": "0.2.7",
+      "dependencies": {
+        "@noble/curves": "^1.4.0",
+        "@noble/hashes": "^1.4.0",
+      },
+      "devDependencies": {
+        "@types/node": "^20.0.0",
+        "typescript": "^5.0.0",
+      },
+    },
+    "packages/security-web": {
+      "name": "@enactprotocol/security-web",
+      "version": "0.1.4",
+      "dependencies": {
+        "@noble/curves": "^1.4.0",
+        "@noble/hashes": "^1.4.0",
+      },
+      "devDependencies": {
+        "typescript": "^5.0.0",
+      },
+    },
     "packages/shared": {
       "name": "@enactprotocol/shared",
-      "version": "1.2.4",
+      "version": "1.2.6",
       "dependencies": {
         "@dagger.io/dagger": "^0.9.11",
         "@enactprotocol/security": "0.2.7",
@@ -113,7 +136,9 @@
 
     "@enactprotocol/mcp-server": ["@enactprotocol/mcp-server@workspace:packages/mcp-server"],
 
-    "@enactprotocol/security": ["@enactprotocol/security@0.2.7", "", { "dependencies": { "@noble/curves": "^1.4.0", "@noble/hashes": "^1.4.0" } }, "sha512-z7f6zDr9pJ1oxkYKt7W9ZEEFP6CmmAEeHK9nej6YSSGeOgCcUDhfV1k2qzzO3+lKsj2FyzrUpgY/knXPFp+jgA=="],
+    "@enactprotocol/security": ["@enactprotocol/security@workspace:packages/security"],
+
+    "@enactprotocol/security-web": ["@enactprotocol/security-web@workspace:packages/security-web"],
 
     "@enactprotocol/shared": ["@enactprotocol/shared@workspace:packages/shared"],
 
