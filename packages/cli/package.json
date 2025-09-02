@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/cli",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "description": "Official CLI for the Enact Protocol - package, secure, and discover AI tools",
   "type": "module",
   "main": "./dist/index.js",
