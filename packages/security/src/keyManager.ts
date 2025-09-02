@@ -24,7 +24,7 @@ export class KeyManager {
 
   // File paths
   private static getPublicKeyPath(keyId: string): string {
-    return path.join(this.TRUSTED_KEYS_DIR, `${keyId}-public.pem`);
+    return path.join(this.TRUSTED_KEYS_DIR, `${keyId}.pem`);
   }
 
   private static getPrivateKeyPath(keyId: string): string {
@@ -188,8 +188,8 @@ export class KeyManager {
       this.ensureDirectories();
       
       const publicFiles = fs.readdirSync(this.TRUSTED_KEYS_DIR)
-        .filter(file => file.endsWith('-public.pem'))
-        .map(file => file.replace('-public.pem', ''));
+        .filter(file => file.endsWith('.pem'))
+        .map(file => file.replace('.pem', ''));
 
       // Only return keys that have both public and private key files
       return publicFiles.filter(keyId => this.keyExists(keyId));
@@ -205,8 +205,8 @@ export class KeyManager {
       
       // Return all public keys (including those without private keys)
       return fs.readdirSync(this.TRUSTED_KEYS_DIR)
-        .filter(file => file.endsWith('-public.pem'))
-        .map(file => file.replace('-public.pem', ''));
+        .filter(file => file.endsWith('.pem'))
+        .map(file => file.replace('.pem', ''));
     } catch (error) {
       console.warn(`Failed to list trusted keys: ${error instanceof Error ? error.message : String(error)}`);
       return [];

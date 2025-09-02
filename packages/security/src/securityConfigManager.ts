@@ -76,7 +76,7 @@ export class SecurityConfigManager {
       // Merge with defaults to ensure all fields are present
       const mergedConfig = { ...DEFAULT_SECURITY_CONFIG, ...config };
       
-      console.log(`Loaded security config from: ${this.CONFIG_FILE}`);
+      // console.log(`Loaded security config from: ${this.CONFIG_FILE}`);
       return mergedConfig;
       
     } catch (error) {
