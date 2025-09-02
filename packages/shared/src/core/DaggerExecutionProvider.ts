@@ -11,8 +11,7 @@ import { parseTimeout } from "../utils/timeout.js";
 import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
-import { spawn, spawnSync } from "child_process";
-import { exit } from "process";
+import { spawnSync } from "child_process";
 
 export interface DaggerExecutionOptions {
 	baseImage?: string; // Default container image
