@@ -19,6 +19,7 @@ import { getAuthHeaders } from "./auth";
 import { addToHistory, getFrontendUrl, getApiUrl } from "@enactprotocol/shared/utils";
 import { getCurrentConfig } from "./config";
 import stripAnsi from "strip-ansi";
+import { CryptoUtils, KeyManager, SecurityConfigManager, SigningService } from "@enactprotocol/security";
 
 // Create core instance with configuration
 let core: EnactCore;
@@ -59,6 +60,11 @@ interface CoreSearchOptions {
 	tags?: string[];
 	format?: string;
 	author?: string;
+}
+
+interface CoreSignOptions {
+	help?: boolean;
+	tool?: string;
 }
 
 interface CoreExecOptions {
@@ -236,10 +242,13 @@ ${pc.bold("EXAMPLES:")}
 				try {
 					const tool = await apiClient.getTool(result.name);
 					if (tool) {
+						const isValid = await EnactCore.checkToolVerificationStatus(tool);
+						// console.log("🔍 TRACE: core.ts - Tool:", tool.name, "isValid:", isValid);
 						// Convert to EnactTool format
 						const enactTool: EnactTool = {
 							name: tool.name,
 							description: tool.description || "",
+							verified: isValid,
 							command: tool.command,
 							from: tool.from,
 							version: tool.version || "1.0.0",
@@ -507,6 +516,215 @@ function parseTimeout(timeout: string): number {
 			return 30000;
 	}
 }
+
+/**
+ * Sign a tool definition using local private key
+ */
+export async function handleSignToolCommand(
+	args: string[],
+	options: CoreSignOptions,
+) {
+	if (options.help) {
+		console.error(`
+Usage: enact sign [options]
+Sign a tool definition using your private key
+Options:
+  --help, -h          Show this help message
+  --tool query      Search for the tool to sign (name)
+Examples:
+  enact sign --tool myorg/mytool
+  `);
+		return;
+	}
+
+		// Show a spinner during search
+	
+	if (!options.tool){
+		const inputSchema = {
+		type: "object",
+		properties: {
+			toolName: {
+			type: "string",
+			description: "The name of the tool to run"
+			}
+		},
+		required: ["tool"]
+		};
+
+		const params = await collectParametersInteractively(inputSchema);
+		// console.log("Collected tool name:", params.toolName);
+		options.tool = params.toolName
+
+	}	
+	const spinner = p.spinner();
+	spinner.start("Searching for tools...");
+	const results: EnactTool[] = [];
+	try {
+		const searchOptions: ToolSearchOptions = {
+			query: options.tool ? options.tool : "",
+			limit: 20,
+			tags: undefined,
+			author: undefined,
+			format: "table" as any,
+		};
+
+		// Use API client directly for search - no need for EnactCore
+		const apiClient = await EnactApiClient.create();
+		const searchResults = await apiClient.searchTools(searchOptions);
+		
+		// Convert API results to EnactTool format
+		for (const result of searchResults) {
+			if (result.name) {
+				try {
+					const tool = await apiClient.getTool(result.name);
+					if (tool) {
+						const documentForVerification = {
+							command: tool.command,
+							description: tool.description,
+							from: tool.from,
+							name: tool.name,
+						};
+						const isValid = await EnactCore.checkToolVerificationStatus(tool);
+						// console.log("🔍 TRACE: core.ts - Tool:", tool.name, "isValid:", isValid);
+						// Convert to EnactTool format
+						const enactTool: EnactTool = {
+							name: tool.name,
+							description: tool.description || "",
+							verified: isValid,
+							command: tool.command,
+							from: tool.from,
+							version: tool.version || "1.0.0",
+							timeout: tool.timeout,
+							tags: tool.tags || [],
+							inputSchema: tool.inputSchema,
+							outputSchema: tool.outputSchema,
+							env: tool.env_vars
+								? Object.fromEntries(
+										Object.entries(tool.env_vars).map(([key, config]: [string, any]) => [
+											key,
+											{ ...config, source: config.source || "env" },
+										]),
+									)
+								: undefined,
+							signature: tool.signature,
+							signatures: Array.isArray(tool.signatures) ? tool.signatures : 
+								(tool.signatures ? Object.values(tool.signatures) : undefined),
+							namespace: tool.namespace,
+							resources: tool.resources,
+							license: tool.license,
+							authors: tool.authors,
+							examples: tool.examples,
+							annotations: tool.annotations,
+						};
+						results.push(enactTool);
+					}
+				} catch (error) {
+					// Skip tools that can't be fetched
+					continue;
+				}
+			}
+		}
+
+		spinner.stop(
+			`Found ${results.length} tool${results.length === 1 ? "" : "s"}`,
+		);
+
+		if (results.length === 0) {
+			p.note("No tools found matching your criteria.", "No Results");
+			p.note(
+				"Try:\n• Broader keywords\n• Removing filters\n• Different spelling",
+				"Suggestions",
+			);
+
+			return;
+		}
+	}catch (error: any) {
+		spinner.stop("Search failed");
+
+		if (
+			error.message?.includes("ENOTFOUND") ||
+			error.message?.includes("ECONNREFUSED")
+		) {
+			p.note(
+				"Could not connect to the Enact registry. Check your internet connection.",
+				"Connection Error",
+			);
+		} else {
+			p.note(error instanceof Error ? error.message : String(error), "Error");
+		}
+
+
+		console.error(
+			pc.red(
+				`Search failed: ${error instanceof Error ? error.message : String(error)}`,
+			),
+		);
+		process.exit(1);
+	}
+
+	const selected_tool = await p.select({
+		message: "Select a tool to sign:",
+		options: results.map((tool) => ({
+			value: tool,
+			label: `${tool.name} - ${tool.description.substring(0, 60)}${tool.description.length > 60 ? "..." : ""} - Verified: ${tool.verified ? pc.green("Yes") : pc.red("No")}`,
+		}))
+	}) as EnactTool;
+
+	const documentForVerification = {
+		command: selected_tool.command,
+		description: selected_tool.description,
+		from: selected_tool.from,
+		name: selected_tool.name,
+	}
+
+	const privateKeys = await KeyManager.getAllPrivateKeys();
+
+	const privateKey = await p.select({
+		message: "Select a private key to sign with:",
+		options: privateKeys.map((key) => ({
+			value: key,
+			label: `${key.fileName}`,
+		}))
+	}) as CryptoUtils.PrivateKey;
+
+	const TrustedKey = CryptoUtils.getPublicKeyFromPrivate(privateKey.key);
+
+
+	if (selected_tool.signatures && selected_tool.signatures.length > 0) {
+		const alreadySigned = selected_tool.signatures.some(sig => {
+				const referenceSignature = {
+					signature: sig.value,
+					publicKey: "", // Correct public key for UUID 71e02e2c-148c-4534-9900-bd9646e99333
+					algorithm: sig.algorithm,
+					timestamp: new Date(sig.created).getTime()
+				};
+
+				return SigningService.verifyDocumentWithPublicKey(
+					documentForVerification,
+					referenceSignature,
+					TrustedKey,
+					{ includeFields: ['command', 'description', 'from', 'name'] }
+				);
+			});
+
+		if (alreadySigned) {
+			console.log(pc.green("✓ Tool has already been signed with the selected key."));
+			return;
+		}
+	}
+	const spinnerSign = p.spinner();
+	console.error(spinnerSign.start("Signing tool..."));
+	const signature = await SigningService.signDocument(documentForVerification, privateKey.key, { includeFields: ['command', 'description', 'from', 'name']});
+	spinnerSign.stop(pc.green("✓ Tool signed successfully"));
+	console.error(pc.cyan("\nSignature Details:"));
+	console.error(pc.cyan(`\tSignature: ${signature.signature}`));
+	console.error(pc.cyan(`\tAlgorithm: ${signature.algorithm}`));
+	console.error(pc.cyan(`\tCreated: ${new Date(signature.timestamp).toISOString()}`));
+	console.error(pc.cyan(`\tPublic Key: ${TrustedKey}`));
+	console.error(pc.red("\nPushing the signature to the registry is not yet implemented."));
+	return signature
+
+};	
 
 /**
  * Enhanced handle execute command using core library with full legacy feature parity
@@ -874,6 +1092,7 @@ Examples:
 		const enactTool: EnactTool = {
 			name: toolDefinition.name,
 			description: toolDefinition.description || "",
+			verified: true, // Verification handled separately
 			command: toolDefinition.command,
 			from: toolDefinition.from,
 			version: toolDefinition.version || "1.0.0",
@@ -1095,10 +1314,13 @@ ${pc.bold("EXAMPLES:")}
 			process.exit(1);
 		}
 
+		const isValid = EnactCore.checkToolVerificationStatus(toolDefinition);
+
 		// Convert to EnactTool format
 		const tool: EnactTool = {
 			name: toolDefinition.name,
 			description: toolDefinition.description || "",
+			verified: isValid,
 			command: toolDefinition.command,
 			from: toolDefinition.from,
 			version: toolDefinition.version || "1.0.0",
@@ -1144,6 +1366,12 @@ ${pc.bold("EXAMPLES:")}
 
 			if (tool.command) {
 				console.error(`${pc.bold("Command:")} ${pc.gray(tool.command)}`);
+			}
+			
+			if (tool.verified) {
+				console.error(`${pc.bold("Verification:")} ${pc.green("Verified ✓")}`);
+			} else {
+				console.error(`${pc.bold("Verification:")} ${pc.red("Unverified ✗")}`);
 			}
 
 			if (tool.from) {
@@ -1221,22 +1449,34 @@ ${pc.bold("EXAMPLES:")}
  */
 function displayResultsTable(results: EnactTool[]): void {
 	console.error("\n" + pc.bold("Search Results:"));
-	console.error("═".repeat(100));
 
-	// Header
 	const nameWidth = 40;
+	const statusWidth = 15; // moved up
 	const descWidth = 45;
 	const tagsWidth = 20;
 
+	// Dynamically calculate the total table width
+	const totalWidth = nameWidth + statusWidth + descWidth + tagsWidth + 9; 
+	// 9 = 3 separators ( " │ " ) × 3
+
+	console.error("═".repeat(totalWidth));
+
+	// Header row
 	console.error(
 		pc.bold(pc.cyan("NAME".padEnd(nameWidth))) +
+			" │ " +
+			pc.bold(pc.cyan("STATUS".padEnd(statusWidth))) +
 			" │ " +
 			pc.bold(pc.cyan("DESCRIPTION".padEnd(descWidth))) +
 			" │ " +
 			pc.bold(pc.cyan("TAGS".padEnd(tagsWidth))),
 	);
+
+	// Separator row
 	console.error(
 		"─".repeat(nameWidth) +
+			"─┼─" +
+			"─".repeat(statusWidth) +
 			"─┼─" +
 			"─".repeat(descWidth) +
 			"─┼─" +
@@ -1245,30 +1485,46 @@ function displayResultsTable(results: EnactTool[]): void {
 
 	// Rows
 	results.forEach((tool) => {
-		const name =
+		// Format name
+		const nameText =
 			tool.name.length > nameWidth
 				? tool.name.substring(0, nameWidth - 3) + "..."
-				: tool.name.padEnd(nameWidth);
+				: tool.name.padEnd(nameWidth);		
+
+		// Format status
+		const statusText = tool.verified ? "Verified" : "Unverified";
+		const statusColor = tool.verified ? pc.green : pc.red;
+		const status = statusColor(statusText.padEnd(statusWidth));
+
+		// const name = statusColor(nameText)
+
+		// Format description
 		const desc =
 			tool.description.length > descWidth
 				? tool.description.substring(0, descWidth - 3) + "..."
 				: tool.description.padEnd(descWidth);
+
+		// Format tags
 		const tags = (tool.tags || []).join(", ");
 		const tagsDisplay =
 			tags.length > tagsWidth
 				? tags.substring(0, tagsWidth - 3) + "..."
 				: tags.padEnd(tagsWidth);
 
+		// Print row
 		console.error(
-			pc.green(name) + " │ " + pc.dim(desc) + " │ " + pc.yellow(tagsDisplay),
+			pc.green(nameText) + " │ " + status + " │ " + pc.dim(desc) + " │ " + pc.yellow(tagsDisplay),
 		);
 	});
 
-	console.error("═".repeat(100));
+	console.error("═".repeat(totalWidth));
 	console.error(
 		pc.dim(`Total: ${results.length} tool${results.length === 1 ? "" : "s"}`),
 	);
 }
+
+
+
 
 /**
  * Display results in a simple list format
@@ -1279,7 +1535,7 @@ function displayResultsList(results: EnactTool[]): void {
 
 	results.forEach((tool, index) => {
 		console.error(
-			`${pc.cyan(`${index + 1}.`)} ${pc.bold(pc.green(tool.name))}`,
+			`${pc.cyan(`${index + 1}.`)} ${pc.bold((tool.verified ? pc.green(tool.name) : pc.red(tool.name)) + (tool.verified ? pc.green(" (verified)") : pc.red(" (unverified)")))}`,
 		);
 		console.error(`   ${pc.dim(tool.description)}`);
 		if (tool.tags && tool.tags.length > 0) {

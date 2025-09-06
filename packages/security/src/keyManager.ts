@@ -237,6 +237,50 @@ export class KeyManager {
     }
   }
 
+  static listPrivateKeys(): string[] {
+    try {
+      this.ensureDirectories();
+      
+      // Return all private keys (including those without public keys)
+      return fs.readdirSync(this.PRIVATE_KEYS_DIR)
+        .filter(file => file.endsWith('-private.pem'))
+        .map(file => file.replace('-private.pem', ''));
+    } catch (error) {
+      console.warn(`Failed to list private keys: ${error instanceof Error ? error.message : String(error)}`);
+      return [];
+    }
+  }
+
+  static getAllPrivateKeys(): CryptoUtils.PrivateKey[] {
+    try {
+      this.ensureDirectories();
+      
+      // Return all private key values from private keys directory
+      return fs.readdirSync(this.PRIVATE_KEYS_DIR)
+        .filter(file => file.endsWith('.pem'))
+        .map(file => {
+          try {
+            const privatekey: CryptoUtils.PrivateKey = {
+              fileName: file,
+              key: "",
+            };
+            //
+            const privateKeyPem = fs.readFileSync(path.join(this.PRIVATE_KEYS_DIR, file), 'utf8').trim();
+            // Convert PEM back to hex for internal use
+            privatekey.key = CryptoUtils.pemToHex(privateKeyPem, 'PRIVATE');
+            return privatekey;
+          } catch (error) {
+            console.warn(`Failed to read private key file ${file}: ${error instanceof Error ? error.message : String(error)}`);
+            return null;
+          }
+        })
+        .filter(key => key !== null) as CryptoUtils.PrivateKey[];
+    } catch (error) {
+      console.warn(`Failed to get all private keys: ${error instanceof Error ? error.message : String(error)}`);
+      return [];
+    }
+  }
+
   static exportKey(keyId: string): KeyPair | undefined {
     return this.getKey(keyId);
   }

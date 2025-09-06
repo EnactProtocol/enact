@@ -1,6 +1,7 @@
 export interface EnactToolDefinition {
 	name: string;
 	description: string;
+	verified?: boolean; // Indicates if the tool has been verified
 	command: string;
 	from?: string;
 	version?: string;
@@ -98,4 +99,16 @@ export interface EnactExecOptions {
 	force?: boolean; // Force execution even if verification fails (legacy)
 	dangerouslySkipVerification?: boolean; // Skip all signature verification (DANGEROUS)
 	mount?: string; // Mount local directory to container (format: "local:container")
+}
+
+export interface ToolSignaturePayload {
+	algorithm: "sha256";
+	created: string; // Time of signing
+	key_id: string; // ID of the private key
+	public_key: string; // The corresponding public key
+	role: "author";
+	signer: string; // The userID of the signer
+	timestamp: number;
+	type: "ecdsa-p256";
+	value: string; // Signature
 }

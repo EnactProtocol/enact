@@ -1,5 +1,6 @@
 import {
 	EnactToolDefinition,
+	ToolSignaturePayload,
 	ToolUsage,
 	ToolSearchQuery,
 	CLITokenCreate,
@@ -480,6 +481,20 @@ export class EnactApiClient {
 			throw new EnactApiError("Unknown error occurred", 0);
 		}
 	}
+	
+	async signTool(
+	toolId: string,
+	payload: ToolSignaturePayload,
+	token: string,
+	tokenType: "jwt" | "cli" = "cli"
+): Promise<any> {
+	const endpoint = `/functions/v1/tools/${encodeURIComponent(toolId)}/signatures`;
+
+	return this.makeRequest(endpoint, {
+		method: "POST",
+		body: JSON.stringify(payload),
+	}, token, tokenType);
+}
 
 	// ===================
 	// OAUTH FLOW HELPERS
