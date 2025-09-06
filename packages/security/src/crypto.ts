@@ -148,3 +148,10 @@ export class CryptoUtils {
     return key.includes('-----BEGIN') && key.includes('-----END');
   }
 }
+
+export namespace CryptoUtils {
+  export type PrivateKey = {
+    fileName: string; // e.g., "id_key.pem"
+    key: string;      // hex or PEM format
+  };
+}

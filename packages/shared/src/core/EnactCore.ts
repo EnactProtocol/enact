@@ -19,6 +19,7 @@ import fs from "fs";
 import path from "path";
 import { CryptoUtils, KeyManager, SecurityConfigManager, SigningService } from "@enactprotocol/security";
 import { getFrontendUrl, getApiUrl } from "../utils/config";
+import { EnactToolDefinition } from "../api/types.js";
 
 export interface EnactCoreOptions {
 	apiUrl?: string;
@@ -408,6 +409,43 @@ export class EnactCore {
 		}
 	}
 
+public static async checkToolVerificationStatus(tool: EnactToolDefinition): Promise<boolean> {
+	const documentForVerification = {
+		command: tool.command,
+		description: tool.description,
+		from: tool.from,
+		name: tool.name,
+		signatures: tool.signatures?.map(sig => ({
+			signature: sig.value,
+			publicKey: "", // TODO: Look up the correct public key
+			algorithm: sig.algorithm,
+			timestamp: new Date(sig.created).getTime(),
+		})),
+	};
+	
+	let isValid = false;
+
+	if (tool.signatures && tool.signatures.length > 0) {
+		isValid = tool.signatures.some(sig => {
+			const referenceSignature = {
+				signature: sig.value,
+				publicKey: "", // TODO: Lookup correct public key based on signature UUID
+				algorithm: sig.algorithm,
+				timestamp: new Date(sig.created).getTime()
+			};
+
+			return SigningService.verifyDocument(
+				documentForVerification,
+				referenceSignature,
+				{ includeFields: ['command', 'description', 'from', 'name'] }
+			);
+		});
+	}
+
+	return isValid;
+}
+		
+
 private async verifyTool(tool: EnactTool, dangerouslySkipVerification: boolean = false): Promise<void> {
     if (dangerouslySkipVerification) {
         logger.warn(`Skipping signature verification for tool: ${tool.name}`);
@@ -419,46 +457,42 @@ private async verifyTool(tool: EnactTool, dangerouslySkipVerification: boolean =
 			throw new Error(`Tool ${tool.name} does not have any signatures`);
 		}
 	
-		const documentForVerification = {
-			command: tool.command,
-			description: tool.description,
-			from: tool.from,
-			name: tool.name,
-		};
+		// const documentForVerification = {
+		// 	command: tool.command,
+		// 	description: tool.description,
+		// 	from: tool.from,
+		// 	name: tool.name,
+		// };
 
-       	const referenceSignature = {
-				signature: tool.signatures[0].value,
-				publicKey: "", // Correct public key for UUID 71e02e2c-148c-4534-9900-bd9646e99333
-				algorithm: tool.signatures[0].algorithm,
-				timestamp: new Date(tool.signatures[0].created).getTime()
-			};
+       	// const referenceSignature = {
+		// 		signature: tool.signatures[0].value,
+		// 		publicKey: "", // Correct public key for UUID 71e02e2c-148c-4534-9900-bd9646e99333
+		// 		algorithm: tool.signatures[0].algorithm,
+		// 		timestamp: new Date(tool.signatures[0].created).getTime()
+		// 	};
 
         
-        // Check what canonical document looks like
-        const canonicalDoc = SigningService.getCanonicalDocument(documentForVerification,     { includeFields:  ['command', 'description', 'from', 'name'] } 
-);
+//         // Check what canonical document looks like
+//         const canonicalDoc = SigningService.getCanonicalDocument(documentForVerification,     { includeFields:  ['command', 'description', 'from', 'name'] } 
+// );
         
-        const docString = JSON.stringify(canonicalDoc);
-        const messageHash = CryptoUtils.hash(docString);
+//         const docString = JSON.stringify(canonicalDoc);
+//         const messageHash = CryptoUtils.hash(docString);
     
         
-        // Test direct crypto verification
-        const directVerify = CryptoUtils.verify(
-            referenceSignature.publicKey,
-            messageHash,
-            referenceSignature.signature
-        );
+//         // Test direct crypto verification
+//         const directVerify = CryptoUtils.verify(
+//             referenceSignature.publicKey,
+//             messageHash,
+//             referenceSignature.signature
+//         );
         
         // Check trusted keys
         // const trustedKeys = KeyManager.getAllTrustedPublicKeys();
 
-        const isValid = SigningService.verifyDocument(
-            documentForVerification,
-            referenceSignature,
-    		{ includeFields: ['command', 'description', 'from', 'name'] }
-        );
+        const isValid = await EnactCore.checkToolVerificationStatus(tool);
         
-        // console.log("Final verification result:", isValid);
+        console.log("Final verification result:", isValid);
 
         if (!isValid) {
             throw new Error(`Tool ${tool.name} has invalid signatures`);

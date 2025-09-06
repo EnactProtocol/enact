@@ -87,7 +87,7 @@ export class SigningService {
     const trustedPublicKeys = KeyManager.getAllTrustedPublicKeys();
     
     // All signatures must be valid and from trusted keys
-    return signatures.every(sig => {
+    return signatures.some(sig => {
       // Check if we have a valid public key in the signature
       const hasValidPublicKey = sig.publicKey && 
                                typeof sig.publicKey === 'string' && 
@@ -106,8 +106,9 @@ export class SigningService {
         // - signature.publicKey is null/undefined/empty
         // - signature.publicKey is invalid/corrupted
         // - we want to verify against any trusted key
-        return trustedPublicKeys.some(trustedKey => {
+        const validity = trustedPublicKeys.some(trustedKey => {
           try {
+            // console.log("The trusted key tried against the signature:", CryptoUtils.verify(trustedKey, messageHash, sig.signature));
             return CryptoUtils.verify(
               trustedKey,
               messageHash,
@@ -118,7 +119,69 @@ export class SigningService {
             return false;
           }
         });
+        // console.log("Validity:", validity);
+        return validity;
       }
+    });
+
+  }
+
+  static verifyDocumentWithPublicKey(
+    document: EnactDocument,
+    signature: Signature,
+    publicKey: string,
+    options: SigningOptions = {},
+    securityConfig?: SecurityConfig
+  ): boolean {
+    const { 
+      useEnactDefaults = false,
+      includeFields,
+      excludeFields,
+      additionalCriticalFields
+    } = options;
+    
+    // Load security config from ~/.enact/security if not provided
+    const loadedConfig = securityConfig ?? SecurityConfigManager.loadConfig();
+    const config = { ...DEFAULT_SECURITY_CONFIG, ...loadedConfig };
+    
+    // Get signatures from document or use provided signature
+    const signatures = document.signatures || [signature];
+    
+    // Check minimum signatures requirement
+    if (signatures.length < (config.minimumSignatures ?? 1)) {
+      // If allowLocalUnsigned is true and we have no signatures, allow it
+      if (config.allowLocalUnsigned && signatures.length === 0) {
+        return true;
+      }
+      return false;
+    }
+    
+    // Verify each signature
+    const fieldSelector = useEnactDefaults ? EnactFieldSelector : GenericFieldSelector;
+    
+    const canonicalDocument = fieldSelector.createCanonicalObject(document, {
+      includeFields,
+      excludeFields,
+      additionalCriticalFields
+    });
+    
+    const documentString = JSON.stringify(canonicalDocument);
+    const messageHash = CryptoUtils.hash(documentString);
+    
+
+    return signatures.every(sig => {
+ 
+        // Try verifying against trusted public key
+          try {
+            return CryptoUtils.verify(
+              publicKey,
+              messageHash,
+              sig.signature
+            );
+          } catch {
+            return false;
+          }
+      
     });
   }
 

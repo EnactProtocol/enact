@@ -15,6 +15,7 @@ import { handleConfigCommand } from "./commands/config";
 import {
 	handleCoreSearchCommand,
 	handleCoreExecCommand,
+	handleSignToolCommand,
 	handleCoreGetCommand,
 	handleCorePublishCommand,
 } from "./commands/core";
@@ -128,6 +129,9 @@ const { values, positionals } = parseArgs({
 		mount: {
 			type: "string",
 		},
+		tool: {
+			type: "string",
+		},
 	},
 	allowPositionals: true,
 	strict: false,
@@ -218,6 +222,12 @@ async function main() {
 				});
 				break;
 
+			case "sign": // Sign command - core library only
+			await handleSignToolCommand(commandArgs, {
+					help: values.help as boolean | undefined,
+					tool: values.tool as string | undefined,
+				});
+				break;	
 
 			case "get": // New case for get command (core library only)
 				await handleCoreGetCommand(commandArgs, {
@@ -266,6 +276,7 @@ async function main() {
 							{ value: "publish", label: "📤 Publish a tool" },
 							{ value: "init", label: "📝 Create a new tool definition" },
 							{ value: "env", label: "🌍 Manage environment variables" },
+							{ value: "sign", label: "✍️  Sign a tool definition" },
 							{ value: "config", label: "🔧 Configure Enact settings" },
 							{ value: "auth", label: "🔐 Manage authentication" },
 							{ value: "remote", label: "🌐 Manage remote servers" },
@@ -322,6 +333,11 @@ async function main() {
 							await handleEnvCommand([envAction as string], {});
 						}
 						return;
+					}
+					
+					if (action === "sign") {
+						// Sign a tool definition
+						await handleSignToolCommand([], {});
 					}
 
 					if (action === "auth") {
