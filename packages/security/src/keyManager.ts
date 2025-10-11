@@ -1,15 +1,8 @@
 import { CryptoUtils } from './crypto';
-import type { KeyPair } from './types';
+import type { KeyPair, KeyMetadata } from './types';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-
-export interface KeyMetadata {
-  keyId: string;
-  created: string;
-  algorithm: string;
-  description?: string;
-}
 
 export class KeyManager {
   // Storage paths
@@ -31,8 +24,8 @@ export class KeyManager {
     return path.join(this.PRIVATE_KEYS_DIR, `${keyId}-private.pem`);
   }
 
-  private static getMetadataPath(keyId: string): string {
-    return path.join(this.TRUSTED_KEYS_DIR, `${keyId}.meta`);
+  private static getMetadataPath(): string {
+    return path.join(this.PRIVATE_KEYS_DIR, `metadata.json`);
   }
 
   static generateAndStoreKey(keyId: string, description?: string): KeyPair {
@@ -69,18 +62,18 @@ export class KeyManager {
       );
 
       // Store metadata
-      const metadata: KeyMetadata = {
-        keyId,
-        created: new Date().toISOString(),
-        algorithm: 'secp256k1',
-        description
-      };
+      // const metadata: KeyMetadata = {
+      //   keyId,
+      //   created: new Date().toISOString(),
+      //   algorithm: 'secp256k1',
+      //   description
+      // };
 
-      fs.writeFileSync(
-        this.getMetadataPath(keyId),
-        JSON.stringify(metadata, null, 2),
-        { mode: 0o644 }
-      );
+      // fs.writeFileSync(
+      //   this.getMetadataPath(keyId),
+      //   JSON.stringify(metadata, null, 2),
+      //   { mode: 0o644 }
+      // );
 
     } catch (error) {
       // Clean up on error
@@ -129,18 +122,34 @@ export class KeyManager {
     }
   }
 
-  static getKeyMetadata(keyId: string): KeyMetadata | undefined {
+  static getKeyMetadata(): KeyMetadata[] | undefined {
     try {
-      const metadataPath = this.getMetadataPath(keyId);
+      const metadataPath = this.getMetadataPath();
       
       if (!fs.existsSync(metadataPath)) {
         return undefined;
       }
 
-      const metadataJson = fs.readFileSync(metadataPath, 'utf8');
-      return JSON.parse(metadataJson);
+      const rawData = fs.readFileSync(metadataPath, 'utf8');
+      const metadata = JSON.parse(rawData);
+
+      const keys: KeyMetadata[] = [];
+
+      metadata.forEach((key: any) => {
+        const publicKeyBytes = key['publicKey'];
+        const publickeyBase64 = Buffer.from(publicKeyBytes).toString('utf-8');
+        keys.push({
+          keyId: key['id'],
+          publicKey: publickeyBase64,
+          created: key['createdAt'],
+          algorithm: 'secp256k1',
+        });
+      });
+
+      return keys;
+
     } catch (error) {
-      console.warn(`Failed to read metadata for key '${keyId}': ${error instanceof Error ? error.message : String(error)}`);
+      console.warn(`Failed to read metadata: ${error instanceof Error ? error.message : String(error)}`);
       return undefined;
     }
   }
@@ -170,11 +179,11 @@ export class KeyManager {
       }
 
       // Remove metadata
-      const metadataPath = this.getMetadataPath(keyId);
-      if (fs.existsSync(metadataPath)) {
-        fs.unlinkSync(metadataPath);
-        removed = true;
-      }
+      // const metadataPath = this.getMetadataPath(keyId);
+      // if (fs.existsSync(metadataPath)) {
+      //   fs.unlinkSync(metadataPath);
+      //   removed = true;
+      // }
 
       return removed;
     } catch (error) {
@@ -309,24 +318,24 @@ export class KeyManager {
       );
 
       // Store metadata
-      const metadata: KeyMetadata = {
-        keyId,
-        created: new Date().toISOString(),
-        algorithm: 'secp256k1',
-        description: description || 'Imported public key'
-      };
+      // const metadata: KeyMetadata = {
+      //   keyId,
+      //   created: new Date().toISOString(),
+      //   algorithm: 'secp256k1',
+      //   description: description || 'Imported public key'
+      // };
 
-      fs.writeFileSync(
-        this.getMetadataPath(keyId),
-        JSON.stringify(metadata, null, 2),
-        { mode: 0o644 }
-      );
+      // fs.writeFileSync(
+      //   this.getMetadataPath(keyId),
+      //   JSON.stringify(metadata, null, 2),
+      //   { mode: 0o644 }
+      // );
 
     } catch (error) {
       // Clean up on error
       try {
         fs.unlinkSync(this.getPublicKeyPath(keyId));
-        fs.unlinkSync(this.getMetadataPath(keyId));
+        // fs.unlinkSync(this.getMetadataPath(keyId));
       } catch {}
       throw new Error(`Failed to import public key '${keyId}': ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -343,7 +352,7 @@ export class KeyManager {
   // Backup/export functionality
   static exportKeyToFile(keyId: string, outputPath: string, includePrivateKey: boolean = false): void {
     const keyPair = this.getKey(keyId);
-    const metadata = this.getKeyMetadata(keyId);
+    const metadata = this.getKeyMetadata();
     
     if (!keyPair) {
       throw new Error(`Key '${keyId}' not found`);

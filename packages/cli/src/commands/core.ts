@@ -5,7 +5,7 @@ import { resolve, extname } from "path";
 import { EnactCore } from "@enactprotocol/shared/core";
 import type { ToolSearchOptions, ToolExecuteOptions } from "@enactprotocol/shared/core";
 import type { EnactTool } from "@enactprotocol/shared";
-import type { EnactToolDefinition } from "@enactprotocol/shared/api";
+import type { EnactToolDefinition, ToolSignaturePayload } from "@enactprotocol/shared/api";
 import pc from "picocolors";
 import * as p from "@clack/prompts";
 import yaml from "yaml";
@@ -19,7 +19,7 @@ import { getAuthHeaders } from "./auth";
 import { addToHistory, getFrontendUrl, getApiUrl } from "@enactprotocol/shared/utils";
 import { getCurrentConfig } from "./config";
 import stripAnsi from "strip-ansi";
-import { CryptoUtils, KeyManager, SecurityConfigManager, SigningService } from "@enactprotocol/security";
+import { CryptoUtils, KeyManager, KeyMetadata, SecurityConfigManager, SigningService } from "@enactprotocol/security";
 
 // Create core instance with configuration
 let core: EnactCore;
@@ -246,6 +246,7 @@ ${pc.bold("EXAMPLES:")}
 						// console.log("🔍 TRACE: core.ts - Tool:", tool.name, "isValid:", isValid);
 						// Convert to EnactTool format
 						const enactTool: EnactTool = {
+							id: tool.id,
 							name: tool.name,
 							description: tool.description || "",
 							verified: isValid,
@@ -588,6 +589,7 @@ Examples:
 						// console.log("🔍 TRACE: core.ts - Tool:", tool.name, "isValid:", isValid);
 						// Convert to EnactTool format
 						const enactTool: EnactTool = {
+							id: tool.id,
 							name: tool.name,
 							description: tool.description || "",
 							verified: isValid,
@@ -687,7 +689,7 @@ Examples:
 		}))
 	}) as CryptoUtils.PrivateKey;
 
-	const TrustedKey = CryptoUtils.getPublicKeyFromPrivate(privateKey.key);
+	const correspondingPublicKey = CryptoUtils.getPublicKeyFromPrivate(privateKey.key);
 
 
 	if (selected_tool.signatures && selected_tool.signatures.length > 0) {
@@ -702,7 +704,7 @@ Examples:
 				return SigningService.verifyDocumentWithPublicKey(
 					documentForVerification,
 					referenceSignature,
-					TrustedKey,
+					correspondingPublicKey,
 					{ includeFields: ['command', 'description', 'from', 'name'] }
 				);
 			});
@@ -712,6 +714,10 @@ Examples:
 			return;
 		}
 	}
+
+	const buffer = Buffer.from(correspondingPublicKey, "hex");
+	const publickeyBase64 = buffer.toString("base64")
+
 	const spinnerSign = p.spinner();
 	console.error(spinnerSign.start("Signing tool..."));
 	const signature = await SigningService.signDocument(documentForVerification, privateKey.key, { includeFields: ['command', 'description', 'from', 'name']});
@@ -720,9 +726,30 @@ Examples:
 	console.error(pc.cyan(`\tSignature: ${signature.signature}`));
 	console.error(pc.cyan(`\tAlgorithm: ${signature.algorithm}`));
 	console.error(pc.cyan(`\tCreated: ${new Date(signature.timestamp).toISOString()}`));
-	console.error(pc.cyan(`\tPublic Key: ${TrustedKey}`));
-	console.error(pc.red("\nPushing the signature to the registry is not yet implemented."));
-	return signature
+	console.error(pc.cyan(`\tPublic Key: ${publickeyBase64}`));
+
+	let keyId = "None"
+	let toolId = selected_tool.id;
+		
+	const user_id = "anon"
+
+	const signaturePayload: ToolSignaturePayload = {
+		algorithm: "sha256",
+		created: new Date(signature.timestamp).toISOString(), // Time of signing
+		keyId: keyId, // ID of the private key
+		public_key: publickeyBase64, // The corresponding public key in base64
+		role: "author",
+		signer: user_id, // The userID of the signer
+		timestamp: Math.floor(Date.now() / 1000), // Unix epoch
+		type: "ecdsa-p256",
+		value: signature.signature, // Signature
+	};
+	console.log(toolId)
+	const apiClient = await EnactApiClient.create();
+	await apiClient.signTool(toolId, signaturePayload);
+
+	console.error(pc.red("\nSignature was successfully added to the Database!"));
+	return signature;
 
 };	
 
@@ -1090,6 +1117,7 @@ Examples:
 
 		// Convert tool definition to EnactTool format for core
 		const enactTool: EnactTool = {
+			id: toolDefinition.id,
 			name: toolDefinition.name,
 			description: toolDefinition.description || "",
 			verified: true, // Verification handled separately
@@ -1318,6 +1346,7 @@ ${pc.bold("EXAMPLES:")}
 
 		// Convert to EnactTool format
 		const tool: EnactTool = {
+			id: toolDefinition.id,
 			name: toolDefinition.name,
 			description: toolDefinition.description || "",
 			verified: isValid,

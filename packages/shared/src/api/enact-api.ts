@@ -485,15 +485,15 @@ export class EnactApiClient {
 	async signTool(
 	toolId: string,
 	payload: ToolSignaturePayload,
-	token: string,
-	tokenType: "jwt" | "cli" = "cli"
+	// token: string,
+	// tokenType: "jwt" | "cli" = "cli"
 ): Promise<any> {
-	const endpoint = `/functions/v1/tools/${encodeURIComponent(toolId)}/signatures`;
+	const endpoint = `/functions/v1/tools/${encodeURIComponent(toolId)}/anon-sign`;
 
 	return this.makeRequest(endpoint, {
 		method: "POST",
 		body: JSON.stringify(payload),
-	}, token, tokenType);
+	});
 }
 
 	// ===================

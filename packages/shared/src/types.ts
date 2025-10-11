@@ -1,6 +1,7 @@
 // src/types.ts - Type definitions for Enact CLI Core
 export interface EnactTool {
 	// REQUIRED FIELDS
+	id: string,
 	name: string; // Tool identifier with hierarchical path
 	description: string; // Human-readable description
 	command: string; // Shell command to execute with version pins

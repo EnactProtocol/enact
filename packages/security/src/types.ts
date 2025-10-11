@@ -35,6 +35,14 @@ export interface Signature {
   timestamp: number;
 }
 
+export interface KeyMetadata {
+  keyId: string;
+  publicKey: string,
+  created: string;
+  algorithm: string;
+  description?: string;
+}
+
 export interface KeyPair {
   privateKey: string;
   publicKey: string;

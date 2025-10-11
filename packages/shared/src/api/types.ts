@@ -1,4 +1,5 @@
 export interface EnactToolDefinition {
+	id: string,
 	name: string;
 	description: string;
 	verified?: boolean; // Indicates if the tool has been verified
@@ -104,11 +105,11 @@ export interface EnactExecOptions {
 export interface ToolSignaturePayload {
 	algorithm: "sha256";
 	created: string; // Time of signing
-	key_id: string; // ID of the private key
-	public_key: string; // The corresponding public key
+	keyId: string; // ID of the private key
+	public_key: string; // The corresponding public key in base64
 	role: "author";
 	signer: string; // The userID of the signer
-	timestamp: number;
+	timestamp: number; // Unix epoch
 	type: "ecdsa-p256";
 	value: string; // Signature
 }

@@ -315,6 +315,7 @@ export class EnactCore {
 			} else {
 				// Fallback: map database fields to tool format (may cause signature verification issues)
 				tool = {
+					id: response.id,
 					name: response.name,
 					description: response.description,
 					command: response.command,
