@@ -76,6 +76,14 @@ const MCP_CLIENTS = {
 			linux: join(homedir(), ".gemini/settings.json"),
 		},
 	},
+	"openai-codex": {
+		name: "OpenAI Codex",
+		configPaths: {
+			darwin: join(homedir(), ".codex/config.toml"),
+			win32: join(homedir(), ".codex/config.toml"),
+			linux: join(homedir(), ".codex/config.toml"),
+		}
+	}
 };
 
 // MCP server configurations
@@ -430,6 +438,51 @@ export async function installMcpServer(client: {
 		return;
 	}
 
+	if (client.id === "openai-codex") {
+        const configPath = client.configPath;
+        const configDir = join(configPath, "..");
+        await mkdir(configDir, { recursive: true });
+
+        let content = "";
+        if (existsSync(configPath)) {
+            content = await readFile(configPath, "utf-8");
+        }
+
+        // Helper to generate the TOML block
+        const generateTomlBlock = (name: string, pkg: string) => {
+		return [
+					`\n\n[mcp_servers.${name}]`,
+					`command = "npx"`,
+					`args = ["-y", "${pkg}"]`
+				].join('\n');
+			};
+
+        const updates: { name: string; pkg: string }[] = [];
+        
+        if (serverType === "main" || serverType === "both") {
+            updates.push({ name: "enact", pkg: "@enactprotocol/mcp-server" });
+        }
+        if (serverType === "dev" || serverType === "both") {
+            updates.push({ name: "enact-dev", pkg: "@enactprotocol/mcp-dev-server" });
+        }
+
+        for (const update of updates) {
+            // 1. Remove existing block if it exists (Regex to match [mcp_servers.name] until next [section] or EOF)
+            // This ensures we update args if they changed, and don't duplicate keys
+            const regex = new RegExp(`\\[mcp_servers\\.${update.name}\\][\\s\\S]*?(?=(\\n\\[|$))`, "g");
+            content = content.replace(regex, "").trim();
+
+            // 2. Append new block
+            content += generateTomlBlock(update.name, update.pkg);
+        }
+
+        // Ensure we have a trailing newline
+        if (!content.endsWith("\n")) content += "\n";
+
+        await writeFile(configPath, content.trimStart(), "utf-8");
+        return;
+    }
+
 	// Original logic for file-based clients
 	const configPath = client.configPath;
 
@@ -520,6 +573,26 @@ export async function checkMcpServerInstalled(client: {
 			return false;
 		}
 	}
+
+	if (client.id === "openai-codex") {
+        if (!existsSync(client.configPath)) return false;
+        try {
+            const content = await readFile(client.configPath, "utf-8");
+            
+            // We check for the specific section header based on server type
+            if (serverType === "main") {
+                return content.includes("[mcp_servers.enact]");
+            } else if (serverType === "dev") {
+                return content.includes("[mcp_servers.enact-dev]");
+            } else if (serverType === "both") {
+                return content.includes("[mcp_servers.enact]") && 
+                       content.includes("[mcp_servers.enact-dev]");
+            }
+            return false;
+        } catch (error) {
+            return false;
+        }
+    }
 
 	if (!existsSync(client.configPath)) {
 		return false;
