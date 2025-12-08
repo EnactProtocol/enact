@@ -18,6 +18,9 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libsecret-1-dev
+
       - name: Install dependencies
         run: bun install
 
@@ -53,6 +56,10 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libsecret-1-dev
+
       - name: Install dependencies
         run: bun install
 
@@ -81,6 +88,9 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libsecret-1-dev
 
       - name: Install dependencies
         run: bun install
