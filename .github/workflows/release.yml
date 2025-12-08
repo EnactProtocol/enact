@@ -24,6 +24,12 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Build all packages
+        run: bun run build
+
+      - name: Reinstall to update workspace copies
+        run: bun install
+
       - name: Test
         run: bun run test
 
