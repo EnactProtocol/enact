@@ -73,11 +73,8 @@ jobs:
         run: bun run build
 
       - name: Compile binary
-        run: |
-          bun build packages/cli/src/index.ts \
-            --compile \
-            --target=${{ matrix.target }} \
-            --outfile=${{ matrix.artifact }}
+        shell: bash
+        run: bun build packages/cli/src/index.ts --compile --target=${{ matrix.target }} --outfile=${{ matrix.artifact }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
