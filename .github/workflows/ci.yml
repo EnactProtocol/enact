@@ -31,7 +31,8 @@ jobs:
       - name: Verify build artifacts
         run: |
           echo "=== Verifying all package builds ==="
-          for pkg in trust secrets shared execution api server mcp-server cli; do
+          # Note: server uses Supabase Edge Functions (Deno), web uses Vite - neither produce dist/index.js
+          for pkg in trust secrets shared execution api mcp-server cli; do
             echo "Checking packages/$pkg/dist..."
             if [ ! -f "packages/$pkg/dist/index.js" ]; then
               echo "ERROR: packages/$pkg/dist/index.js not found!"
