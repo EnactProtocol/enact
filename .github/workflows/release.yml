@@ -82,60 +82,11 @@ jobs:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.artifact }}
 
-  publish-npm:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libsecret-1-dev
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Build all packages
-        run: bun run build
-
-      - name: Set package versions from tag
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          # Update all package versions (--allow-same-version handles already-set versions)
-          cd packages/cli && npm version $VERSION --no-git-tag-version --allow-same-version
-          cd ../api && npm version $VERSION --no-git-tag-version --allow-same-version
-          cd ../shared && npm version $VERSION --no-git-tag-version --allow-same-version
-          cd ../secrets && npm version $VERSION --no-git-tag-version --allow-same-version
-          cd ../trust && npm version $VERSION --no-git-tag-version --allow-same-version
-
-      - name: Setup npm auth
-        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
-
-      - name: Publish @enactprotocol/shared
-        run: cd packages/shared && npm publish --access public
-        continue-on-error: true
-
-      - name: Publish @enactprotocol/secrets
-        run: cd packages/secrets && npm publish --access public
-        continue-on-error: true
-
-      - name: Publish @enactprotocol/trust
-        run: cd packages/trust && npm publish --access public
-        continue-on-error: true
-
-      - name: Publish @enactprotocol/api
-        run: cd packages/api && npm publish --access public
-        continue-on-error: true
-
-      - name: Publish @enactprotocol/cli
-        run: cd packages/cli && npm publish --access public
+  # NOTE: npm publishing is done manually for now using npm trusted publishers
+  # To publish manually, see DEPLOYMENT.md for instructions
 
   release:
-    needs: [build-binaries, publish-npm]
+    needs: [build-binaries]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

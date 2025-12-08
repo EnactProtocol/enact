@@ -216,8 +216,57 @@ Go to repo Settings → Secrets and variables → Actions:
 |--------|-------------|---------|
 | `SUPABASE_ACCESS_TOKEN` | Personal access token from [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens) | `deploy-functions.yml`, `migrate-db.yml` |
 | `SUPABASE_ANON_KEY` | Project anon key (safe for public) | `deploy-web.yml` (embedded in frontend build) |
+| `NPM_TOKEN` | npm access token from [npmjs.com/settings/tokens](https://www.npmjs.com/settings/tokens) - create with "Automation" type | `release.yml` (future - currently manual) |
 
 **Note:** R2 secrets (access keys) are configured directly in Supabase console via `supabase secrets set`, not as GitHub secrets. They're stored securely in Supabase and used by Edge Functions at runtime.
+
+---
+
+## Manual npm Publishing
+
+npm packages are published manually for now (pending npm trusted publishers setup).
+
+### Prerequisites
+
+1. Login to npm: `npm login`
+2. Ensure you have publish access to `@enactprotocol` org
+
+### Publish Steps
+
+```bash
+cd /path/to/enact
+
+# 1. Build all packages
+bun run build
+
+# 2. Convert workspace:* dependencies to real versions
+VERSION=2.0.0  # Set to current version
+for pkg in packages/*/package.json; do
+  sed -i '' 's/"workspace:\*"/"'$VERSION'"/g' "$pkg"
+done
+
+# 3. Publish in dependency order (trust first, cli last)
+cd packages/trust && npm publish --access public
+cd ../secrets && npm publish --access public
+cd ../shared && npm publish --access public  
+cd ../execution && npm publish --access public
+cd ../api && npm publish --access public
+cd ../cli && npm publish --access public
+
+# 4. Revert package.json changes (don't commit the sed changes)
+git checkout packages/*/package.json
+```
+
+### Packages Published
+
+| Package | Description |
+|---------|-------------|
+| `@enactprotocol/trust` | Sigstore signing & verification |
+| `@enactprotocol/secrets` | Secure keychain storage |
+| `@enactprotocol/shared` | Core types & utilities |
+| `@enactprotocol/execution` | Tool execution engine |
+| `@enactprotocol/api` | Registry API client |
+| `@enactprotocol/cli` | Command-line interface |
 
 ### Required Variables
 
