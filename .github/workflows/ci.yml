@@ -22,29 +22,26 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Clean build artifacts
-        run: rm -rf packages/*/dist
-
-      - name: Build
+      - name: Build all packages
         run: bun run build
+
+      - name: Reinstall to update workspace copies
+        run: bun install
 
       - name: Verify build artifacts
         run: |
-          echo "Checking secrets package build..."
-          ls -la packages/secrets/dist/ || echo "No dist folder!"
-          if [ ! -f "packages/secrets/dist/index.js" ]; then
-            echo "ERROR: secrets index.js not built!"
-            exit 1
-          fi
-          if [ ! -f "packages/secrets/dist/keyring.js" ]; then
-            echo "ERROR: secrets keyring.js not built!"
-            exit 1
-          fi
-          echo "=== Checking exports in dist/index.js ==="
-          grep -n "listSecrets" packages/secrets/dist/index.js || echo "listSecrets not found in index.js!"
-          echo "=== Checking exports in dist/keyring.js ==="
-          grep -n "listSecrets" packages/secrets/dist/keyring.js || echo "listSecrets not found in keyring.js!"
-          echo "Build artifacts verified successfully"
+          echo "=== Verifying all package builds ==="
+          for pkg in trust secrets shared execution api server mcp-server cli; do
+            echo "Checking packages/$pkg/dist..."
+            if [ ! -f "packages/$pkg/dist/index.js" ]; then
+              echo "ERROR: packages/$pkg/dist/index.js not found!"
+              exit 1
+            fi
+            echo "✓ packages/$pkg/dist/index.js exists"
+          done
+          echo "=== Verifying workspace symlinks ==="
+          ls -la node_modules/@enactprotocol/ || echo "No @enactprotocol symlinks!"
+          echo "=== All build artifacts verified ==="
 
       - name: Lint
         run: bun run lint
