@@ -64,11 +64,12 @@ bun run lint
 Create a `.env` file based on `.env.example`:
 
 ```env
-VITE_API_URL=http://127.0.0.1:54321/functions/v1
 VITE_SUPABASE_URL=http://127.0.0.1:54321
 VITE_SUPABASE_ANON_KEY=your-anon-key-here
 VITE_REKOR_URL=https://search.sigstore.dev
 ```
+
+The API URL is automatically derived from `VITE_SUPABASE_URL` as `${VITE_SUPABASE_URL}/functions/v1`.
 
 ## CLI Authentication Flow
 

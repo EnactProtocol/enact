@@ -3,7 +3,7 @@
  * Makes direct HTTP calls to the Enact registry without Node.js dependencies
  */
 
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:54321/functions/v1";
+import { API_URL } from "./supabase";
 
 export interface ToolSearchResult {
   name: string;

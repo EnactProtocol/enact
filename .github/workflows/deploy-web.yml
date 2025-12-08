@@ -33,10 +33,9 @@ jobs:
       - name: Build web
         working-directory: packages/web
         env:
-          VITE_API_URL: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co/functions/v1
           VITE_SUPABASE_URL: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          VITE_REKOR_URL: https://search.sigstore.dev
+          VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+          VITE_REKOR_URL: ${{ vars.VITE_REKOR_URL }}
         run: bun run build
 
       - name: Setup Pages
