@@ -1,0 +1,4 @@
+{
+  "*.{ts,tsx,js,jsx,json,md}": ["biome check --write --no-errors-on-unmatched"],
+  "packages/{api,cli,shared,trust,secrets,mcp-server}/**/*.{ts,tsx}": ["bash -c 'tsc --noEmit'"]
+}

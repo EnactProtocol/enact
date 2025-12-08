@@ -1,0 +1,14 @@
+diff --git a/dist/signer/fulcio/ephemeral.js b/dist/signer/fulcio/ephemeral.js
+index 1234567..abcdefg 100644
+--- a/dist/signer/fulcio/ephemeral.js
++++ b/dist/signer/fulcio/ephemeral.js
+@@ -32,7 +32,8 @@ class EphemeralSigner {
+         });
+     }
+     async sign(data) {
+-        const signature = crypto_1.default.sign(null, data, this.keypair.privateKey);
++        // Use 'sha256' instead of null for BoringSSL compatibility (Bun)
++        const signature = crypto_1.default.sign('sha256', data, this.keypair.privateKey);
+         const publicKey = this.keypair.publicKey
+             .export({ format: 'pem', type: 'spki' })
+             .toString('ascii');

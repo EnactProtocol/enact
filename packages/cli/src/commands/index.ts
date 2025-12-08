@@ -1,0 +1,30 @@
+/**
+ * CLI Commands Index
+ *
+ * Exports all command configuration functions.
+ */
+
+export { configureSetupCommand } from "./setup";
+export { configureRunCommand } from "./run";
+export { configureExecCommand } from "./exec";
+export { configureInstallCommand } from "./install";
+export { configureListCommand } from "./list";
+export { configureEnvCommand } from "./env";
+export { configureTrustCommand } from "./trust";
+export { configureConfigCommand } from "./config";
+
+// Registry commands (Phase 8)
+export { configureSearchCommand } from "./search";
+export { configureGetCommand } from "./get";
+export { configurePublishCommand } from "./publish";
+export { configureAuthCommand } from "./auth";
+export { configureCacheCommand } from "./cache";
+
+// CLI solidification commands (Phase 9)
+export { configureSignCommand } from "./sign";
+export { configureReportCommand } from "./report";
+export { configureInspectCommand } from "./inspect";
+
+// API v2 migration commands
+export { configureYankCommand } from "./yank";
+export { configureUnyankCommand } from "./unyank";

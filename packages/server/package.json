@@ -1,0 +1,56 @@
+{
+  "name": "@enactprotocol/server",
+  "version": "0.1.0",
+  "description": "Enact registry server implementation - Supabase backend with Edge Functions",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "echo 'Server package uses Supabase Edge Functions (Deno) - no tsc build needed'",
+    "dev": "supabase functions serve",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:migrate": "supabase db push",
+    "deploy": "supabase functions deploy",
+    "storage:start": "docker-compose up -d",
+    "storage:stop": "docker-compose down",
+    "storage:restart": "docker-compose restart",
+    "storage:logs": "docker-compose logs -f minio",
+    "storage:test": "bun run scripts/test-storage.ts",
+    "local:start": "docker-compose up -d && supabase start",
+    "local:stop": "supabase stop && docker-compose down",
+    "local:status": "docker ps --filter name=enact && supabase status",
+    "local:functions": "supabase functions serve --env-file supabase/.env.local",
+    "local:logs": "docker logs supabase_edge_runtime_server -f",
+    "local:logs:kong": "docker logs supabase_kong_server -f"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.943.0",
+    "@enactprotocol/shared": "workspace:*",
+    "@enactprotocol/trust": "workspace:*",
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^22.10.1",
+    "supabase": "^1.142.2",
+    "typescript": "^5.7.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "files": ["dist", "src", "supabase"],
+  "keywords": ["enact", "server", "registry", "supabase", "backend"],
+  "author": "Enact Protocol",
+  "license": "Apache-2.0"
+}

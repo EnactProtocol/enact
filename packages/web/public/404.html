@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Enact Registry</title>
+    <script>
+      // Single Page App redirect for GitHub Pages
+      // Redirects all 404s to index.html with the path preserved in sessionStorage
+      sessionStorage.redirect = location.href;
+      location.replace(location.pathname.split('/').slice(0, 1).join('/') + '/');
+    </script>
+  </head>
+  <body>
+    Redirecting...
+  </body>
+</html>

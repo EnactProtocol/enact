@@ -1,0 +1,589 @@
+{
+  "package": "@enactprotocol/server",
+  "version": "0.1.0",
+  "description": "Supabase-based registry server for Enact tools",
+  "lastUpdated": "2025-01-02",
+  "phases": [
+    {
+      "id": "phase-1",
+      "name": "Database Schema & Core Infrastructure",
+      "status": "complete",
+      "description": "PostgreSQL schema with RLS, migrations, and core tables",
+      "features": [
+        {
+          "id": "db-schema",
+          "name": "Database Schema",
+          "description": "Complete PostgreSQL schema with all tables and relationships",
+          "status": "complete",
+          "test": "supabase/migrations/20250102000000_initial_schema.sql",
+          "passes": true
+        },
+        {
+          "id": "db-rls",
+          "name": "Row Level Security Policies",
+          "description": "RLS policies for all tables ensuring proper access control",
+          "status": "complete",
+          "test": "supabase/migrations/20250102000000_initial_schema.sql (lines 245-327)",
+          "passes": true
+        },
+        {
+          "id": "db-indexes",
+          "name": "Performance Indexes",
+          "description": "Indexes on foreign keys, search fields, and common queries",
+          "status": "complete",
+          "test": "supabase/migrations/20250102000000_initial_schema.sql (lines 228-242)",
+          "passes": true
+        },
+        {
+          "id": "db-triggers",
+          "name": "Database Triggers",
+          "description": "Triggers for updated_at timestamps and download counting",
+          "status": "complete",
+          "test": "supabase/migrations/20250102000000_initial_schema.sql (lines 336-358)",
+          "passes": true
+        },
+        {
+          "id": "supabase-config",
+          "name": "Supabase Configuration",
+          "description": "Complete Supabase config.toml with OAuth providers",
+          "status": "complete",
+          "test": "supabase/config.toml",
+          "passes": true
+        }
+      ]
+    },
+    {
+      "id": "phase-2",
+      "name": "Storage & Utilities",
+      "status": "complete",
+      "description": "R2/S3 storage integration and utility functions",
+      "features": [
+        {
+          "id": "storage-client",
+          "name": "R2/S3 Storage Client",
+          "description": "Abstraction layer for Cloudflare R2 / AWS S3 storage",
+          "status": "complete",
+          "test": "src/storage/client.ts",
+          "passes": true
+        },
+        {
+          "id": "bundle-storage",
+          "name": "Bundle Storage Operations",
+          "description": "Upload, download, delete bundle files with proper hashing",
+          "status": "complete",
+          "test": "src/storage/bundles.ts",
+          "passes": true
+        },
+        {
+          "id": "error-handling",
+          "name": "Error Handling Utilities",
+          "description": "Standard error codes and response helpers",
+          "status": "complete",
+          "test": "src/utils/errors.ts",
+          "passes": true
+        },
+        {
+          "id": "response-utils",
+          "name": "Response Utilities",
+          "description": "JSON responses, CORS, pagination helpers",
+          "status": "complete",
+          "test": "src/utils/response.ts",
+          "passes": true
+        },
+        {
+          "id": "validation",
+          "name": "Input Validation",
+          "description": "Tool name, version, email validation and sanitization",
+          "status": "complete",
+          "test": "src/utils/validation.ts",
+          "passes": true
+        }
+      ]
+    },
+    {
+      "id": "phase-3",
+      "name": "Tools API Endpoints",
+      "status": "complete",
+      "description": "Edge Function for tool CRUD and version management",
+      "features": [
+        {
+          "id": "tools-search",
+          "name": "Tool Search Endpoint",
+          "description": "GET /tools/search with query, pagination",
+          "status": "complete",
+          "test": "supabase/functions/tools/index.ts (handleSearch)",
+          "passes": true
+        },
+        {
+          "id": "tools-publish",
+          "name": "Tool Publishing",
+          "description": "POST /tools/{name} - Multipart upload with validation",
+          "status": "complete",
+          "test": "supabase/functions/tools/index.ts (handlePublish)",
+          "passes": true
+        },
+        {
+          "id": "tools-get",
+          "name": "Get Tool Metadata",
+          "description": "GET /tools/{name} - Tool info with all versions",
+          "status": "complete",
+          "test": "supabase/functions/tools/index.ts (handleGetTool)",
+          "passes": true
+        },
+        {
+          "id": "tools-get-version",
+          "name": "Get Version Details",
+          "description": "GET /tools/{name}/versions/{version}",
+          "status": "complete",
+          "test": "supabase/functions/tools/index.ts (handleGetVersion)",
+          "passes": true
+        },
+        {
+          "id": "tools-download",
+          "name": "Bundle Download",
+          "description": "GET /tools/{name}/versions/{version}/download",
+          "status": "complete",
+          "test": "supabase/functions/tools/index.ts (handleDownload)",
+          "passes": true
+        },
+        {
+          "id": "tools-yank",
+          "name": "Yank Version",
+          "description": "POST /tools/{name}/versions/{version}/yank",
+          "status": "complete",
+          "test": "supabase/functions/tools/index.ts (handleYank)",
+          "passes": true
+        },
+        {
+          "id": "tools-unyank",
+          "name": "Unyank Version",
+          "description": "POST /tools/{name}/versions/{version}/unyank",
+          "status": "complete",
+          "test": "supabase/functions/tools/index.ts (handleUnyank)",
+          "passes": true
+        },
+        {
+          "id": "tools-delete",
+          "name": "Delete Tool",
+          "description": "DELETE /tools/{name}",
+          "status": "complete",
+          "test": "supabase/functions/tools/index.ts (handleDeleteTool)",
+          "passes": true
+        }
+      ]
+    },
+    {
+      "id": "phase-4",
+      "name": "Attestations API",
+      "status": "complete",
+      "description": "Sigstore attestation submission and verification",
+      "features": [
+        {
+          "id": "attestations-get",
+          "name": "Get Attestations",
+          "description": "GET /tools/{name}/versions/{version}/attestations",
+          "status": "complete",
+          "test": "supabase/functions/attestations/index.ts (handleGetAttestations)",
+          "passes": true
+        },
+        {
+          "id": "attestations-submit",
+          "name": "Submit Attestation",
+          "description": "POST /tools/{name}/versions/{version}/attestations - Verify Sigstore bundle",
+          "status": "complete",
+          "test": "supabase/functions/attestations/index.ts (handleSubmitAttestation)",
+          "passes": true
+        },
+        {
+          "id": "attestations-revoke",
+          "name": "Revoke Attestation",
+          "description": "DELETE /tools/{name}/versions/{version}/attestations?auditor={email}",
+          "status": "complete",
+          "test": "supabase/functions/attestations/index.ts (handleRevokeAttestation)",
+          "passes": true
+        },
+        {
+          "id": "attestations-get-bundle",
+          "name": "Get Sigstore Bundle",
+          "description": "GET /tools/{name}/versions/{version}/trust/attestations/{auditor}",
+          "status": "complete",
+          "test": "supabase/functions/attestations/index.ts (handleGetAttestationBundle)",
+          "passes": true
+        },
+        {
+          "id": "attestations-verify",
+          "name": "Server-Side Verification",
+          "description": "Verify Sigstore bundles against Rekor using @enactprotocol/trust",
+          "status": "complete",
+          "test": "supabase/functions/attestations/index.ts (verifyBundle integration)",
+          "passes": true
+        }
+      ]
+    },
+    {
+      "id": "phase-5",
+      "name": "Trust Management API",
+      "status": "pending",
+      "description": "User trust configuration endpoints",
+      "features": [
+        {
+          "id": "trust-get",
+          "name": "Get User Trust Config",
+          "description": "GET /users/{username}/trust",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        },
+        {
+          "id": "trust-update",
+          "name": "Update Trust Config",
+          "description": "PUT /users/me/trust",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        }
+      ]
+    },
+    {
+      "id": "phase-6",
+      "name": "Reports API",
+      "status": "pending",
+      "description": "Security and quality reporting",
+      "features": [
+        {
+          "id": "reports-submit",
+          "name": "Submit Report",
+          "description": "POST /tools/{name}/versions/{version}/reports",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        },
+        {
+          "id": "reports-get",
+          "name": "Get Reports",
+          "description": "GET /tools/{name}/versions/{version}/reports (admin/owner only)",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        },
+        {
+          "id": "reports-resolve",
+          "name": "Resolve Report",
+          "description": "PATCH /reports/{id} - Update status (admin only)",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        }
+      ]
+    },
+    {
+      "id": "phase-7",
+      "name": "Advanced Search",
+      "status": "pending",
+      "description": "Semantic search with vector embeddings and AI",
+      "features": [
+        {
+          "id": "search-vector-embeddings",
+          "name": "Vector Embeddings for Tools",
+          "description": "Generate embeddings for tool descriptions using OpenAI/Anthropic",
+          "status": "pending",
+          "test": null,
+          "passes": false,
+          "notes": "Add vector column to tools table, generate embeddings on publish"
+        },
+        {
+          "id": "search-pgvector",
+          "name": "pgvector Extension",
+          "description": "Enable pgvector extension for similarity search",
+          "status": "pending",
+          "test": null,
+          "passes": false,
+          "notes": "CREATE EXTENSION vector; ALTER TABLE tools ADD COLUMN embedding vector(1536);"
+        },
+        {
+          "id": "search-semantic",
+          "name": "Semantic Search Query",
+          "description": "Query tools by semantic similarity instead of keyword matching",
+          "status": "pending",
+          "test": null,
+          "passes": false,
+          "notes": "Use cosine similarity on embeddings: ORDER BY embedding <=> query_embedding"
+        },
+        {
+          "id": "search-hybrid",
+          "name": "Hybrid Search",
+          "description": "Combine full-text search (trigram) with semantic search for best results",
+          "status": "pending",
+          "test": null,
+          "passes": false,
+          "notes": "Weighted combination of text rank and vector similarity"
+        },
+        {
+          "id": "search-caching",
+          "name": "Search Result Caching",
+          "description": "Cache popular search queries with Redis or Supabase Cache",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        },
+        {
+          "id": "search-filters",
+          "name": "Advanced Filters",
+          "description": "Filter by tags, license, downloads, attestations, trust score",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        }
+      ]
+    },
+    {
+      "id": "phase-8",
+      "name": "Analytics & Monitoring",
+      "status": "pending",
+      "description": "Analytics dashboard and monitoring",
+      "features": [
+        {
+          "id": "analytics-dashboard",
+          "name": "Analytics Dashboard",
+          "description": "Admin dashboard for download trends, popular tools, trust metrics",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        },
+        {
+          "id": "analytics-metrics",
+          "name": "Metrics Collection",
+          "description": "Collect and aggregate download stats, search queries, attestation counts",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        },
+        {
+          "id": "monitoring-health",
+          "name": "Health Check Endpoint",
+          "description": "GET /health - Database, storage, and API health status",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        },
+        {
+          "id": "monitoring-logging",
+          "name": "Structured Logging",
+          "description": "Comprehensive logging for debugging and monitoring",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        }
+      ]
+    },
+    {
+      "id": "phase-9",
+      "name": "Webhooks & Events",
+      "status": "pending",
+      "description": "Event system for external integrations",
+      "features": [
+        {
+          "id": "webhooks-config",
+          "name": "Webhook Configuration",
+          "description": "User-configurable webhooks for events",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        },
+        {
+          "id": "webhooks-events",
+          "name": "Event Types",
+          "description": "tool.published, tool.yanked, attestation.created, attestation.revoked, report.created",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        },
+        {
+          "id": "webhooks-delivery",
+          "name": "Webhook Delivery",
+          "description": "Reliable webhook delivery with retries and logging",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        }
+      ]
+    },
+    {
+      "id": "phase-10",
+      "name": "Rate Limiting & Security",
+      "status": "pending",
+      "description": "Production-grade rate limiting and security features",
+      "features": [
+        {
+          "id": "rate-limit-implementation",
+          "name": "Rate Limiting",
+          "description": "Implement rate limits per endpoint using Redis or Supabase",
+          "status": "pending",
+          "test": null,
+          "passes": false,
+          "notes": "Search: 100/min, Download: 1000/min, Publish: 10/min, Auth: 20/min"
+        },
+        {
+          "id": "rate-limit-headers",
+          "name": "Rate Limit Headers",
+          "description": "Return X-RateLimit-* headers in responses",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        },
+        {
+          "id": "security-cors",
+          "name": "CORS Configuration",
+          "description": "Proper CORS headers for web clients",
+          "status": "complete",
+          "test": "src/utils/response.ts (CORS_HEADERS)",
+          "passes": true
+        },
+        {
+          "id": "security-input-sanitization",
+          "name": "Input Sanitization",
+          "description": "Sanitize all user inputs to prevent XSS and injection",
+          "status": "complete",
+          "test": "src/utils/validation.ts (sanitizeInput)",
+          "passes": true
+        },
+        {
+          "id": "security-bundle-scanning",
+          "name": "Malware Scanning",
+          "description": "Scan uploaded bundles for malware and vulnerabilities",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        }
+      ]
+    },
+    {
+      "id": "phase-11",
+      "name": "Testing & CI/CD",
+      "status": "pending",
+      "description": "Comprehensive testing and deployment automation",
+      "features": [
+        {
+          "id": "tests-unit",
+          "name": "Unit Tests",
+          "description": "Unit tests for all utilities and handlers",
+          "status": "pending",
+          "test": null,
+          "passes": false,
+          "notes": "Target: >80% coverage"
+        },
+        {
+          "id": "tests-integration",
+          "name": "Integration Tests",
+          "description": "Integration tests for Edge Functions with test database",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        },
+        {
+          "id": "tests-e2e",
+          "name": "End-to-End Tests",
+          "description": "E2E tests for full workflows (publish, download, attest)",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        },
+        {
+          "id": "ci-github-actions",
+          "name": "GitHub Actions CI",
+          "description": "Automated testing on PR and push",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        },
+        {
+          "id": "cd-deployment",
+          "name": "Automated Deployment",
+          "description": "Deploy to Supabase on merge to main",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        }
+      ]
+    },
+    {
+      "id": "phase-12",
+      "name": "Performance Optimization",
+      "status": "pending",
+      "description": "Database and API performance improvements",
+      "features": [
+        {
+          "id": "perf-query-optimization",
+          "name": "Query Optimization",
+          "description": "Optimize slow queries with EXPLAIN ANALYZE",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        },
+        {
+          "id": "perf-caching",
+          "name": "Response Caching",
+          "description": "Cache frequently accessed data (tool metadata, versions)",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        },
+        {
+          "id": "perf-cdn",
+          "name": "CDN Integration",
+          "description": "Serve bundles via CDN with edge caching",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        },
+        {
+          "id": "perf-connection-pooling",
+          "name": "Connection Pooling",
+          "description": "Optimize database connection management",
+          "status": "pending",
+          "test": null,
+          "passes": false
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_phases": 12,
+    "completed_phases": 4,
+    "in_progress_phases": 0,
+    "pending_phases": 8,
+    "total_features": 59,
+    "completed_features": 27,
+    "pending_features": 32,
+    "test_coverage": "0% (tests not yet implemented)"
+  },
+  "priorities": [
+    {
+      "priority": "high",
+      "features": ["tests-unit", "tests-integration", "rate-limit-implementation"]
+    },
+    {
+      "priority": "medium",
+      "features": [
+        "search-semantic",
+        "search-vector-embeddings",
+        "analytics-dashboard",
+        "trust-get",
+        "trust-update"
+      ]
+    },
+    {
+      "priority": "low",
+      "features": ["webhooks-config", "webhooks-events", "perf-cdn"]
+    }
+  ],
+  "notes": [
+    "Phase 4 (Attestations) is now COMPLETE with full Sigstore verification",
+    "Vector embeddings require OpenAI API key or Anthropic API key for generating embeddings",
+    "pgvector extension must be enabled in Supabase project settings",
+    "Semantic search will significantly improve tool discovery quality",
+    "Rate limiting should be implemented before production deployment",
+    "Tests are essential before deploying to production",
+    "Attestation verification uses @enactprotocol/trust package for cryptographic validation"
+  ]
+}

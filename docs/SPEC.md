@@ -1,0 +1,885 @@
+# Enact Protocol Field Specification
+
+**Version:** 2.0.0
+**Last Updated:** 2025-11-17
+
+This document provides a comprehensive reference for all Enact protocol fields used in tool definitions.
+
+## Overview
+
+All Enact tools are defined in a single **`enact.md`** file that combines:
+
+1. **YAML frontmatter** — Machine-readable metadata (fields documented below)
+2. **Markdown body** — Human-readable documentation and instructions
+
+This unified format serves as the single source of truth for both AI models and human developers.
+
+## Package Definition (Optional)
+
+To avoid duplication and support shared configuration (like environment variables), you can place an **`enact-package.yaml`** file in any directory.
+
+- **Scope:** Applies to all tools in the same directory and subdirectories.
+- **Inheritance:** Tools inherit fields from the nearest `enact-package.yaml`.
+- **Overriding:** Tools can override inherited fields (except `env`, which is merged).
+
+**Example `enact-package.yaml`:**
+```yaml
+enact: "2.0.0"
+# Shared environment variables for all tools in this folder
+env:
+  API_TOKEN:
+    description: "API Token for the service"
+    secret: true
+
+# Shared metadata
+authors:
+  - name: "Acme Corp"
+license: "MIT"
+```
+
+---
+
+## Required Fields
+```markdown
+---
+enact: "2.0.0"
+name: "alice/utils/greeter"
+description: "Greets the user by name"
+command: "echo 'Hello, ${name}!'"
+inputSchema:
+  type: object
+  properties:
+    name: { type: string }
+  required: ["name"]
+---
+
+# Greeter
+
+A simple tool that greets users by name.
+
+## Usage
+
+Provide a name and get a friendly greeting back.
+```
+
+### Example with Build Step
+```markdown
+---
+enact: "2.0.0"
+name: "alice/utils/hello-rust"
+description: "A Rust-based greeting tool"
+from: "rust:1.75-alpine"
+build: "rustc hello.rs -o hello"
+command: "./hello '${name}'"
+inputSchema:
+  type: object
+  properties:
+    name: { type: string }
+  required: ["name"]
+---
+
+# Hello Rust
+
+A greeting tool compiled from Rust source.
+The build step compiles the code and is cached by Dagger.
+```
+
+---
+
+## Required Fields
+
+These fields must be present in the YAML frontmatter of every `enact.md` file.
+
+### `name`
+- **Type:** `string`
+- **Description:** Hierarchical tool identifier using filepath-style naming
+- **Format:** `org/path/to/tool-name` 
+- **Common pattern:** `org/category/tool-name` (but not prescribed)
+- **Examples:**
+  - `enact/text/analyzer` - Two levels
+  - `acme-corp/internal/data/processor` - Three levels
+  - `username/personal/utility` - Two levels
+  - `mycompany/ai/nlp/sentiment/advanced-analyzer` - Five levels
+- **Notes:**
+  - Used for tool identity and prevents impersonation
+  - No prescribed depth — use what makes sense for your organization
+  - Like Java packages, deeper hierarchies provide better organization
+
+### `description`
+- **Type:** `string`
+- **Description:** Human-readable description of what the tool does
+- **Best Practice:** Include what it does and when to use it
+- **Example:** `"Formats JavaScript/TypeScript code using Prettier"`
+
+### `command`
+- **Type:** `string`
+- **Description:** Shell command to execute with parameter substitution
+- **Format:** Uses `${parameter}` syntax for variable substitution
+- **Examples:**
+  ```yaml
+  command: "echo 'Hello ${name}!'"
+  command: "npx prettier@3.3.3 --write '${file}'"
+  command: "python src/process.py --file='${file}' --operation='${operation}'"
+  ```
+- **Best Practice:** Use exact versions for reproducibility
+- **Notes:**
+  - Required for container-executed tools
+  - Omitted for LLM-driven tools (tools without deterministic execution)
+
+---
+
+## Recommended Fields
+
+These optional fields should be included in the YAML frontmatter for better tool discovery, execution control, and documentation.
+
+### `enact`
+- **Type:** `string`
+- **Description:** Version of the Enact protocol specification
+- **Format:** Semantic version (e.g., `"2.0.0"`)
+- **Default:** Latest version at time of tool creation
+- **Example:** `enact: "2.0.0"`
+
+### `from`
+- **Type:** `string`
+- **Description:** Container base image for tool execution
+- **Format:** Docker image name with tag
+- **Examples:**
+  - `from: "node:18-alpine"`
+  - `from: "python:3.11-slim"`
+  - `from: "ghcr.io/company/custom-env:v2.1.0"`
+- **Default:** `"alpine:latest"` (if omitted)
+- **Best Practice:** Pin specific tags, prefer minimal images (`alpine`, `slim`)
+
+### `timeout`
+- **Type:** `string`
+- **Description:** Maximum execution time for the tool
+- **Format:** Go duration format
+- **Examples:** `"30s"`, `"5m"`, `"1h"`
+- **Default:** `"30s"`
+- **Notes:** Critical for preventing DoS attacks. Only applies to command execution, not build steps.
+
+### `build`
+- **Type:** `string` or `array of strings`
+- **Description:** Build command(s) to run before executing the main command
+- **Execution:** Runs outside the timeout, cached by Dagger for fast subsequent runs
+- **Use cases:** Compiling code, installing dependencies, preparing the environment
+- **Examples:**
+  ```yaml
+  # Single build command
+  build: "rustc hello.rs -o hello"
+  
+  # Multiple build commands
+  build:
+    - "npm install"
+    - "npm run build"
+  
+  # Python dependencies
+  build: "pip install -r requirements.txt"
+  ```
+- **Notes:** 
+  - Build steps are cached by Dagger's layer caching
+  - First run may be slow, subsequent runs are instant
+  - Errors during build will fail the tool execution
+  - Use for setup that doesn't need to run every time
+
+### `version`
+- **Type:** `string`
+- **Description:** Tool version (not protocol version)
+- **Format:** Semantic versioning (major.minor.patch)
+- **Example:** `version: "1.2.3"`
+- **Best Practice:** Follow semver conventions
+- **Note:** In manifests, omit the `v` prefix. When referencing tools (e.g., `enact install tool@v1.2.3`), always use the `v` prefix.
+
+### `license`
+- **Type:** `string`
+- **Description:** Software license for the tool
+- **Format:** SPDX license identifier
+- **Examples:** `"MIT"`, `"Apache-2.0"`, `"GPL-3.0"`
+- **Best Practice:** Always include for published tools
+
+### `tags`
+- **Type:** `array of strings`
+- **Description:** Keywords for tool discovery and categorization
+- **Example:**
+  ```yaml
+  tags:
+    - text
+    - analysis
+    - nlp
+  ```
+- **Best Practice:** Use relevant, searchable terms
+
+---
+
+## Schema Fields
+
+These fields define input and output structure in the YAML frontmatter, enabling validation and helping AI models use tools correctly.
+
+### `inputSchema`
+- **Type:** `object` (JSON Schema)
+- **Description:** Defines the structure and validation for tool input parameters
+- **Format:** JSON Schema (typically `type: object`)
+- **Example:**
+  ```yaml
+  inputSchema:
+    type: object
+    properties:
+      file:
+        type: string
+        description: "Path to file to process"
+      operation:
+        type: string
+        enum: ["summarize", "validate", "transform"]
+    required: ["file", "operation"]
+  ```
+- **Best Practice:** Always include for container-executed tools that accept arguments.
+- **Notes:** Not required, but highly recommended if the tool takes arguments. Helps AI models use tools correctly.
+
+### `outputSchema`
+- **Type:** `object` (JSON Schema)
+- **Description:** Defines the structure of tool output
+- **Format:** JSON Schema
+- **Example:**
+  ```yaml
+  outputSchema:
+    type: object
+    properties:
+      status:
+        type: string
+        enum: ["success", "error"]
+      result:
+        type: object
+      errors:
+        type: array
+        items:
+          type: string
+  ```
+- **Best Practice:** Strongly recommended for all tools
+- **Notes:** Enables structured output validation
+
+---
+
+## Environment Variables and Secrets
+
+Enact provides a unified `env` field for all runtime configuration. The `secret: true` flag determines storage:
+
+1. **Secrets** (`secret: true`) → Stored in OS keyring
+2. **Environment variables** (`secret: false`, default) → Stored in `.env` files
+
+### `env`
+- **Type:** `object`
+- **Description:** Environment variable configuration for the tool
+- **Structure:**
+  ```yaml
+  env:
+    VARIABLE_NAME:
+      description: string    # What this variable is for (required)
+      secret: boolean        # If true, stored in OS keyring (default: false)
+      default: string        # Default value if not set (optional, non-secrets only)
+  ```
+
+### Secret Variables (`secret: true`)
+
+- **Storage:** OS keyring (macOS Keychain, Windows Credential Manager, Linux Secret Service)
+- **Resolution:** Namespace inheritance - walks up the tool path
+- **Example:**
+  ```yaml
+  env:
+    API_TOKEN:
+      description: "API authentication token"
+      secret: true
+    DATABASE_PASSWORD:
+      description: "Database credentials"
+      secret: true
+  ```
+- **Resolution example:**
+  ```
+  Tool: alice/api/slack/notifier
+  Needs: API_TOKEN
+
+  Lookup:
+    1. alice/api/slack:API_TOKEN
+    2. alice/api:API_TOKEN ✓ found
+    3. alice:API_TOKEN
+  ```
+- **Security:** Never written to disk, injected via Dagger's secure secret API
+- **CLI:** `enact env set/get/list/delete --secret --namespace <namespace>`
+
+### Non-Secret Variables (`secret: false` or omitted)
+
+- **Storage:**
+  - Global: `~/.enact/.env`
+  - Local (project): `.enact/.env`
+- **Priority:** Local → Global → Default
+- **Example:**
+  ```yaml
+  env:
+    LOG_LEVEL:
+      description: "Logging verbosity level"
+      default: "info"
+    API_BASE_URL:
+      description: "API endpoint URL"
+      default: "https://api.example.com"
+  ```
+- **Security:** May appear in logs and cache keys
+- **CLI:** `enact env set/get/list/delete/edit [--local]`
+
+### Unified CLI
+
+All environment variables and secrets are managed through a single command:
+
+```bash
+# Non-secrets
+enact env set LOG_LEVEL debug              # Global
+enact env set LOG_LEVEL debug --local      # Project-specific
+
+# Secrets (add --secret --namespace)
+enact env set API_TOKEN --secret --namespace alice/api
+
+# Resolution for a tool
+enact env resolve alice/api/slack/notifier
+```
+
+### Complete Example
+
+```yaml
+env:
+  # Secrets (stored in OS keyring)
+  SLACK_TOKEN:
+    description: "Slack Bot OAuth Token"
+    secret: true
+  
+  # Non-secrets (stored in .env files)
+  SLACK_CHANNEL:
+    description: "Default channel to post to"
+    default: "#general"
+  
+  LOG_LEVEL:
+    description: "Logging verbosity"
+    default: "info"
+```
+
+### Migration from older format
+
+If you have a separate `secrets` array, migrate to the unified `env` structure:
+
+**Old format (deprecated):**
+```yaml
+secrets:
+  - API_KEY
+
+env:
+  LOG_LEVEL:
+    description: "Logging level"
+    default: "info"
+```
+
+**New format:**
+```yaml
+env:
+  API_KEY:
+    description: "API authentication key"
+    secret: true
+  
+  LOG_LEVEL:
+    description: "Logging level"
+    default: "info"
+```
+
+---
+
+## Behavior Annotations
+
+Provide execution hints to AI models via the `annotations` field in the YAML frontmatter.
+
+### `annotations`
+- **Type:** `object`
+- **Description:** Hints about tool behavior for AI models
+- **All fields default to `false`**
+- **Fields:**
+
+#### `title`
+- **Type:** `string`
+- **Description:** Human-readable display name
+- **Optional**
+
+#### `readOnlyHint`
+- **Type:** `boolean`
+- **Description:** Tool does not modify the environment
+- **Example use:** Read-only operations, analysis tools
+
+#### `destructiveHint`
+- **Type:** `boolean`
+- **Description:** Tool may make irreversible changes
+- **Example use:** Delete operations, file modifications
+
+#### `idempotentHint`
+- **Type:** `boolean`
+- **Description:** Multiple executions produce the same result
+- **Example use:** Stateless transformations
+
+#### `openWorldHint`
+- **Type:** `boolean`
+- **Description:** Tool interacts with external systems (network, APIs)
+- **Example use:** Web scraping, API calls
+
+**Example:**
+```yaml
+annotations:
+  title: "Data Analyzer"
+  readOnlyHint: true
+  destructiveHint: false
+  idempotentHint: true
+  openWorldHint: false
+```
+
+---
+
+## Resource Requirements
+
+Specify resource limits in the YAML frontmatter's `resources` field to control execution constraints.
+
+### `resources`
+- **Type:** `object`
+- **Description:** Resource limits and requirements for tool execution
+- **Fields:**
+
+#### `memory`
+- **Type:** `string`
+- **Description:** System memory needed
+- **Format:** Kubernetes-style units
+- **Examples:** `"512Mi"`, `"2Gi"`, `"16Gi"`
+
+#### `gpu`
+- **Type:** `string`
+- **Description:** GPU memory needed
+- **Format:** Kubernetes-style units
+- **Examples:** `"24Gi"`, `"48Gi"`
+
+#### `disk`
+- **Type:** `string`
+- **Description:** Disk space needed
+- **Format:** Kubernetes-style units
+- **Examples:** `"100Gi"`, `"500Gi"`, `"1Ti"`
+
+**Example:**
+```yaml
+resources:
+  memory: "2Gi"
+  gpu: "24Gi"
+  disk: "100Gi"
+```
+
+---
+
+## Documentation Fields
+
+Additional metadata fields in the YAML frontmatter for richer tool documentation.
+
+### `doc`
+- **Type:** `string`
+- **Description:** Extended Markdown documentation for the tool (YAML frontmatter field)
+- **Format:** Markdown
+- **Best Practice:** Keep brief in YAML frontmatter; use the Markdown body section of `enact.md` for extensive documentation, or `RESOURCES.md` for progressive disclosure
+
+### `authors`
+- **Type:** `array of objects`
+- **Description:** Tool creators and maintainers
+- **Structure:**
+  ```yaml
+  authors:
+    - name: string     # Author name (required)
+      email: string    # Author email (optional)
+      url: string      # Author website (optional)
+  ```
+- **Example:**
+  ```yaml
+  authors:
+    - name: "Alice Developer"
+      email: "alice@acme-corp.com"
+      url: "https://example.com"
+  ```
+
+---
+
+## Testing and Examples
+
+Define test cases in the YAML frontmatter's `examples` field to enable automated validation.
+
+### `examples`
+- **Type:** `array of objects`
+- **Description:** Test cases and expected outputs for validation
+- **Structure:**
+  ```yaml
+  examples:
+    - input: object         # Input parameters (optional, omit for no-input tools)
+      output: any           # Expected output (optional)
+      description: string   # Test description (optional)
+  ```
+- **Example:**
+  ```yaml
+  examples:
+    - input:
+        file: "data.csv"
+        operation: "validate"
+      output:
+        status: "success"
+        result:
+          valid: true
+          rows: 1000
+      description: "Validate CSV structure"
+  ```
+
+---
+
+## Security and Signing
+
+Enact uses **Sigstore** for cryptographic signing and verification of published tools. Signatures are **not stored in the tool metadata file** but in separate `.sigstore-bundle` files alongside tool bundles.
+
+### Sigstore-Based Signing
+
+**How it works:**
+1. **Local tools** (`~/.enact/local/`) do not require signing (trusted environment)
+2. **Published tools** are signed using Sigstore before distribution
+3. **Signature bundles** (`.sigstore-bundle`) contain:
+   - Short-lived X.509 certificates from Fulcio (Certificate Authority)
+   - ECDSA P-256 signatures
+   - Rekor transparency log entries
+   - Identity claims (GitHub OAuth, SSO)
+
+**Signing process:**
+```bash
+$ enact sign my-tool/
+Creating bundle...
+├─ Creating tarball: my-tool-v1.0.0.tar.gz
+├─ Computing SHA256 hash: abc123...
+└─ ✓ Bundle created
+
+Signing with Sigstore...
+├─ Authenticating with GitHub OAuth...
+├─ ✓ Authenticated as alice@acme-corp.com
+├─ Requesting certificate from Fulcio...
+├─ ✓ Issued: 10 minute validity
+├─ Generating ECDSA P-256 signature...
+├─ Submitting to Rekor transparency log...
+├─ ✓ Logged at index: 12347
+└─ ✓ Created: my-tool.sigstore-bundle
+```
+
+**Verification checks:**
+1. Bundle integrity (SHA-256 hash)
+2. Signature validity (ECDSA P-256)
+3. Certificate chain to Fulcio CA
+4. Rekor transparency log proof
+5. Certificate revocation status (CRL)
+6. Identity claims in certificate
+
+**Storage locations:**
+- Active tools: `~/.enact/tools/{org}/{path}/{tool}/` - No signature required (user-controlled)
+- Cached bundles: `~/.enact/cache/{org}/{path}/{tool}/v{version}/` - Verified on download from registry
+- Signature bundles: Stored alongside cached bundles as `.sigstore-bundle`
+
+**Security benefits:**
+- Identity-based certificates (no long-lived keys)
+- Immutable audit trail (Rekor)
+- Real-time revocation (CRL)
+- Public auditability
+
+---
+
+## Custom Extensions
+
+Add custom metadata fields to the YAML frontmatter using the `x-*` prefix.
+
+### `x-*` prefix
+- **Type:** Any
+- **Description:** Custom fields for implementation-specific or organizational metadata
+- **Format:** Must start with `x-`
+- **Not included in signature verification**
+- **Examples:**
+  ```yaml
+  x-internal-id: "tool-12345"
+  x-team-owner: "platform-team"
+  x-cost-center: "engineering"
+  x-compliance-level: "high"
+  ```
+
+---
+
+## Signed Content
+
+When publishing tools, Sigstore signs the **entire tool bundle** (tarball). The signature covers:
+
+**What gets signed:**
+- The complete tarball (`.tar.gz`) containing:
+  - Tool definition file (`enact.md` with YAML frontmatter + Markdown documentation)
+  - Source code and dependencies
+  - Additional documentation files (e.g., `RESOURCES.md`)
+  - All resources
+
+**Hash computation:**
+- SHA-256 hash of the entire tarball
+- Any modification to any file breaks the signature
+- Ensures complete bundle integrity
+
+**What is NOT signed in the metadata:**
+- Signatures are stored separately in `.sigstore-bundle` files
+- The `enact.md` file does not contain signature fields
+- This keeps the tool definition clean and focused on functionality
+
+**Example:**
+```bash
+# Tool structure
+my-tool/
+├── enact.md           # Tool definition (YAML frontmatter + Markdown docs)
+├── src/               # Source code
+└── RESOURCES.md       # Additional documentation (optional, for progressive disclosure)
+
+# After signing
+my-tool-v1.0.0.tar.gz           # Signed tarball
+my-tool.sigstore-bundle         # Signature + certificate + Rekor proof
+```
+
+---
+
+## File Format: `enact.md`
+
+All Enact tools are defined in a single **`enact.md`** file — a Markdown document with YAML frontmatter.
+
+### Structure
+- **YAML frontmatter** (between `---` delimiters) contains structured tool metadata
+- **Markdown body** contains human-readable documentation and instructions
+- **Single source of truth** for both machine-readable specs and human documentation
+
+### Example:
+```markdown
+---
+enact: "2.0.0"
+name: "org/category/tool"
+description: "Tool description"
+command: "python src/main.py ${args}"  # Optional
+inputSchema:
+  type: object
+  properties:
+    args:
+      type: string
+  required: ["args"]
+---
+
+# Tool Name
+
+Detailed documentation in Markdown format.
+
+## Usage
+
+Explain how to use the tool, provide examples, tips, etc.
+```
+
+### Execution Model
+
+The presence of a `command` field in the YAML frontmatter determines execution:
+- **With `command`** → Container-executed (deterministic)
+- **Without `command`** → LLM-driven (instructions interpreted by AI)
+
+---
+
+## Tool Types
+
+Both tool types are defined in `enact.md` files — the presence of a `command` field determines the execution model.
+
+### Container-Executed Tools
+- **Has:** `command` field in YAML frontmatter
+- **Execution:** Runs in isolated Dagger container
+- **Characteristics:** Deterministic, reproducible
+- **Use case:** Scripts, CLI tools, data processing
+
+### LLM-Driven Tools
+- **No:** `command` field in YAML frontmatter
+- **Execution:** Markdown body instructions interpreted by LLM
+- **Characteristics:** Non-deterministic, flexible
+- **Use case:** Complex analysis, creative tasks, multi-step reasoning
+- **Supports:** Progressive disclosure (on-demand content loading via RESOURCES.md)
+
+---
+
+## Directory Structure
+
+### Active User-Level Tools
+```
+~/.enact/tools/
+└── {org}/
+    └── {path}/                      # Arbitrary depth hierarchy (like Java packages)
+        └── {to}/
+            └── {tool}/
+                ├── enact.md         # Tool definition
+                ├── src/             # Built source code (if any)
+                ├── dist/            # Compiled output (if any)
+                ├── node_modules/    # Dependencies (if any)
+                └── RESOURCES.md     # Additional docs (for progressive disclosure)
+```
+
+**Examples:**
+```
+~/.enact/tools/acme-corp/api/slack-notifier/
+~/.enact/tools/mycompany/ai/nlp/sentiment/analyzer/
+~/.enact/tools/username/utils/helper/
+```
+
+**Notes:**
+- These are the "active" installed tools (like npm global installs)
+- No version directory - only one active version at a time per tool
+- Can be modified/customized by the user
+- Created when you run `enact install --global` or `enact install .`
+
+### Immutable Cached Bundles
+```
+~/.enact/cache/
+└── {org}/
+    └── {path}/                      # Arbitrary depth hierarchy
+        └── {to}/
+            └── {tool}/
+                └── v1.0.0/          # Specific version (immutable)
+                    ├── bundle.tar.gz
+                    ├── .sigstore-bundle
+                    └── metadata.json
+```
+
+**Examples:**
+```
+~/.enact/cache/acme-corp/api/slack-notifier/v1.0.0/
+~/.enact/cache/acme-corp/api/slack-notifier/v1.0.1/
+~/.enact/cache/mycompany/ai/nlp/sentiment/analyzer/v2.3.0/
+```
+
+**Notes:**
+- Immutable, versioned artifacts
+- Can store multiple versions simultaneously
+- Used for instant reinstall, project reproducibility
+- Verified signatures stored here
+- Created automatically during install or download
+
+### Project-Level Tools
+```
+my-project/
+├── .enact/
+│   ├── tools.json               # Project manifest (commit to git)
+│   └── {org}/
+│       └── {path}/
+│           └── {tool}/
+│               ├── enact.md
+│               └── ...
+```
+
+**Notes:**
+- Tools installed for specific projects only
+- Created when you run `enact install <tool>` (without --global)
+- Team members can sync via `tools.json`
+
+### Secrets and Environment Variables
+
+**Secrets (OS Keyring):**
+- Stored in OS-native keyring (macOS Keychain, Windows Credential Manager, Linux Secret Service)
+- Service name: `enact-cli`
+- Account format: `{namespace}:{SECRET_NAME}`
+- Resolution: Namespace inheritance (walks up tool path)
+
+**Environment Variables (.env files):**
+```
+~/.enact/
+└── .env                              # Global non-secret env vars
+
+project-dir/
+└── .enact/
+    └── .env                          # Local project overrides
+```
+
+**Priority order:**
+1. Local project `.env` (`.enact/.env`)
+2. Global user `.env` (`~/.enact/.env`)
+3. Default values from tool manifest
+
+---
+
+## Security Considerations
+
+### Command Injection Prevention
+The `command` field uses string interpolation (e.g., `${input}`). While convenient, this can be vulnerable to command injection if inputs contain shell metacharacters.
+
+**Best Practices:**
+1. **Use Environment Variables:** Pass complex or untrusted inputs as environment variables instead of interpolating them directly into the command string.
+   ```yaml
+   # Safer approach
+   command: "python process.py"
+   env:
+     INPUT_DATA: "${input}" # Runtime handles safe injection into env
+   ```
+2. **Use JSON Files:** For complex structured data, write the input to a JSON file and pass the filename.
+   ```yaml
+   command: "python process.py --config input.json"
+   ```
+3. **Quote Arguments:** If you must use interpolation, always wrap variables in single quotes: `'${variable}'`.
+
+### Secret Management
+Tools often require API keys or credentials. **Never hardcode secrets in `enact.md`.**
+
+**Best Practices:**
+
+1. **Declare Secrets:** Use `secret: true` in the `env` field:
+   ```yaml
+   env:
+     OPENAI_API_KEY:
+       description: "OpenAI API key for model access"
+       secret: true
+     DATABASE_PASSWORD:
+       description: "Database credentials"
+       secret: true
+   ```
+
+2. **User Storage:** Users set secrets using the unified CLI, which stores them in the OS keyring:
+   ```bash
+   enact env set OPENAI_API_KEY --secret --namespace alice/api
+   ```
+
+3. **Namespace Inheritance:** Secrets are shared across all tools in a namespace (e.g., `alice/api/*` shares `alice/api:OPENAI_API_KEY`).
+
+4. **Runtime Injection:** Secrets are loaded from the keyring and injected securely via Dagger's secret API - never written to disk.
+
+5. **Non-Sensitive Config:** Omit `secret` (or set to `false`) for configuration that can be stored in `.env` files:
+   ```yaml
+   env:
+     LOG_LEVEL:
+       description: "Logging verbosity"
+       default: "info"
+   ```
+
+---
+
+## Best Practices Summary
+
+1. **Naming:** Use hierarchical paths like Java packages (e.g., `org/category/tool-name` or deeper as needed)
+2. **Versions:** Pin exact versions in `command` fields (e.g., `npx prettier@3.3.3`)
+3. **Schemas:** Always provide `inputSchema` and `outputSchema`
+4. **Containers:** Pin specific image tags, prefer minimal images
+5. **Annotations:** Set appropriate behavior hints for safety
+6. **Documentation:** Include clear descriptions and examples
+7. **Security:** Sign tools before public distribution
+8. **Timeouts:** Set realistic timeout values
+9. **Resources:** Specify resource limits for resource-intensive tools
+10. **Testing:** Include examples for validation
+
+---
+
+## References
+
+- **Full Specification:** [new.md](new.md)
+- **Implementation Guide:** [README.md](README.md)
+- **Examples:** See `examples/` directory
+- **JSON Schema:** `schema.json` (for validation)
+
+---
+
+## License
+
+MIT License
+
+© 2025 Enact Protocol Contributors

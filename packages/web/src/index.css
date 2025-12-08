@@ -1,0 +1,190 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* HK Grotesk Font */
+@font-face {
+  font-family: "HK Grotesk";
+  src: url("/605e2a51-d45f-4d87-a285-9410ad350515_HKGrotesk-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "HK Grotesk";
+  src: url("/605e2a51-d45f-4d87-a285-9410ad350515_HKGrotesk-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Spacing scale */
+  --space-0: 0;
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 32px;
+  --space-4: 64px;
+  --space-5: 128px;
+
+  /* Font sizes */
+  --fontSizes-tiny: 0.75rem;
+  --fontSizes-small: 0.875rem;
+  --fontSizes-normal: 1rem;
+  --fontSizes-big: 1.125rem;
+  --fontSizes-bigger: 1.375rem;
+  --fontSizes-huge: 2rem;
+
+  /* Font families */
+  --fonts-mono: Menlo, Consolas, Monaco, "Lucida Console", monospace;
+  --fonts-sans: "HK Grotesk", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", sans-serif;
+
+  /* Rounded corners */
+  --rounded: 5px;
+
+  /* Shadows */
+  --popShadow: 0px 2px 5px 0px rgba(0, 0, 0, 0.27), 0px 1px 1px 0px rgba(0, 0, 0, 0.15);
+
+  /* Colors */
+  --background: #fff;
+  --background-secondary: #f5f5f5;
+  --text: #222;
+  --text-secondary: #636363;
+  --text-placeholder: #707070;
+  --border: #c3c3c3;
+  --focused: #a2d7ff;
+
+  /* Brand colors */
+  --brand-blue: #2800ff;
+  --brand-light-blue: #5a78ff;
+  --brand-green: #05f293;
+  --brand-teal: #9be7d8;
+  --brand-pink: #fec1ee;
+  --brand-red: #ff7698;
+  --cta: #83ffcd;
+}
+
+@layer base {
+  html {
+    font-size: 100%;
+  }
+
+  body {
+    @apply bg-white antialiased;
+    background: var(--background);
+    color: var(--text);
+    font-family: var(--fonts-sans);
+    line-height: 1.5;
+  }
+
+  code,
+  pre,
+  .font-mono {
+    font-family: var(--fonts-mono);
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary-500 text-white hover:bg-primary-600;
+  }
+
+  .btn-secondary {
+    @apply btn bg-gray-100 text-gray-900 hover:bg-gray-200 border border-gray-200;
+  }
+
+  .btn-brand {
+    @apply btn bg-brand-blue text-white hover:opacity-90;
+  }
+
+  .btn-share {
+    @apply btn text-white hover:opacity-90;
+    background-color: #694dff;
+  }
+
+  .card {
+    @apply bg-white rounded-lg border border-gray-200 p-6 shadow-sm;
+  }
+
+  .card-hover {
+    @apply card hover:shadow-md hover:border-gray-300 transition-all;
+  }
+
+  .input {
+    @apply w-full px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-default {
+    @apply badge bg-gray-100 text-gray-600;
+  }
+
+  .badge-primary {
+    @apply badge bg-primary-100 text-primary-600;
+  }
+
+  .badge-success {
+    @apply badge bg-green-100 text-green-600;
+  }
+
+  .badge-warning {
+    @apply badge bg-warning-light text-yellow-600;
+  }
+
+  .badge-danger {
+    @apply badge text-white;
+    background-color: #ff7698;
+  }
+
+  .badge-teal {
+    @apply badge bg-teal-100 text-teal-600;
+  }
+
+  .badge-pink {
+    @apply badge bg-pink-100 text-pink-600;
+  }
+
+  .link {
+    @apply text-primary-500 hover:text-primary-600 hover:underline;
+  }
+
+  .section-gradient {
+    background: linear-gradient(
+      180deg,
+      hsl(0deg 0% 96%) 0%,
+      hsl(344deg 0% 96%) 11%,
+      hsl(344deg 0% 97%) 22%,
+      hsl(344deg 0% 97%) 33%,
+      hsl(344deg 0% 98%) 44%,
+      hsl(344deg 0% 98%) 56%,
+      hsl(344deg 0% 99%) 67%,
+      hsl(344deg 0% 99%) 78%,
+      hsl(344deg 0% 100%) 89%,
+      hsl(0deg 0% 100%) 100%
+    );
+  }
+}
+
+/* Floating animation */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}

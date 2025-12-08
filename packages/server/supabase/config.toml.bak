@@ -1,0 +1,81 @@
+# Supabase Configuration for Enact Registry
+
+project_id = "enact-registry"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage"]
+extra_search_path = ["public"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[db.pooler]
+enabled = false
+port = 54329
+pool_mode = "transaction"
+default_pool_size = 20
+max_client_conn = 100
+
+[realtime]
+enabled = false
+port = 54323
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1"
+
+[inbucket]
+enabled = true
+port = 54324
+smtp_port = 54325
+pop3_port = 54326
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:9876/callback"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+
+[auth.external.github]
+enabled = true
+client_id = "env(GITHUB_CLIENT_ID)"
+secret = "env(GITHUB_CLIENT_SECRET)"
+
+[auth.external.google]
+enabled = true
+client_id = "env(GOOGLE_CLIENT_ID)"
+secret = "env(GOOGLE_CLIENT_SECRET)"
+
+[auth.external.azure]
+enabled = true
+client_id = "env(AZURE_CLIENT_ID)"
+secret = "env(AZURE_CLIENT_SECRET)"
+url = "env(AZURE_URL)"
+
+[edge_functions]
+enabled = true
+
+[[edge_functions.port]]
+name = "tools"
+verify_jwt = false
+
+[[edge_functions.port]]
+name = "attestations"
+verify_jwt = false
+
+[[edge_functions.port]]
+name = "auth"
+verify_jwt = false

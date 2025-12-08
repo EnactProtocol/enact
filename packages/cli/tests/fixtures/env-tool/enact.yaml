@@ -1,0 +1,19 @@
+enact: "2.0.0"
+name: test/env-tool
+version: "1.0.0"
+description: A tool that uses environment variables
+from: alpine:latest
+command: echo '{"status":"ok"}'
+env:
+  TEST_VAR:
+    default: default_value
+    description: A test environment variable
+  SECRET_VAR:
+    secret: true
+    description: A secret environment variable
+inputSchema:
+  type: object
+  properties:
+    showEnv:
+      type: boolean
+      default: false

@@ -1,0 +1,6 @@
+{
+  "tools": {
+    "testuser/hello-js": "1.0.0",
+    "examples/hello-simple": "0.1.0"
+  }
+}

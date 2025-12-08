@@ -1,0 +1,154 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Test
+        run: bun run test
+
+  build-binaries:
+    needs: test
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: bun-linux-x64
+            artifact: enact-linux-x64
+          - os: ubuntu-latest
+            target: bun-linux-arm64
+            artifact: enact-linux-arm64
+          - os: macos-latest
+            target: bun-darwin-x64
+            artifact: enact-darwin-x64
+          - os: macos-latest
+            target: bun-darwin-arm64
+            artifact: enact-darwin-arm64
+          - os: windows-latest
+            target: bun-windows-x64
+            artifact: enact-windows-x64.exe
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build CLI
+        run: bun run build
+
+      - name: Compile binary
+        run: |
+          bun build packages/cli/src/index.ts \
+            --compile \
+            --target=${{ matrix.target }} \
+            --outfile=${{ matrix.artifact }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
+
+  publish-npm:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build all packages
+        run: bun run build
+
+      - name: Set package versions from tag
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          # Update all package versions
+          cd packages/cli && npm version $VERSION --no-git-tag-version
+          cd ../api && npm version $VERSION --no-git-tag-version
+          cd ../shared && npm version $VERSION --no-git-tag-version
+          cd ../secrets && npm version $VERSION --no-git-tag-version
+          cd ../trust && npm version $VERSION --no-git-tag-version
+
+      - name: Setup npm auth
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+
+      - name: Publish @enactprotocol/shared
+        run: cd packages/shared && npm publish --access public
+        continue-on-error: true
+
+      - name: Publish @enactprotocol/secrets
+        run: cd packages/secrets && npm publish --access public
+        continue-on-error: true
+
+      - name: Publish @enactprotocol/trust
+        run: cd packages/trust && npm publish --access public
+        continue-on-error: true
+
+      - name: Publish @enactprotocol/api
+        run: cd packages/api && npm publish --access public
+        continue-on-error: true
+
+      - name: Publish @enactprotocol/cli
+        run: cd packages/cli && npm publish --access public
+
+  release:
+    needs: [build-binaries, publish-npm]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: binaries
+
+      - name: Create checksums
+        run: |
+          cd binaries
+          for dir in */; do
+            cd "$dir"
+            sha256sum * >> ../checksums.txt || true
+            cd ..
+          done
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            binaries/enact-linux-x64/enact-linux-x64
+            binaries/enact-linux-arm64/enact-linux-arm64
+            binaries/enact-darwin-x64/enact-darwin-x64
+            binaries/enact-darwin-arm64/enact-darwin-arm64
+            binaries/enact-windows-x64.exe/enact-windows-x64.exe
+            binaries/checksums.txt
+          generate_release_notes: true

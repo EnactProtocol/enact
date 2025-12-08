@@ -1,0 +1,34 @@
+{
+  "name": "@enactprotocol/api",
+  "version": "0.2.0",
+  "description": "Enact registry API client v2 - OAuth auth, search, download, publish, attestations, and trust",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "dev": "bun run --watch src/index.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^22.10.1",
+    "typescript": "^5.7.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "files": ["dist", "src"],
+  "keywords": ["enact", "api", "registry", "tools"],
+  "author": "Enact Protocol",
+  "license": "Apache-2.0"
+}

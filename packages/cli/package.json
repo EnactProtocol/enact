@@ -1,0 +1,51 @@
+{
+  "name": "@enactprotocol/cli",
+  "version": "0.1.0",
+  "description": "Command-line interface for Enact - the npm for AI tools",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "enact": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EnactProtocol/enact-cli-2.0.git",
+    "directory": "packages/cli"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "rm -rf dist",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "dev": "bun run src/index.ts",
+    "dev:publish": "ENACT_REGISTRY_URL=http://127.0.0.1:54321/functions/v1 bun run dist/index.js publish --skip-auth",
+    "dev:search": "ENACT_REGISTRY_URL=http://127.0.0.1:54321/functions/v1 bun run dist/index.js search",
+    "dev:get": "ENACT_REGISTRY_URL=http://127.0.0.1:54321/functions/v1 bun run dist/index.js get"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.11.0",
+    "@enactprotocol/api": "workspace:*",
+    "@enactprotocol/execution": "workspace:*",
+    "@enactprotocol/secrets": "workspace:*",
+    "@enactprotocol/shared": "workspace:*",
+    "commander": "^12.1.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "typescript": "^5.7.2"
+  },
+  "keywords": ["cli", "enact", "tools"],
+  "author": "Enact Protocol",
+  "license": "Apache-2.0"
+}

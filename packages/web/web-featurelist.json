@@ -1,0 +1,367 @@
+{
+  "name": "@enactprotocol/web",
+  "description": "Enact Registry Browser & Auth Portal - Web application for discovering tools and authenticating CLI",
+  "version": "0.1.0",
+  "status": "in-progress",
+  "features": [
+    {
+      "id": "cli-auth",
+      "name": "CLI Authentication Portal",
+      "description": "OAuth authentication flow for enact auth login command",
+      "status": "implemented",
+      "priority": "high",
+      "phase": 1,
+      "components": ["CliAuth", "CliCallback", "CliSuccess"],
+      "pages": [
+        "/auth/cli - Start OAuth flow",
+        "/auth/cli/callback - Handle OAuth callback, send tokens to CLI",
+        "/auth/cli/success - Success message"
+      ],
+      "flow": [
+        "CLI starts local server on port 8118",
+        "CLI opens browser to /auth/cli?port=8118",
+        "Web redirects to Supabase OAuth (GitHub/Google)",
+        "User approves",
+        "Callback page POSTs tokens to localhost:8118",
+        "CLI stores tokens in keyring"
+      ],
+      "providers": ["github", "google"]
+    },
+    {
+      "id": "home-page",
+      "name": "Home Page",
+      "description": "Landing page with hero section, search bar, and featured tools",
+      "status": "implemented",
+      "priority": "high",
+      "phase": 1,
+      "components": ["Hero", "SearchBar", "FeaturedTools", "Stats"]
+    },
+    {
+      "id": "browse-page",
+      "name": "Browse Tools",
+      "description": "Paginated tool listing with search, filters, and sorting",
+      "status": "implemented",
+      "priority": "high",
+      "phase": 1,
+      "components": ["ToolGrid", "ToolCard", "SearchBar", "FilterSidebar", "Pagination"],
+      "filters": ["tags", "license", "has_attestations", "owner"],
+      "sorting": ["downloads", "newest", "alphabetical"]
+    },
+    {
+      "id": "tool-detail",
+      "name": "Tool Detail Page",
+      "description": "GitHub-style tool view with file browser, markdown rendering, and metadata sidebar",
+      "status": "implemented",
+      "priority": "high",
+      "phase": 1,
+      "components": [
+        "ToolHeader",
+        "FileBrowser",
+        "MarkdownRenderer",
+        "TrustStatus",
+        "InstallCommand",
+        "UsageCommand"
+      ],
+      "sections": [
+        "header (name, description, version, downloads, verified badge)",
+        "file browser (GitHub-style top-level file listing with icons and sizes)",
+        "enact.md/yaml content display (markdown rendered for .md files)",
+        "sidebar (details, installation, usage, tags)"
+      ],
+      "features": [
+        "GitHub-style file list with folder/file icons",
+        "Markdown rendering with remark-gfm (GitHub Flavored Markdown)",
+        "YAML/JSON syntax display for config files",
+        "Compact install/usage commands in sidebar",
+        "Dynamic file fetching from bundle"
+      ]
+    },
+    {
+      "id": "code-browser",
+      "name": "Code Browser",
+      "description": "GitHub-like source code viewer with file tree and syntax highlighting",
+      "status": "implemented",
+      "priority": "high",
+      "phase": 2,
+      "components": ["FileTree", "CodeViewer", "BreadcrumbPath"],
+      "features": [
+        "collapsible file tree",
+        "shiki syntax highlighting",
+        "line numbers",
+        "file type icons",
+        "raw file download"
+      ],
+      "supported_languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "yaml",
+        "json",
+        "markdown",
+        "bash",
+        "dockerfile"
+      ]
+    },
+    {
+      "id": "search",
+      "name": "Search",
+      "description": "Full-text and semantic search across tools",
+      "status": "implemented",
+      "priority": "high",
+      "phase": 1,
+      "components": ["SearchBar", "SearchResults", "SearchSuggestions"],
+      "features": ["instant search", "url persistence", "keyboard navigation", "recent searches"]
+    },
+    {
+      "id": "attestation-display",
+      "name": "Attestation Display",
+      "description": "Visual representation of trust and attestation status",
+      "status": "planned",
+      "priority": "medium",
+      "phase": 3,
+      "components": ["AttestationBadge", "TrustStatus", "RekorLink", "SignerInfo"],
+      "features": [
+        "verified badge",
+        "attestation count",
+        "signer identity display",
+        "rekor transparency log link",
+        "certificate details modal"
+      ]
+    },
+    {
+      "id": "version-selector",
+      "name": "Version Selector",
+      "description": "Dropdown to switch between tool versions",
+      "status": "planned",
+      "priority": "medium",
+      "phase": 3,
+      "components": ["VersionDropdown", "VersionDiff"],
+      "features": ["version list", "yanked version warning", "changelog link"]
+    },
+    {
+      "id": "dark-mode",
+      "name": "Dark Mode",
+      "description": "Toggle between light and dark themes",
+      "status": "planned",
+      "priority": "medium",
+      "phase": 3,
+      "components": ["ThemeToggle"],
+      "features": ["system preference detection", "persistent preference", "smooth transition"]
+    },
+    {
+      "id": "responsive-design",
+      "name": "Responsive Design",
+      "description": "Mobile-friendly layout",
+      "status": "planned",
+      "priority": "medium",
+      "phase": 3,
+      "breakpoints": ["mobile (< 640px)", "tablet (640-1024px)", "desktop (> 1024px)"]
+    },
+    {
+      "id": "copy-commands",
+      "name": "Copy Commands",
+      "description": "One-click copy for install and run commands",
+      "status": "implemented",
+      "priority": "high",
+      "phase": 1,
+      "components": ["CopyButton", "CommandBlock"],
+      "commands": ["enact install", "enact run"]
+    },
+    {
+      "id": "user-auth",
+      "name": "User Authentication",
+      "description": "Login to view personalized trust settings",
+      "status": "implemented",
+      "priority": "high",
+      "phase": 4,
+      "providers": ["email", "github", "google"],
+      "components": ["AuthContext", "Login", "UserMenu", "AuthCallback", "ChooseUsername"],
+      "pages": [
+        "/login - Sign in/up with email/password, GitHub, or Google",
+        "/auth/callback - OAuth callback handler",
+        "/auth/choose-username - Username selection for new users"
+      ],
+      "features": [
+        "email/password sign in",
+        "email/password sign up with inline username selection",
+        "password reset via email",
+        "email confirmation flow",
+        "GitHub OAuth login",
+        "Google OAuth login",
+        "username selection during signup",
+        "username availability checking",
+        "unique username validation",
+        "profile management with Supabase profiles table",
+        "persistent session",
+        "user avatar display",
+        "user menu dropdown",
+        "sign out",
+        "view trusted identities",
+        "see personalized trust status",
+        "manage published tools"
+      ]
+    },
+    {
+      "id": "tool-comparison",
+      "name": "Tool Comparison",
+      "description": "Compare two tools side-by-side",
+      "status": "planned",
+      "priority": "low",
+      "phase": 4,
+      "components": ["ComparisonView"],
+      "compare_fields": ["inputs", "outputs", "container", "attestations", "downloads"]
+    }
+  ],
+  "tech_stack": {
+    "framework": "react",
+    "build_tool": "vite",
+    "language": "typescript",
+    "styling": "tailwindcss",
+    "tailwind_plugins": ["@tailwindcss/typography"],
+    "syntax_highlighting": "shiki",
+    "markdown_rendering": "react-markdown with remark-gfm",
+    "data_fetching": "@tanstack/react-query",
+    "routing": "react-router-dom",
+    "icons": "lucide-react",
+    "api_client": "browser-native (src/lib/api-client.ts)",
+    "authentication": "@supabase/supabase-js"
+  },
+  "pages": [
+    {
+      "path": "/",
+      "name": "Home",
+      "component": "pages/Home.tsx"
+    },
+    {
+      "path": "/browse",
+      "name": "Browse",
+      "component": "pages/Browse.tsx"
+    },
+    {
+      "path": "/tools/:owner/:name",
+      "name": "Tool Detail",
+      "component": "pages/Tool.tsx"
+    },
+    {
+      "path": "/tools/:owner/:name/code",
+      "name": "Code Browser",
+      "component": "pages/ToolCode.tsx"
+    },
+    {
+      "path": "/tools/:owner/:name/code/*",
+      "name": "Code File",
+      "component": "pages/ToolCode.tsx"
+    },
+    {
+      "path": "/auth/cli",
+      "name": "CLI Auth Start",
+      "component": "pages/auth/CliAuth.tsx"
+    },
+    {
+      "path": "/auth/cli/callback",
+      "name": "CLI Auth Callback",
+      "component": "pages/auth/CliCallback.tsx"
+    },
+    {
+      "path": "/auth/cli/success",
+      "name": "CLI Auth Success",
+      "component": "pages/auth/CliSuccess.tsx"
+    },
+    {
+      "path": "/login",
+      "name": "Web Login",
+      "component": "pages/auth/Login.tsx"
+    },
+    {
+      "path": "/auth/callback",
+      "name": "OAuth Callback",
+      "component": "pages/auth/AuthCallback.tsx"
+    },
+    {
+      "path": "/auth/choose-username",
+      "name": "Choose Username",
+      "component": "pages/auth/ChooseUsername.tsx"
+    }
+  ],
+  "api_endpoints_required": [
+    {
+      "method": "GET",
+      "path": "/tools/search",
+      "description": "Search tools",
+      "status": "exists"
+    },
+    {
+      "method": "GET",
+      "path": "/tools/{name}",
+      "description": "Get tool metadata",
+      "status": "exists"
+    },
+    {
+      "method": "GET",
+      "path": "/tools/{name}/versions/{version}",
+      "description": "Get version details",
+      "status": "exists"
+    },
+    {
+      "method": "GET",
+      "path": "/tools/{name}/versions/{version}/attestations",
+      "description": "Get attestations",
+      "status": "exists"
+    },
+    {
+      "method": "GET",
+      "path": "/tools/{name}/versions/{version}/files",
+      "description": "List files in bundle",
+      "status": "needed"
+    },
+    {
+      "method": "GET",
+      "path": "/tools/{name}/versions/{version}/files/{path}",
+      "description": "Get file content",
+      "status": "needed"
+    }
+  ],
+  "deployment": {
+    "recommended": "vercel",
+    "alternatives": ["cloudflare-pages", "netlify", "s3-cloudfront"],
+    "environment_variables": [
+      "VITE_API_URL",
+      "VITE_REKOR_URL",
+      "VITE_SUPABASE_URL",
+      "VITE_SUPABASE_ANON_KEY"
+    ]
+  },
+  "phases": [
+    {
+      "phase": 1,
+      "name": "Core Browse + CLI Auth",
+      "features": [
+        "cli-auth",
+        "home-page",
+        "browse-page",
+        "tool-detail",
+        "search",
+        "copy-commands"
+      ],
+      "estimated_days": 6
+    },
+    {
+      "phase": 2,
+      "name": "Code Browser",
+      "features": ["code-browser"],
+      "estimated_days": 3
+    },
+    {
+      "phase": 3,
+      "name": "Trust & Polish",
+      "features": ["attestation-display", "version-selector", "dark-mode", "responsive-design"],
+      "estimated_days": 3
+    },
+    {
+      "phase": 4,
+      "name": "Advanced Features",
+      "features": ["user-auth", "tool-comparison"],
+      "estimated_days": 5
+    }
+  ]
+}

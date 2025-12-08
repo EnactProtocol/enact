@@ -1,0 +1,124 @@
+# enact run
+
+Execute a tool with its manifest-defined command in a containerized environment.
+
+## Synopsis
+
+```bash
+enact run <tool> [options]
+```
+
+## Description
+
+The `run` command executes a tool using the command defined in its manifest (`enact.yaml` or `enact.md`). The tool runs in an isolated container environment with:
+
+- Input validation against the tool's JSON Schema
+- Automatic secret resolution from the OS keyring
+- Environment variable injection from `.env` files
+- Shell-safe parameter interpolation
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `<tool>` | Tool to run. Can be a tool name (`alice/utils/greeter`), a path (`./my-tool`), or `.` for the current directory |
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `-a, --args <json>` | Input arguments as a JSON object |
+| `-i, --input <key=value>` | Input arguments as key=value pairs (can be repeated) |
+| `-t, --timeout <duration>` | Execution timeout (e.g., `30s`, `5m`, `1h`) |
+| `--no-cache` | Disable container caching |
+| `--local` | Only resolve from local sources |
+| `--dry-run` | Show what would be executed without running |
+| `-v, --verbose` | Show detailed output including stderr and timing |
+| `--json` | Output result as JSON |
+
+## Examples
+
+### Basic execution
+
+```bash
+# Run a tool with JSON arguments
+enact run alice/utils/greeter --args '{"name":"World"}'
+
+# Run a tool with key=value arguments
+enact run alice/utils/greeter --input name=World
+
+# Run a tool from current directory
+enact run . --args '{"input":"test.txt"}'
+```
+
+### Advanced options
+
+```bash
+# Run with timeout
+enact run slow-tool --args '{}' --timeout 5m
+
+# Dry run to preview execution
+enact run alice/utils/greeter --args '{"name":"World"}' --dry-run
+
+# Get JSON output for scripting
+enact run alice/utils/greeter --args '{"name":"World"}' --json
+
+# Verbose mode for debugging
+enact run alice/utils/greeter --args '{"name":"World"}' --verbose
+```
+
+### Multiple inputs
+
+```bash
+# Mix JSON and key=value
+enact run my-tool --args '{"config":{"debug":true}}' --input file=input.txt
+
+# Multiple key=value pairs
+enact run my-tool --input name=test --input count=5 --input enabled=true
+```
+
+## Input Resolution
+
+Inputs are resolved in the following priority order:
+
+1. `--input` key=value pairs (highest priority)
+2. `--args` JSON object
+3. Default values from the manifest's `inputSchema`
+
+## Environment Resolution
+
+The command automatically resolves environment variables:
+
+1. **Secrets** (env vars with `secret: true` in manifest):
+   - Resolved from OS keyring using namespace inheritance
+   - Never written to disk or shown in output
+
+2. **Environment variables** (env vars with `secret: false`):
+   - Resolved from local `.enact/.env` (project)
+   - Then from `~/.enact/.env` (global)
+   - Then from manifest defaults
+
+## Dry Run Output
+
+When using `--dry-run`, the command shows:
+
+- Tool name and version
+- Container image that would be used
+- All input parameters
+- Environment variables (secrets masked as `***`)
+- The interpolated command
+
+## Exit Codes
+
+| Code | Description |
+|------|-------------|
+| `0` | Successful execution |
+| `1` | Execution failed or error |
+| `2` | Invalid arguments |
+| `3` | Tool not found |
+
+## See Also
+
+- [enact exec](../exec/README.md) - Execute arbitrary commands in a tool's container
+- [enact install](../install/README.md) - Install tools
+- [enact env](../env/README.md) - Manage environment variables and secrets

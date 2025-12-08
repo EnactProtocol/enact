@@ -1,0 +1,40 @@
+enact: "2.0.0"
+name: acme/utils/greeter
+description: Greets users by name
+version: "1.0.0"
+from: node:18-alpine
+command: "echo 'Hello ${name}!'"
+timeout: 30s
+license: MIT
+tags:
+  - greeting
+  - utility
+inputSchema:
+  type: object
+  properties:
+    name:
+      type: string
+      description: The name to greet
+  required:
+    - name
+outputSchema:
+  type: object
+  properties:
+    message:
+      type: string
+env:
+  LOG_LEVEL:
+    description: Logging verbosity level
+    default: info
+annotations:
+  readOnlyHint: true
+  idempotentHint: true
+authors:
+  - name: Alice Developer
+    email: alice@example.com
+examples:
+  - input:
+      name: World
+    output:
+      message: "Hello World!"
+    description: Basic greeting

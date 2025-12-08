@@ -1,0 +1,5 @@
+# Bun configuration file
+
+[install]
+# Package installation
+registry = "https://registry.npmjs.org"

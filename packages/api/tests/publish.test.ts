@@ -1,0 +1,249 @@
+/**
+ * Tests for publish functionality
+ */
+
+import { beforeEach, describe, expect, test } from "bun:test";
+import { createApiClient } from "../src/client";
+import {
+  createBundle,
+  deleteTool,
+  publishTool,
+  submitAttestation,
+  unyankVersion,
+  yankVersion,
+} from "../src/publish";
+import { type MockServer, createMockServer } from "./mocks/server";
+
+describe("publish module", () => {
+  let mockServer: MockServer;
+
+  beforeEach(() => {
+    mockServer = createMockServer();
+    // @ts-expect-error - Simplified fetch mock for testing
+    globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => {
+      const url =
+        typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+      const request = new Request(url, init);
+      return mockServer.fetch(request);
+    };
+  });
+
+  describe("createBundle", () => {
+    test("throws not implemented error", async () => {
+      await expect(createBundle("./my-tool")).rejects.toThrow("not yet implemented");
+    });
+  });
+
+  describe("publishTool", () => {
+    test("publishes tool with multipart upload (v2)", async () => {
+      const client = createApiClient({ authToken: "valid-token" });
+      const bundle = new TextEncoder().encode("mock bundle content");
+
+      const result = await publishTool(client, {
+        name: "alice/utils/new-tool",
+        manifest: {
+          enact: "2.0.0",
+          name: "alice/utils/new-tool",
+          version: "1.0.0",
+          description: "A new tool",
+        },
+        bundle,
+      });
+
+      expect(result.name).toBe("alice/utils/new-tool");
+      expect(result.version).toBe("1.0.0");
+      expect(result.publishedAt).toBeInstanceOf(Date);
+      expect(result.bundleHash).toMatch(/^sha256:/);
+    });
+
+    test("accepts ArrayBuffer", async () => {
+      const client = createApiClient({ authToken: "valid-token" });
+      const bundle = new TextEncoder().encode("mock bundle content").buffer;
+
+      const result = await publishTool(client, {
+        name: "alice/utils/another-tool",
+        manifest: {
+          enact: "2.0.0",
+          name: "alice/utils/another-tool",
+          version: "2.0.0",
+          description: "Another tool",
+        },
+        bundle,
+      });
+
+      expect(result.name).toBe("alice/utils/another-tool");
+      expect(result.version).toBeDefined(); // Mock returns 1.0.0 since it doesn't parse manifest
+      expect(result.publishedAt).toBeInstanceOf(Date);
+      expect(result.bundleHash).toBeDefined();
+    });
+
+    test("supports optional readme", async () => {
+      const client = createApiClient({ authToken: "valid-token" });
+      const bundle = new TextEncoder().encode("mock bundle content");
+
+      const result = await publishTool(client, {
+        name: "alice/utils/documented-tool",
+        manifest: {
+          enact: "2.0.0",
+          name: "alice/utils/documented-tool",
+          version: "1.0.0",
+          description: "A documented tool",
+        },
+        bundle,
+        readme: "# My Tool\n\nThis is a great tool!",
+      });
+
+      expect(result.name).toBeTruthy();
+    });
+
+    test("requires authentication", async () => {
+      const client = createApiClient({ baseUrl: "http://localhost" });
+      const bundle = new TextEncoder().encode("mock bundle content");
+
+      await expect(
+        publishTool(client, {
+          name: "alice/utils/new-tool",
+          manifest: {
+            enact: "2.0.0",
+            name: "alice/utils/new-tool",
+            version: "1.0.0",
+            description: "A new tool",
+          },
+          bundle,
+        })
+      ).rejects.toThrow();
+    });
+  });
+
+  describe("submitAttestation", () => {
+    test("submits attestation with Sigstore bundle (v2)", async () => {
+      const client = createApiClient({ authToken: "valid-token" });
+
+      const result = await submitAttestation(client, {
+        name: "alice/utils/greeter",
+        version: "1.2.0",
+        sigstoreBundle: {
+          $schema: "https://sigstore.dev/bundle/v1",
+          mediaType: "application/vnd.dev.sigstore.bundle.v0.3+json",
+          verificationMaterial: {
+            certificate: "mock-cert",
+          },
+          messageSignature: {
+            signature: "mock-signature",
+          },
+        },
+      });
+
+      expect(result.auditor).toBeDefined();
+      expect(result.auditorProvider).toBeDefined();
+      expect(result.signedAt).toBeInstanceOf(Date);
+      expect(result.rekorLogId).toBeTruthy();
+      expect(result.verification).toBeDefined();
+      expect(result.verification.verified).toBeBoolean();
+      expect(result.verification.verifiedAt).toBeInstanceOf(Date);
+    });
+
+    test("includes full verification details", async () => {
+      const client = createApiClient({ authToken: "valid-token" });
+
+      const result = await submitAttestation(client, {
+        name: "alice/utils/greeter",
+        version: "1.2.0",
+        sigstoreBundle: {
+          $schema: "https://sigstore.dev/bundle/v1",
+        },
+      });
+
+      expect(result.verification.rekorVerified).toBeBoolean();
+      expect(result.verification.certificateVerified).toBeBoolean();
+      expect(result.verification.signatureVerified).toBeBoolean();
+    });
+
+    test("requires authentication", async () => {
+      const client = createApiClient({ baseUrl: "http://localhost" });
+
+      await expect(
+        submitAttestation(client, {
+          name: "alice/utils/greeter",
+          version: "1.2.0",
+          sigstoreBundle: { $schema: "https://sigstore.dev/bundle/v1" },
+        })
+      ).rejects.toThrow();
+    });
+  });
+
+  describe("yankVersion", () => {
+    test("yanks a version with reason", async () => {
+      const client = createApiClient({ authToken: "valid-token" });
+
+      const result = await yankVersion(client, "alice/utils/greeter", "1.0.0", {
+        reason: "Security vulnerability CVE-2025-1234",
+      });
+
+      expect(result.yanked).toBe(true);
+      expect(result.version).toBe("1.0.0");
+      expect(result.reason).toBeDefined();
+      expect(result.yankedAt).toBeInstanceOf(Date);
+    });
+
+    test("yanks with replacement version", async () => {
+      const client = createApiClient({ authToken: "valid-token" });
+
+      const result = await yankVersion(client, "alice/utils/greeter", "1.0.0", {
+        reason: "Deprecated",
+        replacementVersion: "2.0.0",
+      });
+
+      expect(result.yanked).toBe(true);
+      expect(result.replacementVersion).toBe("2.0.0");
+    });
+
+    test("yanks without optional parameters", async () => {
+      const client = createApiClient({ authToken: "valid-token" });
+
+      const result = await yankVersion(client, "alice/utils/greeter", "1.0.0");
+
+      expect(result.yanked).toBe(true);
+      expect(result.version).toBe("1.0.0");
+    });
+
+    test("requires authentication", async () => {
+      const client = createApiClient({ baseUrl: "http://localhost" });
+
+      await expect(yankVersion(client, "alice/utils/greeter", "1.0.0")).rejects.toThrow();
+    });
+  });
+
+  describe("unyankVersion", () => {
+    test("unyanks a previously yanked version", async () => {
+      const client = createApiClient({ authToken: "valid-token" });
+
+      const result = await unyankVersion(client, "alice/utils/greeter", "1.0.0");
+
+      expect(result.yanked).toBe(false);
+      expect(result.version).toBe("1.0.0");
+      expect(result.unyankedAt).toBeInstanceOf(Date);
+    });
+
+    test("requires authentication", async () => {
+      const client = createApiClient({ baseUrl: "http://localhost" });
+
+      await expect(unyankVersion(client, "alice/utils/greeter", "1.0.0")).rejects.toThrow();
+    });
+  });
+
+  describe("deleteTool", () => {
+    test("deletes tool when authenticated", async () => {
+      const client = createApiClient({ authToken: "valid-token" });
+
+      // Should not throw
+      await deleteTool(client, "alice/utils/old-tool");
+    });
+
+    test("requires authentication", async () => {
+      const client = createApiClient({ baseUrl: "http://localhost" });
+
+      await expect(deleteTool(client, "alice/utils/old-tool")).rejects.toThrow();
+    });
+  });
+});

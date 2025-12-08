@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # MinIO - S3-compatible object storage
+  minio:
+    image: minio/minio:latest
+    container_name: enact-minio
+    ports:
+      - "9000:9000"  # S3 API
+      - "9001:9001"  # Web Console
+    environment:
+      MINIO_ROOT_USER: enact
+      MINIO_ROOT_PASSWORD: enact123456
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - enact-network
+
+  # MinIO Client - Creates bucket on startup
+  minio-init:
+    image: minio/mc:latest
+    container_name: enact-minio-init
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      /usr/bin/mc alias set myminio http://minio:9000 enact enact123456;
+      /usr/bin/mc mb myminio/enact-bundles --ignore-existing;
+      /usr/bin/mc anonymous set download myminio/enact-bundles;
+      echo 'MinIO bucket created: enact-bundles';
+      exit 0;
+      "
+    networks:
+      - enact-network
+
+volumes:
+  minio-data:
+    driver: local
+
+networks:
+  enact-network:
+    driver: bridge

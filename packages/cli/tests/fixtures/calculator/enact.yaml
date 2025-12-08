@@ -1,0 +1,34 @@
+enact: "2.0.0"
+name: test/calculator
+version: "2.0.0"
+description: A calculator tool that performs basic math operations
+from: python:3.12-alpine
+command: "python3 -c \"import json; print(json.dumps({'result': eval('${a} + ${b}' if '${operation}'=='add' else '${a} - ${b}' if '${operation}'=='subtract' else '${a} * ${b}' if '${operation}'=='multiply' else '${a} / ${b}'), 'operation': '${operation}'}))\""
+inputSchema:
+  type: object
+  properties:
+    operation:
+      type: string
+      enum:
+        - add
+        - subtract
+        - multiply
+        - divide
+      description: The math operation to perform
+    a:
+      type: number
+      description: First operand
+    b:
+      type: number
+      description: Second operand
+  required:
+    - operation
+    - a
+    - b
+outputSchema:
+  type: object
+  properties:
+    result:
+      type: number
+    operation:
+      type: string

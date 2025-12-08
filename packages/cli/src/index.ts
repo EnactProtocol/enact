@@ -1,0 +1,96 @@
+#!/usr/bin/env bun
+
+/**
+ * @enactprotocol/cli
+ *
+ * Command-line interface for Enact.
+ * User-facing commands for tool execution, discovery, and management.
+ */
+
+import { Command } from "commander";
+import {
+  configureAuthCommand,
+  configureCacheCommand,
+  configureConfigCommand,
+  configureEnvCommand,
+  configureExecCommand,
+  configureGetCommand,
+  configureInspectCommand,
+  configureInstallCommand,
+  configureListCommand,
+  configurePublishCommand,
+  configureReportCommand,
+  configureRunCommand,
+  configureSearchCommand,
+  configureSetupCommand,
+  configureSignCommand,
+  configureTrustCommand,
+  configureUnyankCommand,
+  configureYankCommand,
+} from "./commands";
+import { error, formatError } from "./utils";
+
+export const version = "0.1.0";
+
+// Export types for external use
+export type { GlobalOptions, CommandContext } from "./types";
+
+// Main CLI entry point
+async function main() {
+  const program = new Command();
+
+  program
+    .name("enact")
+    .description("Enact - Verified, portable protocol for AI-executable tools")
+    .version(version)
+    .option("--json", "Output as JSON")
+    .option("-v, --verbose", "Enable verbose output");
+
+  // Configure all commands
+  configureSetupCommand(program);
+  configureRunCommand(program);
+  configureExecCommand(program);
+  configureInstallCommand(program);
+  configureListCommand(program);
+  configureEnvCommand(program);
+  configureTrustCommand(program);
+  configureConfigCommand(program);
+
+  // Registry commands (Phase 8)
+  configureSearchCommand(program);
+  configureGetCommand(program);
+  configurePublishCommand(program);
+  configureAuthCommand(program);
+  configureCacheCommand(program);
+
+  // CLI solidification commands (Phase 9)
+  configureSignCommand(program);
+  configureReportCommand(program);
+  configureInspectCommand(program);
+
+  // API v2 migration commands
+  configureYankCommand(program);
+  configureUnyankCommand(program);
+
+  // Global error handler
+  program.exitOverride((err) => {
+    if (err.code === "commander.help" || err.code === "commander.version") {
+      process.exit(0);
+    }
+    throw err;
+  });
+
+  try {
+    await program.parseAsync(process.argv);
+  } catch (err) {
+    error(formatError(err));
+    process.exit(1);
+  }
+}
+
+if (import.meta.main) {
+  main().catch((err) => {
+    error(formatError(err));
+    process.exit(1);
+  });
+}

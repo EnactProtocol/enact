@@ -1,0 +1,66 @@
+{
+  "compilerOptions": {
+    // Type Checking
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitReturns": true,
+
+    // Module Resolution
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "noEmit": true,
+
+    // Interop Constraints
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+
+    // Language and Environment
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "types": ["bun-types"],
+
+    // Emit
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+
+    // Path Aliases for workspace packages
+    "baseUrl": ".",
+    "paths": {
+      "@enactprotocol/trust": ["./packages/trust/src/index.ts"],
+      "@enactprotocol/trust/*": ["./packages/trust/src/*"],
+      "@enactprotocol/secrets": ["./packages/secrets/src/index.ts"],
+      "@enactprotocol/secrets/*": ["./packages/secrets/src/*"],
+      "@enactprotocol/shared": ["./packages/shared/src/index.ts"],
+      "@enactprotocol/shared/*": ["./packages/shared/src/*"],
+      "@enactprotocol/api": ["./packages/api/src/index.ts"],
+      "@enactprotocol/api/*": ["./packages/api/src/*"],
+      "@enactprotocol/mcp-server": ["./packages/mcp-server/src/index.ts"],
+      "@enactprotocol/mcp-server/*": ["./packages/mcp-server/src/*"],
+      "@enactprotocol/cli": ["./packages/cli/src/index.ts"],
+      "@enactprotocol/cli/*": ["./packages/cli/src/*"]
+    },
+
+    // Completeness
+    "skipLibCheck": true
+  },
+  "include": [
+    "packages/api/src/**/*",
+    "packages/cli/src/**/*",
+    "packages/shared/src/**/*",
+    "packages/trust/src/**/*",
+    "packages/secrets/src/**/*",
+    "packages/mcp-server/src/**/*",
+    "packages/*/tests/**/*"
+  ],
+  "exclude": ["node_modules", "dist", "**/node_modules", "**/dist", "packages/server/**/*"]
+}

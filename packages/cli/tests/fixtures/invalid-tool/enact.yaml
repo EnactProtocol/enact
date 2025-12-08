@@ -1,0 +1,4 @@
+enact: "2.0.0"
+name: test/invalid-tool
+version: "1.0.0"
+description: An invalid tool manifest for testing validation

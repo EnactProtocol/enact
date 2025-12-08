@@ -1,0 +1,31 @@
+{
+  "name": "@enactprotocol/execution",
+  "version": "0.1.0",
+  "description": "Dagger-based execution engine for Enact tools",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src/",
+    "lint:fix": "biome check --write src/"
+  },
+  "dependencies": {
+    "@enactprotocol/shared": "workspace:*",
+    "@dagger.io/dagger": "^0.11.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.8.0",
+    "@types/bun": "^1.1.0",
+    "typescript": "^5.3.3"
+  },
+  "license": "Apache-2.0"
+}

@@ -1,0 +1,32 @@
+{
+  "name": "@enactprotocol/trust",
+  "version": "0.1.0",
+  "description": "Sigstore integration, attestations, and verification for Enact",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "rm -rf dist",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "open": "^11.0.0",
+    "openid-client": "5",
+    "sigstore": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "typescript": "^5.7.2"
+  },
+  "keywords": ["cryptography", "sigstore", "attestation", "verification"],
+  "author": "Enact Protocol",
+  "license": "Apache-2.0"
+}

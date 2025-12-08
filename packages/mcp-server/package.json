@@ -1,0 +1,35 @@
+{
+  "name": "@enactprotocol/mcp-server",
+  "version": "0.1.0",
+  "description": "MCP protocol server for Enact tool integration",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "enact-mcp": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "rm -rf dist",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "dev": "bun run src/index.ts"
+  },
+  "dependencies": {
+    "@enactprotocol/shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "typescript": "^5.7.2"
+  },
+  "keywords": ["mcp", "model-context-protocol", "ai", "tools"],
+  "author": "Enact Protocol",
+  "license": "Apache-2.0"
+}

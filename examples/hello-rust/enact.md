@@ -1,0 +1,35 @@
+---
+enact: "2.0.0"
+name: "examples/hello-rust"
+version: "1.0.0"
+description: "A simple Rust greeting tool"
+license: "MIT"
+from: "rust:1.83-slim"
+
+inputSchema:
+  type: object
+  properties:
+    name:
+      type: string
+      description: "Name to greet"
+      default: "World"
+
+outputSchema:
+  type: object
+  properties:
+    greeting:
+      type: string
+
+build: "rustc /work/hello.rs -o /work/hello"
+command: "/work/hello ${name}"
+---
+
+# Hello Rust
+
+A simple Rust tool that greets you by name.
+
+## Usage
+
+```bash
+enact run ./examples/hello-rust --input "name=Alice"
+```
