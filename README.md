@@ -1,6 +1,6 @@
 # Enact
 
-A verified, portable protocol for defining, discovering, and safely executing AI-ready tools.
+Enact is A verified, portable protocol for defining, discovering, and safely executing AI-ready tools inspired by npm.
 
 ## Overview
 
