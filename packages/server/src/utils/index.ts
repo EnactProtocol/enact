@@ -2,6 +2,6 @@
  * Server utilities
  */
 
-export * from "./errors.ts";
-export * from "./response.ts";
-export * from "./validation.ts";
+export * from "./errors";
+export * from "./response";
+export * from "./validation";

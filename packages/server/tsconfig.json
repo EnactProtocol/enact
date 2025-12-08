@@ -11,6 +11,6 @@
     "module": "ESNext",
     "moduleResolution": "bundler"
   },
-  "include": [],
-  "exclude": ["node_modules", "dist", "tests", "src", "supabase"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "tests", "supabase"]
 }
