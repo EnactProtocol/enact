@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/web",
-  "version": "0.1.0",
+  "version": "2.0.0",
   "description": "Enact Registry Browser & Auth Portal",
   "private": true,
   "type": "module",
