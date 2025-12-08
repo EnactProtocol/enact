@@ -17,7 +17,7 @@ jobs:
           bun-version: latest
 
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libsecret-1-dev
+        run: sudo apt-get update && sudo apt-get install -y libsecret-1-0 libsecret-1-dev gnome-keyring dbus-x11
 
       - name: Install dependencies
         run: bun install
