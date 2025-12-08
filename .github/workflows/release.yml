@@ -108,12 +108,12 @@ jobs:
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          # Update all package versions
-          cd packages/cli && npm version $VERSION --no-git-tag-version
-          cd ../api && npm version $VERSION --no-git-tag-version
-          cd ../shared && npm version $VERSION --no-git-tag-version
-          cd ../secrets && npm version $VERSION --no-git-tag-version
-          cd ../trust && npm version $VERSION --no-git-tag-version
+          # Update all package versions (--allow-same-version handles already-set versions)
+          cd packages/cli && npm version $VERSION --no-git-tag-version --allow-same-version
+          cd ../api && npm version $VERSION --no-git-tag-version --allow-same-version
+          cd ../shared && npm version $VERSION --no-git-tag-version --allow-same-version
+          cd ../secrets && npm version $VERSION --no-git-tag-version --allow-same-version
+          cd ../trust && npm version $VERSION --no-git-tag-version --allow-same-version
 
       - name: Setup npm auth
         run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
