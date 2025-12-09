@@ -2,7 +2,6 @@ import SearchBar from "@/components/ui/SearchBar";
 import {
   ArrowRight,
   Bot,
-  Box,
   Download,
   FolderOpen,
   Globe,
@@ -136,49 +135,65 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Comparison Table */}
-            <div className="grid md:grid-cols-2 gap-8 mb-12">
-              {/* npm column */}
-              <div className="card border-2 border-gray-200">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                    <Box className="w-5 h-5 text-red-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-6">npm</h3>
-                  <span className="text-sm text-gray-4 ml-auto">For JavaScript</span>
+            {/* Enact Commands */}
+            <div className="card border-2 border-brand-blue mb-12">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-blueLight-1 rounded-lg flex items-center justify-center">
+                  <Terminal className="w-5 h-5 text-brand-blue" />
                 </div>
-                <div className="space-y-3 font-mono text-sm">
-                  <div className="bg-gray-100 rounded-lg p-3">
-                    <span className="text-gray-4">$</span> npx install @openai/cli
-                  </div>
-                  <div className="bg-gray-100 rounded-lg p-3">
-                    <span className="text-gray-4">$</span> npm install -g @openai/cli
-                  </div>
-                  <div className="bg-gray-100 rounded-lg p-3">
-                    <span className="text-gray-4">$</span> npm publish
-                  </div>
-                </div>
+                <h3 className="text-xl font-semibold text-gray-6">Enact CLI</h3>
+                <span className="text-sm text-brand-blue ml-auto">For AI Tools</span>
               </div>
-
-              {/* Enact column */}
-              <div className="card border-2 border-brand-blue">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 bg-blueLight-1 rounded-lg flex items-center justify-center">
-                    <Terminal className="w-5 h-5 text-brand-blue" />
+              <div className="grid md:grid-cols-2 gap-4 font-mono text-sm">
+                <div className="bg-blueLight-1/50 hover:bg-red-100 rounded-lg p-3 text-gray-6 transition-colors cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <span>
+                      <span className="text-gray-4">$</span> enact search "resize images"
+                    </span>
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-6">Enact</h3>
-                  <span className="text-sm text-brand-blue ml-auto">For AI Tools</span>
+                  <p className="text-xs text-gray-5 mt-1 font-sans">Find tools in the registry</p>
                 </div>
-                <div className="space-y-3 font-mono text-sm">
-                  <div className="bg-blueLight-1/50 rounded-lg p-3 text-gray-6">
-                    <span className="text-gray-4">$</span> enact install alice/resizer
+                <div className="bg-blueLight-1/50 hover:bg-red-100 rounded-lg p-3 text-gray-6 transition-colors cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <span>
+                      <span className="text-gray-4">$</span> enact run alice/resizer
+                    </span>
                   </div>
-                  <div className="bg-blueLight-1/50 rounded-lg p-3 text-gray-6">
-                    <span className="text-gray-4">$</span> enact install -g alice/resizer
+                  <p className="text-xs text-gray-5 mt-1 font-sans">Execute a tool instantly</p>
+                </div>
+                <div className="bg-blueLight-1/50 hover:bg-red-100 rounded-lg p-3 text-gray-6 transition-colors cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <span>
+                      <span className="text-gray-4">$</span> enact install -g alice/resizer
+                    </span>
                   </div>
-                  <div className="bg-blueLight-1/50 rounded-lg p-3 text-gray-6">
-                    <span className="text-gray-4">$</span> enact publish
+                  <p className="text-xs text-gray-5 mt-1 font-sans">Add to your project</p>
+                </div>
+                <div className="bg-blueLight-1/50 hover:bg-red-100 rounded-lg p-3 text-gray-6 transition-colors cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <span>
+                      <span className="text-gray-4">$</span> enact init
+                    </span>
                   </div>
+                  <p className="text-xs text-gray-5 mt-1 font-sans">Create a new tool template</p>
+                </div>
+                <div className="bg-blueLight-1/50 hover:bg-red-100 rounded-lg p-3 text-gray-6 transition-colors cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <span>
+                      <span className="text-gray-4">$</span> enact publish
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-5 mt-1 font-sans">
+                    Share with cryptographic signing
+                  </p>
+                </div>
+                <div className="bg-blueLight-1/50 hover:bg-red-100 rounded-lg p-3 text-gray-6 transition-colors cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <span>
+                      <span className="text-gray-4">$</span> enact list
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-5 mt-1 font-sans">See installed tools</p>
                 </div>
               </div>
             </div>
