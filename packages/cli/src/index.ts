@@ -7,6 +7,7 @@
  * User-facing commands for tool execution, discovery, and management.
  */
 
+import { ensureGlobalSetup } from "@enactprotocol/shared";
 import { Command } from "commander";
 import {
   configureAuthCommand,
@@ -30,13 +31,16 @@ import {
 } from "./commands";
 import { error, formatError } from "./utils";
 
-export const version = "0.1.0";
+export const version = "2.0.1";
 
 // Export types for external use
 export type { GlobalOptions, CommandContext } from "./types";
 
 // Main CLI entry point
 async function main() {
+  // Ensure global setup is complete on first run
+  ensureGlobalSetup();
+
   const program = new Command();
 
   program

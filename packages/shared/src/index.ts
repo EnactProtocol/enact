@@ -40,6 +40,7 @@ export {
   setConfigValue,
   resetConfig,
   configExists,
+  ensureGlobalSetup,
   DEFAULT_CONFIG,
   // Local trust management (new unified API)
   getTrustedIdentities,

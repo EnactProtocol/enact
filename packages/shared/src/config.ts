@@ -4,7 +4,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 import yaml from "js-yaml";
 import { getConfigPath, getEnactHome } from "./paths";
 
@@ -95,7 +95,7 @@ export const DEFAULT_CONFIG: EnactConfig = {
     verbose: false,
   },
   registry: {
-    url: "https://enact.tools",
+    url: "https://siikwkfgsmouioodghho.supabase.co/functions/v1",
   },
 };
 
@@ -255,6 +255,40 @@ export function resetConfig(): void {
  */
 export function configExists(): boolean {
   return existsSync(getConfigPath());
+}
+
+/**
+ * Ensure global setup is complete
+ * Creates ~/.enact/ directory structure and default config if they don't exist.
+ * This is a non-interactive initialization that runs silently.
+ * @returns true if setup was performed, false if already initialized
+ */
+export function ensureGlobalSetup(): boolean {
+  const enactHome = getEnactHome();
+  const configPath = getConfigPath();
+  const cacheDir = join(enactHome, "cache");
+
+  let performedSetup = false;
+
+  // Ensure ~/.enact/ directory exists
+  if (!existsSync(enactHome)) {
+    mkdirSync(enactHome, { recursive: true });
+    performedSetup = true;
+  }
+
+  // Ensure ~/.enact/cache/ directory exists
+  if (!existsSync(cacheDir)) {
+    mkdirSync(cacheDir, { recursive: true });
+    performedSetup = true;
+  }
+
+  // Create default config if it doesn't exist
+  if (!existsSync(configPath)) {
+    saveConfig({ ...DEFAULT_CONFIG });
+    performedSetup = true;
+  }
+
+  return performedSetup;
 }
 
 // =============================================================================

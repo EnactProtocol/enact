@@ -11,6 +11,7 @@ import {
   addTrustedIdentity,
   configExists,
   emailToProviderIdentity,
+  ensureGlobalSetup,
   getConfigValue,
   getMinimumAttestations,
   getTrustPolicy,
@@ -25,6 +26,7 @@ import {
   saveConfig,
   setConfigValue,
 } from "../src/config";
+import { getCacheDir, getConfigPath, getEnactHome } from "../src/paths";
 
 // Use a test-specific home directory to avoid affecting real config
 const TEST_HOME = join(import.meta.dir, "fixtures", "config-test-home");
@@ -64,7 +66,9 @@ describe("configuration manager", () => {
       expect(DEFAULT_CONFIG.trust?.minimum_attestations).toBe(1);
       expect(DEFAULT_CONFIG.cache?.maxSizeMb).toBe(1024);
       expect(DEFAULT_CONFIG.execution?.defaultTimeout).toBe("30s");
-      expect(DEFAULT_CONFIG.registry?.url).toBe("https://enact.tools");
+      expect(DEFAULT_CONFIG.registry?.url).toBe(
+        "https://siikwkfgsmouioodghho.supabase.co/functions/v1"
+      );
     });
   });
 
@@ -510,6 +514,191 @@ describe("configuration manager", () => {
         const result = emailToProviderIdentity("alice@unknown.com");
         expect(result).toBe("alice@unknown.com");
       });
+    });
+  });
+
+  describe("ensureGlobalSetup", () => {
+    test("creates ~/.enact/ directory if it doesn't exist", () => {
+      const enactHome = getEnactHome();
+
+      // Clean up first to ensure fresh state
+      if (existsSync(enactHome)) {
+        rmSync(enactHome, { recursive: true, force: true });
+      }
+
+      // Run setup
+      const result = ensureGlobalSetup();
+
+      // Should have performed setup
+      expect(result).toBe(true);
+      expect(existsSync(enactHome)).toBe(true);
+    });
+
+    test("creates ~/.enact/cache/ directory", () => {
+      const enactHome = getEnactHome();
+      const cacheDir = getCacheDir();
+
+      // Clean up first
+      if (existsSync(enactHome)) {
+        rmSync(enactHome, { recursive: true, force: true });
+      }
+
+      ensureGlobalSetup();
+
+      expect(existsSync(cacheDir)).toBe(true);
+    });
+
+    test("creates default config.yaml", () => {
+      const enactHome = getEnactHome();
+      const configPath = getConfigPath();
+
+      // Clean up first
+      if (existsSync(enactHome)) {
+        rmSync(enactHome, { recursive: true, force: true });
+      }
+
+      ensureGlobalSetup();
+
+      expect(existsSync(configPath)).toBe(true);
+
+      // Verify config content
+      const config = loadConfig();
+      expect(config.version).toBe(DEFAULT_CONFIG.version);
+      expect(config.trust?.policy).toBe(DEFAULT_CONFIG.trust?.policy);
+      expect(config.registry?.url).toBe(DEFAULT_CONFIG.registry?.url);
+    });
+
+    test("returns false if already initialized", () => {
+      // First call should perform setup
+      ensureGlobalSetup();
+
+      // Second call should return false (already set up)
+      const result = ensureGlobalSetup();
+      expect(result).toBe(false);
+    });
+
+    test("is idempotent - multiple calls don't break things", () => {
+      // Run setup multiple times
+      ensureGlobalSetup();
+      ensureGlobalSetup();
+      ensureGlobalSetup();
+
+      // Everything should still work
+      expect(configExists()).toBe(true);
+      const config = loadConfig();
+      expect(config.version).toBeDefined();
+    });
+
+    test("preserves existing config if present", () => {
+      const enactHome = getEnactHome();
+
+      // Clean up first
+      if (existsSync(enactHome)) {
+        rmSync(enactHome, { recursive: true, force: true });
+      }
+
+      // Create initial config
+      ensureGlobalSetup();
+
+      // Modify the config
+      saveConfig({
+        ...DEFAULT_CONFIG,
+        trust: { policy: "require_attestation", auditors: ["github:test-user"] },
+      });
+
+      // Run setup again
+      ensureGlobalSetup();
+
+      // Config should be preserved
+      const config = loadConfig();
+      expect(config.trust?.policy).toBe("require_attestation");
+      expect(config.trust?.auditors).toContain("github:test-user");
+    });
+
+    test("creates cache directory even if config exists", () => {
+      const enactHome = getEnactHome();
+      const cacheDir = getCacheDir();
+
+      // Clean up first
+      if (existsSync(enactHome)) {
+        rmSync(enactHome, { recursive: true, force: true });
+      }
+
+      // Create only the home and config
+      mkdirSync(enactHome, { recursive: true });
+      saveConfig({ ...DEFAULT_CONFIG });
+
+      // Manually remove cache dir if it exists
+      if (existsSync(cacheDir)) {
+        rmSync(cacheDir, { recursive: true, force: true });
+      }
+
+      // Run setup
+      const result = ensureGlobalSetup();
+
+      // Should have created cache dir
+      expect(result).toBe(true);
+      expect(existsSync(cacheDir)).toBe(true);
+    });
+
+    test("default config has correct registry URL", () => {
+      const enactHome = getEnactHome();
+
+      // Clean up first
+      if (existsSync(enactHome)) {
+        rmSync(enactHome, { recursive: true, force: true });
+      }
+
+      ensureGlobalSetup();
+
+      const config = loadConfig();
+      expect(config.registry?.url).toBe("https://siikwkfgsmouioodghho.supabase.co/functions/v1");
+    });
+
+    test("default config has correct trust settings", () => {
+      const enactHome = getEnactHome();
+
+      // Clean up first
+      if (existsSync(enactHome)) {
+        rmSync(enactHome, { recursive: true, force: true });
+      }
+
+      ensureGlobalSetup();
+
+      const config = loadConfig();
+      expect(config.trust?.policy).toBe("prompt");
+      expect(config.trust?.minimum_attestations).toBe(1);
+      expect(config.trust?.auditors).toEqual([]);
+    });
+
+    test("default config has correct cache settings", () => {
+      const enactHome = getEnactHome();
+
+      // Clean up first
+      if (existsSync(enactHome)) {
+        rmSync(enactHome, { recursive: true, force: true });
+      }
+
+      ensureGlobalSetup();
+
+      const config = loadConfig();
+      expect(config.cache?.maxSizeMb).toBe(1024);
+      expect(config.cache?.ttlSeconds).toBe(86400 * 7); // 7 days
+    });
+
+    test("default config has correct execution settings", () => {
+      const enactHome = getEnactHome();
+
+      // Clean up first
+      if (existsSync(enactHome)) {
+        rmSync(enactHome, { recursive: true, force: true });
+      }
+
+      ensureGlobalSetup();
+
+      const config = loadConfig();
+      expect(config.execution?.defaultTimeout).toBe("30s");
+      expect(config.execution?.verbose).toBe(false);
     });
   });
 });

@@ -3,6 +3,6 @@ import { version } from "../src/index";
 
 describe("@enactprotocol/cli", () => {
   test("exports version", () => {
-    expect(version).toBe("0.1.0");
+    expect(version).toBe("2.0.1");
   });
 });

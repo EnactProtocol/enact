@@ -1,6 +1,6 @@
 ---
 enact: "2.0.0"
-name: "examples/hello-python"
+name: "keithalgroves/hello-python"
 version: "1.0.0"
 description: "A simple Python greeting tool"
 license: "MIT"

@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/server",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Enact registry server implementation - Supabase backend with Edge Functions",
   "type": "module",
   "main": "dist/index.js",
