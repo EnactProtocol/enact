@@ -161,4 +161,63 @@ command: "echo hello"
       expect(predicateType).toContain("tool");
     });
   });
+
+  describe("remote tool reference parsing", () => {
+    test("parses simple remote tool reference with version", () => {
+      const ref = "alice/greeter@1.2.0";
+      const atIndex = ref.lastIndexOf("@");
+      const name = ref.slice(0, atIndex);
+      const version = ref.slice(atIndex + 1);
+
+      expect(name).toBe("alice/greeter");
+      expect(version).toBe("1.2.0");
+    });
+
+    test("parses namespaced tool reference with version", () => {
+      const ref = "org/utils/greeter@2.0.0";
+      const atIndex = ref.lastIndexOf("@");
+      const name = ref.slice(0, atIndex);
+      const version = ref.slice(atIndex + 1);
+
+      expect(name).toBe("org/utils/greeter");
+      expect(version).toBe("2.0.0");
+    });
+
+    test("detects remote vs local tool reference", () => {
+      const isRemoteToolRef = (path: string): boolean => {
+        // Remote refs contain @ for version and don't start with . or /
+        return (
+          !path.startsWith(".") && !path.startsWith("/") && path.includes("@") && path.includes("/")
+        );
+      };
+
+      expect(isRemoteToolRef("alice/greeter@1.0.0")).toBe(true);
+      expect(isRemoteToolRef("./local-tool")).toBe(false);
+      expect(isRemoteToolRef("/absolute/path/tool")).toBe(false);
+      expect(isRemoteToolRef("examples/hello-python")).toBe(false);
+    });
+
+    test("requires version in remote tool reference", () => {
+      const hasVersion = (ref: string): boolean => {
+        return ref.includes("@") && ref.lastIndexOf("@") > 0;
+      };
+
+      expect(hasVersion("alice/greeter@1.0.0")).toBe(true);
+      expect(hasVersion("alice/greeter")).toBe(false);
+    });
+
+    test("validates semver version format", () => {
+      const isValidSemver = (version: string): boolean => {
+        const semverRegex = /^\d+\.\d+\.\d+(-[\w.]+)?(\+[\w.]+)?$/;
+        return semverRegex.test(version);
+      };
+
+      expect(isValidSemver("1.0.0")).toBe(true);
+      expect(isValidSemver("2.1.3")).toBe(true);
+      expect(isValidSemver("1.0.0-alpha")).toBe(true);
+      expect(isValidSemver("1.0.0-beta.1")).toBe(true);
+      expect(isValidSemver("invalid")).toBe(false);
+      expect(isValidSemver("1.0")).toBe(false);
+    });
+  });
 });

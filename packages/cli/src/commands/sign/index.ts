@@ -12,11 +12,7 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import {
-  createApiClient,
-  getToolVersion,
-  submitAttestation as submitAttestationToRegistry,
-} from "@enactprotocol/api";
+import { createApiClient, getToolVersion, submitAttestationToRegistry } from "@enactprotocol/api";
 import { getSecret } from "@enactprotocol/secrets";
 import {
   addTrustedAuditor,
@@ -387,11 +383,12 @@ async function signRemoteTool(
     const attestationResult = await withSpinner(
       "Submitting attestation to registry...",
       async () => {
-        return await submitAttestationToRegistry(client, {
-          name: toolInfo.name,
-          version: toolInfo.version,
-          sigstoreBundle: result.bundle as unknown as Record<string, unknown>,
-        });
+        return await submitAttestationToRegistry(
+          client,
+          toolInfo.name,
+          toolInfo.version,
+          result.bundle as unknown as Record<string, unknown>
+        );
       }
     );
 
@@ -562,11 +559,12 @@ async function signLocalTool(
           "Submitting attestation to registry...",
           async () => {
             // Submit the Sigstore bundle directly (v2 API)
-            return await submitAttestationToRegistry(client, {
-              name: manifest.name,
-              version: manifest.version ?? "1.0.0",
-              sigstoreBundle: result.bundle as unknown as Record<string, unknown>,
-            });
+            return await submitAttestationToRegistry(
+              client,
+              manifest.name,
+              manifest.version ?? "1.0.0",
+              result.bundle as unknown as Record<string, unknown>
+            );
           }
         );
 

@@ -186,7 +186,16 @@ async function fetchAndCacheTool(
     process.env.ENACT_REGISTRY_URL ??
     config.registry?.url ??
     "https://siikwkfgsmouioodghho.supabase.co/functions/v1";
-  const client = createApiClient({ baseUrl: registryUrl });
+
+  // Get auth token - use user token if available, otherwise use anon key for public access
+  let authToken = config.registry?.authToken ?? process.env.ENACT_AUTH_TOKEN;
+  if (!authToken && registryUrl.includes("siikwkfgsmouioodghho.supabase.co")) {
+    // Use the official Supabase anon key for unauthenticated access
+    authToken =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpaWt3a2Znc21vdWlvb2RnaGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2MTkzMzksImV4cCI6MjA4MDE5NTMzOX0.kxnx6-IPFhmGx6rzNx36vbyhFMFZKP_jFqaDbKnJ_E0";
+  }
+
+  const client = createApiClient({ baseUrl: registryUrl, authToken });
 
   // Get tool info to find latest version or use requested version
   const toolInfo = await getToolInfo(client, toolName);

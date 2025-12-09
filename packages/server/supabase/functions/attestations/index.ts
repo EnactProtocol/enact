@@ -4,7 +4,7 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { verifyBundle } from "https://esm.sh/@enactprotocol/trust@0.1.0/dist/index.js";
+import { verifyBundle } from "../_shared/sigstore.ts";
 import type { Database } from "../../../src/types.ts";
 import {
   jsonResponse,
@@ -15,6 +15,11 @@ import {
 } from "../../../src/utils/response.ts";
 import { Errors } from "../../../src/utils/errors.ts";
 import { parsePaginationParams } from "../../../src/utils/validation.ts";
+import {
+  handleSubmitAttestation,
+  extractAuditorFromBundle,
+  detectProviderFromIssuer,
+} from "../_shared/attestation.ts";
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -58,7 +63,7 @@ Deno.serve(async (req) => {
       const version = pathParts[pathParts.length - 2];
       const toolName = pathParts.slice(1, pathParts.length - 3).join("/");
       return addCorsHeaders(
-        await handleSubmitAttestation(supabase, req, toolName, version)
+        await handleSubmitAttestation(supabase, req, toolName, version, verifyBundle)
       );
     }
 
@@ -166,141 +171,6 @@ async function handleGetAttestations(
 }
 
 /**
- * Handle submit attestation
- */
-async function handleSubmitAttestation(
-  supabase: any,
-  req: Request,
-  toolName: string,
-  version: string
-): Promise<Response> {
-  // Get current user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return Errors.unauthorized();
-  }
-
-  // Parse request body
-  const body = await req.json();
-  const { bundle } = body;
-
-  if (!bundle) {
-    return Errors.validation("Missing Sigstore bundle");
-  }
-
-  // Get tool version
-  const { data: toolVersion, error: versionError } = await supabase
-    .from("tool_versions")
-    .select(`
-      id,
-      bundle_hash,
-      tools!inner(name)
-    `)
-    .eq("tools.name", toolName)
-    .eq("version", version)
-    .single();
-
-  if (versionError || !toolVersion) {
-    return Errors.notFound(`Version not found: ${toolName}@${version}`);
-  }
-
-  // Verify the Sigstore bundle
-  let verificationResult;
-  try {
-    // Convert bundle hash to Buffer (remove "sha256:" prefix)
-    const hashWithoutPrefix = toolVersion.bundle_hash.replace("sha256:", "");
-    const artifactHash = new Uint8Array(
-      hashWithoutPrefix.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
-    );
-
-    // Verify using @enactprotocol/trust
-    verificationResult = await verifyBundle(bundle, artifactHash);
-
-    if (!verificationResult.verified) {
-      return Errors.attestationFailed("Sigstore verification failed", {
-        details: verificationResult,
-      });
-    }
-  } catch (error) {
-    console.error("[Attestations] Verification error:", error);
-    return Errors.attestationFailed(
-      `Verification failed: ${(error as Error).message}`
-    );
-  }
-
-  // Extract auditor identity from bundle
-  // The identity is in the certificate's subject alternative name
-  const auditor = extractAuditorFromBundle(bundle);
-  const auditorProvider = detectProviderFromIssuer(bundle);
-
-  if (!auditor) {
-    return Errors.validation("Could not extract auditor identity from bundle");
-  }
-
-  // Extract Rekor info
-  const rekorLogId = bundle.verificationMaterial?.tlogEntries?.[0]?.logId?.keyId;
-  const rekorLogIndex = bundle.verificationMaterial?.tlogEntries?.[0]?.logIndex;
-
-  if (!rekorLogId) {
-    return Errors.validation("Missing Rekor log ID in bundle");
-  }
-
-  // Check if attestation already exists
-  const { data: existing } = await supabase
-    .from("attestations")
-    .select("id")
-    .eq("tool_version_id", toolVersion.id)
-    .eq("auditor", auditor)
-    .single();
-
-  if (existing) {
-    return Errors.conflict(`Attestation already exists for auditor ${auditor}`);
-  }
-
-  // Store attestation
-  const { data: attestation, error: insertError } = await supabase
-    .from("attestations")
-    .insert({
-      tool_version_id: toolVersion.id,
-      auditor,
-      auditor_provider: auditorProvider,
-      bundle,
-      rekor_log_id: rekorLogId,
-      rekor_log_index: rekorLogIndex,
-      signed_at: new Date().toISOString(),
-      verified: verificationResult.verified,
-      rekor_verified: true,
-      certificate_verified: true,
-      signature_verified: true,
-      verified_at: new Date().toISOString(),
-    })
-    .select()
-    .single();
-
-  if (insertError) {
-    console.error("[Attestations] Insert error:", insertError);
-    return Errors.internal(insertError.message);
-  }
-
-  return createdResponse({
-    auditor: attestation.auditor,
-    auditor_provider: attestation.auditor_provider,
-    signed_at: attestation.signed_at,
-    rekor_log_id: attestation.rekor_log_id,
-    rekor_log_index: attestation.rekor_log_index,
-    verification: {
-      verified: attestation.verified,
-      verified_at: attestation.verified_at,
-      rekor_verified: attestation.rekor_verified,
-      certificate_verified: attestation.certificate_verified,
-      signature_verified: attestation.signature_verified,
-    },
-  });
-}
-
-/**
  * Handle revoke attestation
  */
 async function handleRevokeAttestation(
@@ -392,77 +262,4 @@ async function handleGetAttestationBundle(
   }
 
   return jsonResponse(attestation.bundle);
-}
-
-/**
- * Extract auditor identity from Sigstore bundle
- */
-function extractAuditorFromBundle(bundle: any): string | null {
-  try {
-    // The identity is in the certificate's SAN (Subject Alternative Name)
-    const cert = bundle.verificationMaterial?.certificate?.rawBytes;
-    if (!cert) {
-      return null;
-    }
-
-    // For now, we'll look for the SAN extension in the certificate
-    // In production, this would use proper certificate parsing
-    // The SAN typically contains the email or URI
-
-    // Try to get from Fulcio-specific extensions
-    const extensions = bundle.verificationMaterial?.certificate?.extensions;
-    if (extensions) {
-      // Look for the Fulcio SAN extension
-      for (const ext of extensions) {
-        if (ext.critical === false && ext.value) {
-          // This is a simplified extraction - in production use proper ASN.1 parsing
-          return ext.value;
-        }
-      }
-    }
-
-    // Fallback: try to extract from messageSignature
-    const signature = bundle.messageSignature?.messageDigest;
-    if (signature?.algorithm === "SHA2_256") {
-      // The identity might be in the signature metadata
-      return null; // Will need proper implementation
-    }
-
-    return null;
-  } catch (error) {
-    console.error("[Attestations] Error extracting auditor:", error);
-    return null;
-  }
-}
-
-/**
- * Detect OAuth provider from issuer
- */
-function detectProviderFromIssuer(bundle: any): string | null {
-  try {
-    const issuer = bundle.verificationMaterial?.certificate?.issuer;
-    if (!issuer) {
-      return null;
-    }
-
-    const issuerStr = issuer.toLowerCase();
-
-    if (issuerStr.includes("github")) {
-      return "github";
-    }
-    if (issuerStr.includes("google") || issuerStr.includes("accounts.google")) {
-      return "google";
-    }
-    if (issuerStr.includes("microsoft") || issuerStr.includes("login.microsoftonline")) {
-      return "microsoft";
-    }
-    if (issuerStr.includes("gitlab")) {
-      return "gitlab";
-    }
-
-    return "unknown";
-  } catch (error) {
-    console.error("[Attestations] Error detecting provider:", error);
-    return null;
-  }
 }

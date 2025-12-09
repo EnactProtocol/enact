@@ -27,7 +27,7 @@ import {
 } from "../../utils";
 
 interface GetOptions extends GlobalOptions {
-  version?: string;
+  ver?: string;
 }
 
 /**
@@ -65,7 +65,7 @@ function displayToolInfo(tool: ToolInfo, options: GetOptions): void {
   }
 
   newline();
-  keyValue("Available Versions", tool.versions.join(", "));
+  keyValue("Available Versions", tool.versions.map((v) => v.version).join(", "));
 
   if (options.verbose) {
     newline();
@@ -129,9 +129,9 @@ async function getHandler(
   }
 
   try {
-    if (options.version) {
+    if (options.ver) {
       // Get specific version info
-      const versionInfo = await getToolVersion(client, toolName, options.version);
+      const versionInfo = await getToolVersion(client, toolName, options.ver);
 
       if (options.json) {
         json(versionInfo);
@@ -177,7 +177,7 @@ export function configureGetCommand(program: Command): void {
     .command("get <tool>")
     .alias("info")
     .description("Show detailed information about a tool")
-    .option("-V, --version <version>", "Show info for a specific version")
+    .option("--ver <version>", "Show info for a specific version")
     .option("-v, --verbose", "Show detailed output")
     .option("--json", "Output as JSON")
     .action(async (toolName: string, options: GetOptions) => {

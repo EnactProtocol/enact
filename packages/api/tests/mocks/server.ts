@@ -14,6 +14,13 @@ import type {
 } from "../../src/types";
 
 /**
+ * The Supabase anon key - used to identify public/anonymous requests
+ * Requests with this key should not be treated as authenticated users
+ */
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpaWt3a2Znc21vdWlvb2RnaGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2MTkzMzksImV4cCI6MjA4MDE5NTMzOX0.kxnx6-IPFhmGx6rzNx36vbyhFMFZKP_jFqaDbKnJ_E0";
+
+/**
  * Mock tool data (v2 format with full ToolMetadata shape)
  */
 export const MOCK_TOOLS: Record<string, ToolMetadata> = {
@@ -472,6 +479,11 @@ export function createMockServer() {
   function requireAuth(request: Request): Response | null {
     const authHeader = request.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return errorResponse("unauthorized", "Authentication required", 401);
+    }
+    // The anon key is not a valid user authentication token
+    const token = authHeader.slice(7); // Remove "Bearer " prefix
+    if (token === SUPABASE_ANON_KEY) {
       return errorResponse("unauthorized", "Authentication required", 401);
     }
     return null;

@@ -41,7 +41,7 @@ export function paginatedResponse<T>(items: T[], meta: PaginationMeta, status = 
  * Create a created response (201)
  */
 export function createdResponse<T>(data: T): Response {
-  return successResponse(data, 201);
+  return jsonResponse(data, 201);
 }
 
 /**

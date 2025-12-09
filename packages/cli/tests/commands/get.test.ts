@@ -42,24 +42,26 @@ describe("get command", () => {
       expect(args[0]?.name()).toBe("tool");
     });
 
-    test("has --version option", () => {
+    test("has --ver option for specifying version", () => {
       const program = new Command();
       configureGetCommand(program);
 
       const getCmd = program.commands.find((cmd) => cmd.name() === "get");
       const opts = getCmd?.options ?? [];
-      const versionOpt = opts.find((o) => o.long === "--version");
-      expect(versionOpt).toBeDefined();
+      const verOpt = opts.find((o) => o.long === "--ver");
+      expect(verOpt).toBeDefined();
     });
 
-    test("has -v short option for version", () => {
+    test("has -v short option for verbose (not version)", () => {
       const program = new Command();
       configureGetCommand(program);
 
       const getCmd = program.commands.find((cmd) => cmd.name() === "get");
       const opts = getCmd?.options ?? [];
-      const versionOpt = opts.find((o) => o.short === "-v");
-      expect(versionOpt).toBeDefined();
+      // -v is for verbose, not version (--ver is for version)
+      const verboseOpt = opts.find((o) => o.short === "-v");
+      expect(verboseOpt).toBeDefined();
+      expect(verboseOpt?.long).toBe("--verbose");
     });
 
     test("has --json option", () => {

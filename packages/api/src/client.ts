@@ -11,6 +11,13 @@ import type { ApiError, RateLimitInfo } from "./types";
 export const DEFAULT_REGISTRY_URL = "https://siikwkfgsmouioodghho.supabase.co/functions/v1";
 
 /**
+ * Default Supabase anon key - required for all Edge Function requests
+ */
+const DEFAULT_SUPABASE_ANON_KEY =
+  process.env.SUPABASE_ANON_KEY ??
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpaWt3a2Znc21vdWlvb2RnaGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2MTkzMzksImV4cCI6MjA4MDE5NTMzOX0.kxnx6-IPFhmGx6rzNx36vbyhFMFZKP_jFqaDbKnJ_E0";
+
+/**
  * API client configuration options
  */
 export interface ApiClientOptions {
@@ -142,11 +149,12 @@ export class EnactApiClient {
       headers.set("Content-Type", contentType);
     }
 
-    if (this.authToken) {
-      headers.set("Authorization", `Bearer ${this.authToken}`);
-      // Supabase Edge Functions also need the apikey header
-      headers.set("apikey", this.authToken);
-    }
+    // Supabase Edge Functions require BOTH apikey and Authorization headers
+    // Always use the anon key for apikey header
+    headers.set("apikey", DEFAULT_SUPABASE_ANON_KEY);
+
+    // Authorization header uses auth token if available, otherwise anon key
+    headers.set("Authorization", `Bearer ${this.authToken ?? DEFAULT_SUPABASE_ANON_KEY}`);
 
     return headers;
   }

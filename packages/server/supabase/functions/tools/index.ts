@@ -4,6 +4,7 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { verifyBundle } from "../_shared/sigstore.ts";
 import type {
   Database,
   Tool,
@@ -43,6 +44,9 @@ import {
   listTarGzFiles,
   getFileFromTarGz,
 } from "../_shared/tar.ts";
+import {
+  handleSubmitAttestation,
+} from "../_shared/attestation.ts";
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -127,7 +131,7 @@ Deno.serve(async (req) => {
     if (pathParts[pathParts.length - 1] === "attestations" && req.method === "POST") {
       const version = pathParts[pathParts.length - 2];
       const toolName = pathParts.slice(1, pathParts.length - 3).join("/");
-      return addCorsHeaders(await handleSubmitAttestation(supabase, req, toolName, version));
+      return addCorsHeaders(await handleSubmitAttestation(supabase, req, toolName, version, verifyBundle));
     }
 
     // GET /tools/{name}/versions/{version} -> get version info (must be before generic GET /tools/{name})
