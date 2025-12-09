@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
 export default function UserMenu() {
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -22,8 +22,9 @@ export default function UserMenu() {
 
   if (!user) return null;
 
-  const avatarUrl = user.user_metadata?.avatar_url;
+  const avatarUrl = profile?.avatar_url || user.user_metadata?.avatar_url;
   const displayName =
+    profile?.username ||
     user.user_metadata?.full_name ||
     user.user_metadata?.user_name ||
     user.email?.split("@")[0] ||

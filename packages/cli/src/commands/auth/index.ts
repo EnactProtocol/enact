@@ -315,7 +315,12 @@ async function waitForWebCallback(port: number): Promise<{
   user: {
     id: string;
     email?: string;
-    user_metadata?: { user_name?: string; full_name?: string; avatar_url?: string };
+    user_metadata?: {
+      username?: string;
+      user_name?: string;
+      full_name?: string;
+      avatar_url?: string;
+    };
   };
 }> {
   return new Promise((resolve, reject) => {
@@ -436,8 +441,9 @@ async function webLoginHandler(options: AuthOptions, _ctx: CommandContext): Prom
     // 4. Store tokens securely in keyring (default 1 hour expiry for Supabase tokens)
     await storeTokens(accessToken, refreshToken, 3600, "supabase");
 
-    // Get username from user metadata
+    // Get username from profile (set by CliCallback) or fall back to OAuth metadata
     const username =
+      user.user_metadata?.username ||
       user.user_metadata?.user_name ||
       user.user_metadata?.full_name ||
       user.email?.split("@")[0] ||
