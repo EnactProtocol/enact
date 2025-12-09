@@ -162,6 +162,61 @@ export async function publishTool(
 
   if (!response.ok) {
     const errorText = await response.text();
+
+    // Try to parse as JSON to get a more meaningful error message
+    try {
+      const errorJson = JSON.parse(errorText);
+      const error = errorJson.error;
+
+      if (error?.code && error?.message) {
+        // Provide user-friendly error messages based on error code
+        switch (error.code) {
+          case "NAMESPACE_MISMATCH":
+            throw new Error(
+              `Namespace mismatch: ${error.message}\n` +
+                `Hint: You can only publish tools under your own namespace (${error.details?.userNamespace || "your username"}).`
+            );
+          case "CONFLICT":
+            throw new Error(
+              `Version conflict: ${error.message}\nHint: Bump the version number in your enact.md file and try again.`
+            );
+          case "UNAUTHORIZED":
+            throw new Error(
+              `Authentication required: ${error.message}\nHint: Run 'enact auth login' to authenticate.`
+            );
+          case "VALIDATION_ERROR":
+            throw new Error(`Validation error: ${error.message}`);
+          case "BUNDLE_TOO_LARGE":
+            throw new Error(`Bundle too large: ${error.message}`);
+          default:
+            throw new Error(`Publish failed (${error.code}): ${error.message}`);
+        }
+      }
+    } catch (parseError) {
+      // If JSON parsing fails, fall back to the raw error text
+      if (parseError instanceof Error && parseError.message.startsWith("Namespace mismatch:")) {
+        throw parseError;
+      }
+      if (parseError instanceof Error && parseError.message.startsWith("Version conflict:")) {
+        throw parseError;
+      }
+      if (
+        parseError instanceof Error &&
+        parseError.message.startsWith("Authentication required:")
+      ) {
+        throw parseError;
+      }
+      if (parseError instanceof Error && parseError.message.startsWith("Validation error:")) {
+        throw parseError;
+      }
+      if (parseError instanceof Error && parseError.message.startsWith("Bundle too large:")) {
+        throw parseError;
+      }
+      if (parseError instanceof Error && parseError.message.startsWith("Publish failed (")) {
+        throw parseError;
+      }
+    }
+
     throw new Error(`Publish failed: ${response.status} - ${errorText}`);
   }
 

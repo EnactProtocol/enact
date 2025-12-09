@@ -113,6 +113,193 @@ describe("publish module", () => {
         })
       ).rejects.toThrow();
     });
+
+    test("provides user-friendly error for namespace mismatch", async () => {
+      // Override fetch to return namespace mismatch error
+      // @ts-expect-error - Simplified fetch mock for testing
+      globalThis.fetch = async () => {
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: "NAMESPACE_MISMATCH",
+              message: 'Tool namespace "wronguser" does not match your username "alice".',
+              details: { toolNamespace: "wronguser", userNamespace: "alice" },
+            },
+          }),
+          { status: 403 }
+        );
+      };
+
+      const client = createApiClient({ authToken: "valid-token" });
+      const bundle = new TextEncoder().encode("mock bundle content");
+
+      await expect(
+        publishTool(client, {
+          name: "wronguser/tool",
+          manifest: {
+            enact: "2.0.0",
+            name: "wronguser/tool",
+            version: "1.0.0",
+            description: "Test",
+          },
+          bundle,
+        })
+      ).rejects.toThrow(/Namespace mismatch/);
+    });
+
+    test("provides user-friendly error for version conflict", async () => {
+      // Override fetch to return conflict error
+      // @ts-expect-error - Simplified fetch mock for testing
+      globalThis.fetch = async () => {
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: "CONFLICT",
+              message: "Version 1.0.0 already exists",
+            },
+          }),
+          { status: 409 }
+        );
+      };
+
+      const client = createApiClient({ authToken: "valid-token" });
+      const bundle = new TextEncoder().encode("mock bundle content");
+
+      await expect(
+        publishTool(client, {
+          name: "alice/tool",
+          manifest: { enact: "2.0.0", name: "alice/tool", version: "1.0.0", description: "Test" },
+          bundle,
+        })
+      ).rejects.toThrow(/Version conflict.*Hint: Bump the version/s);
+    });
+
+    test("provides user-friendly error for unauthorized", async () => {
+      // Override fetch to return unauthorized error
+      // @ts-expect-error - Simplified fetch mock for testing
+      globalThis.fetch = async () => {
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: "UNAUTHORIZED",
+              message: "Unauthorized",
+            },
+          }),
+          { status: 401 }
+        );
+      };
+
+      const client = createApiClient({ authToken: "invalid-token" });
+      const bundle = new TextEncoder().encode("mock bundle content");
+
+      await expect(
+        publishTool(client, {
+          name: "alice/tool",
+          manifest: { enact: "2.0.0", name: "alice/tool", version: "1.0.0", description: "Test" },
+          bundle,
+        })
+      ).rejects.toThrow(/Authentication required.*Hint: Run 'enact auth login'/s);
+    });
+
+    test("provides user-friendly error for validation error", async () => {
+      // Override fetch to return validation error
+      // @ts-expect-error - Simplified fetch mock for testing
+      globalThis.fetch = async () => {
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: "VALIDATION_ERROR",
+              message: "Invalid version format",
+            },
+          }),
+          { status: 422 }
+        );
+      };
+
+      const client = createApiClient({ authToken: "valid-token" });
+      const bundle = new TextEncoder().encode("mock bundle content");
+
+      await expect(
+        publishTool(client, {
+          name: "alice/tool",
+          manifest: { enact: "2.0.0", name: "alice/tool", version: "bad", description: "Test" },
+          bundle,
+        })
+      ).rejects.toThrow(/Validation error: Invalid version format/);
+    });
+
+    test("provides user-friendly error for bundle too large", async () => {
+      // Override fetch to return bundle too large error
+      // @ts-expect-error - Simplified fetch mock for testing
+      globalThis.fetch = async () => {
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: "BUNDLE_TOO_LARGE",
+              message: "Bundle size 60000000 bytes exceeds maximum 50000000 bytes",
+            },
+          }),
+          { status: 413 }
+        );
+      };
+
+      const client = createApiClient({ authToken: "valid-token" });
+      const bundle = new TextEncoder().encode("mock bundle content");
+
+      await expect(
+        publishTool(client, {
+          name: "alice/tool",
+          manifest: { enact: "2.0.0", name: "alice/tool", version: "1.0.0", description: "Test" },
+          bundle,
+        })
+      ).rejects.toThrow(/Bundle too large/);
+    });
+
+    test("falls back to raw error for unknown error codes", async () => {
+      // Override fetch to return unknown error
+      // @ts-expect-error - Simplified fetch mock for testing
+      globalThis.fetch = async () => {
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: "UNKNOWN_ERROR",
+              message: "Something went wrong",
+            },
+          }),
+          { status: 500 }
+        );
+      };
+
+      const client = createApiClient({ authToken: "valid-token" });
+      const bundle = new TextEncoder().encode("mock bundle content");
+
+      await expect(
+        publishTool(client, {
+          name: "alice/tool",
+          manifest: { enact: "2.0.0", name: "alice/tool", version: "1.0.0", description: "Test" },
+          bundle,
+        })
+      ).rejects.toThrow(/Publish failed \(UNKNOWN_ERROR\): Something went wrong/);
+    });
+
+    test("falls back to raw text for non-JSON error responses", async () => {
+      // Override fetch to return non-JSON error
+      // @ts-expect-error - Simplified fetch mock for testing
+      globalThis.fetch = async () => {
+        return new Response("Internal Server Error", { status: 500 });
+      };
+
+      const client = createApiClient({ authToken: "valid-token" });
+      const bundle = new TextEncoder().encode("mock bundle content");
+
+      await expect(
+        publishTool(client, {
+          name: "alice/tool",
+          manifest: { enact: "2.0.0", name: "alice/tool", version: "1.0.0", description: "Test" },
+          bundle,
+        })
+      ).rejects.toThrow(/Publish failed: 500 - Internal Server Error/);
+    });
   });
 
   describe("submitAttestation", () => {

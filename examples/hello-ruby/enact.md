@@ -1,6 +1,6 @@
 ---
 enact: "2.0.0"
-name: "examples/hello-ruby"
+name: "enact/hello-ruby"
 version: "1.0.0"
 description: "A simple Ruby greeting tool"
 license: "MIT"

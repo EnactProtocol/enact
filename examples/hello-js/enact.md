@@ -1,5 +1,5 @@
 ---
-name: "testuser/hello-js"
+name: "enact/hello-js"
 version: "1.0.1"
 description: "A simple JavaScript greeting tool"
 from: "node:22-alpine"

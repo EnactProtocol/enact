@@ -1,7 +1,7 @@
 ---
 enact: "2.0.0"
-name: "keithalgroves/hello-python"
-version: "1.0.0"
+name: "enact/hello-python"
+version: "1.0.1"
 description: "A simple Python greeting tool"
 license: "MIT"
 from: "python:3.12-slim"

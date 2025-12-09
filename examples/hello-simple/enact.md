@@ -1,5 +1,5 @@
 ---
-name: examples/hello-simple
+name: enact/hello-simple
 version: 0.1.0
 description: A bare-bones example that prints a greeting
 command: echo "Hello from Enact!"

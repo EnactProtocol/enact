@@ -105,3 +105,6 @@ export {
   ErrorMessages,
   printErrorWithSuggestions,
 } from "./errors";
+
+// Auth utilities
+export { getCurrentUsername, extractNamespace } from "./auth";

@@ -21,7 +21,9 @@ import type { CommandContext, GlobalOptions } from "../../types";
 import {
   dim,
   error,
+  extractNamespace,
   formatError,
+  getCurrentUsername,
   header,
   info,
   json,
@@ -207,6 +209,27 @@ async function publishHandler(
     keyValue("Tags", manifest.tags.join(", "));
   }
   newline();
+
+  // Pre-flight namespace check (skip in local dev mode)
+  if (!options.skipAuth) {
+    const currentUsername = await getCurrentUsername();
+    if (currentUsername) {
+      const toolNamespace = extractNamespace(toolName);
+      if (toolNamespace !== currentUsername) {
+        error(
+          `Namespace mismatch: Tool namespace "${toolNamespace}" does not match your username "${currentUsername}".`
+        );
+        newline();
+        dim("You can only publish tools under your own namespace.");
+        dim("Either:");
+        dim(
+          `  1. Change the tool name to "${currentUsername}/${toolName.split("/").slice(1).join("/")}" in your enact.md`
+        );
+        dim(`  2. Or login as a user with the "${toolNamespace}" username`);
+        process.exit(1);
+      }
+    }
+  }
 
   // Get registry URL from config or environment
   const config = loadConfig();

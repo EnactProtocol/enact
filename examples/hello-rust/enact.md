@@ -1,6 +1,6 @@
 ---
 enact: "2.0.0"
-name: "examples/hello-rust"
+name: "enact/hello-rust"
 version: "1.0.0"
 description: "A simple Rust greeting tool"
 license: "MIT"
