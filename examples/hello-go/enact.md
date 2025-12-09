@@ -1,7 +1,7 @@
 ---
 enact: "2.0.0"
 name: "enact/hello-go"
-version: "1.0.0"
+version: "1.0.1"
 description: "A simple Go greeting tool"
 license: "MIT"
 from: "golang:1.23-alpine"

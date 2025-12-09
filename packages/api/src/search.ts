@@ -18,6 +18,8 @@ export interface SearchOptions {
   limit?: number | undefined;
   /** Pagination offset */
   offset?: number | undefined;
+  /** Similarity threshold for semantic search (0.0 to 1.0, default: 0.3) */
+  threshold?: number | undefined;
 }
 
 /**
@@ -61,6 +63,8 @@ export interface SearchResponse {
   offset: number;
   /** Whether more results are available */
   hasMore: boolean;
+  /** Search type used: "hybrid" (semantic+text) or "text" (fallback) */
+  searchType?: "hybrid" | "text" | undefined;
 }
 
 /**
@@ -71,6 +75,7 @@ interface RawSearchResponse {
   total: number;
   limit: number;
   offset: number;
+  search_type?: "hybrid" | "text";
 }
 
 /**
@@ -133,6 +138,12 @@ export async function searchTools(
     params.set("offset", String(options.offset));
   }
 
+  if (options.threshold !== undefined) {
+    // Clamp threshold between 0 and 1
+    const threshold = Math.max(0, Math.min(1, options.threshold));
+    params.set("threshold", String(threshold));
+  }
+
   const response = await client.get<RawSearchResponse>(`/tools/search?${params.toString()}`);
 
   const results = response.data.tools.map(toSearchResult);
@@ -143,5 +154,6 @@ export async function searchTools(
     limit: response.data.limit,
     offset: response.data.offset,
     hasMore: response.data.offset + results.length < response.data.total,
+    searchType: response.data.search_type,
   };
 }

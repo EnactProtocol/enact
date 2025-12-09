@@ -1,6 +1,6 @@
 ---
 name: enact/hello-simple
-version: 0.1.0
+version: 0.1.1
 description: A bare-bones example that prints a greeting
 command: echo "Hello from Enact!"
 tags:

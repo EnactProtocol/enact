@@ -32,6 +32,7 @@ interface SearchOptions extends GlobalOptions {
   tags?: string;
   limit?: string;
   offset?: string;
+  threshold?: string;
   local?: boolean;
   global?: boolean;
 }
@@ -229,7 +230,15 @@ async function searchHandler(
     process.env.ENACT_REGISTRY_URL ??
     config.registry?.url ??
     "https://siikwkfgsmouioodghho.supabase.co/functions/v1";
-  const authToken = config.registry?.authToken;
+
+  // Get auth token - use user token if available, otherwise use anon key for public access
+  let authToken = config.registry?.authToken ?? process.env.ENACT_AUTH_TOKEN;
+  if (!authToken && registryUrl.includes("siikwkfgsmouioodghho.supabase.co")) {
+    // Use the official Supabase anon key for unauthenticated access
+    authToken =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpaWt3a2Znc21vdWlvb2RnaGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2MTkzMzksImV4cCI6MjA4MDE5NTMzOX0.kxnx6-IPFhmGx6rzNx36vbyhFMFZKP_jFqaDbKnJ_E0";
+  }
+
   const client = createApiClient({
     baseUrl: registryUrl,
     authToken: authToken,
@@ -237,11 +246,15 @@ async function searchHandler(
 
   const limit = options.limit ? Number.parseInt(options.limit, 10) : 20;
   const offset = options.offset ? Number.parseInt(options.offset, 10) : 0;
+  const threshold = options.threshold ? Number.parseFloat(options.threshold) : undefined;
 
   if (ctx.options.verbose) {
     info(`Searching for: "${query}"`);
     if (options.tags) {
       info(`Tags: ${options.tags}`);
+    }
+    if (threshold !== undefined) {
+      info(`Similarity threshold: ${threshold}`);
     }
   }
 
@@ -251,7 +264,15 @@ async function searchHandler(
       tags: options.tags,
       limit,
       offset,
+      threshold,
     });
+
+    // Show search type in verbose mode
+    if (ctx.options.verbose && response.searchType) {
+      const searchTypeLabel =
+        response.searchType === "hybrid" ? "semantic + text (hybrid)" : "text only (no OpenAI key)";
+      info(`Search mode: ${searchTypeLabel}`);
+    }
 
     // JSON output
     if (options.json) {
@@ -262,6 +283,7 @@ async function searchHandler(
         limit: response.limit,
         offset: response.offset,
         hasMore: response.hasMore,
+        searchType: response.searchType,
       });
       return;
     }
@@ -269,6 +291,9 @@ async function searchHandler(
     // No results
     if (response.results.length === 0) {
       info(`No tools found matching "${query}"`);
+      if (response.searchType === "text") {
+        dim("Note: Semantic search unavailable (OpenAI key not configured on server)");
+      }
       dim("Try a different search term or remove tag filters");
       return;
     }
@@ -348,6 +373,10 @@ export function configureSearchCommand(program: Command): void {
     .option("-t, --tags <tags>", "Filter by tags (comma-separated, registry only)")
     .option("-l, --limit <number>", "Maximum results to return (default: 20, registry only)")
     .option("-o, --offset <number>", "Pagination offset (default: 0, registry only)")
+    .option(
+      "--threshold <number>",
+      "Similarity threshold for semantic search (0.0-1.0, default: 0.1)"
+    )
     .option("-v, --verbose", "Show detailed output")
     .option("--json", "Output as JSON")
     .action(async (query: string, options: SearchOptions) => {

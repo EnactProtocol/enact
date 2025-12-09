@@ -170,6 +170,12 @@ async function handleSearch(supabase: any, url: URL): Promise<Response> {
   const { limit, offset } = parsePaginationParams(url);
   const useSemanticSearch = url.searchParams.get("semantic") !== "false";
 
+  // Parse threshold parameter (default: 0.1, range: 0.0-1.0)
+  const thresholdParam = url.searchParams.get("threshold");
+  const threshold = thresholdParam
+    ? Math.max(0, Math.min(1, Number.parseFloat(thresholdParam)))
+    : 0.1;
+
   // Try semantic search if query is provided and OpenAI is configured
   if (query && useSemanticSearch && Deno.env.get("OPENAI_API_KEY")) {
     try {
@@ -185,7 +191,12 @@ async function handleSearch(supabase: any, url: URL): Promise<Response> {
           text_weight: 0.3,
           semantic_weight: 0.7,
           match_count: limit + offset,
+          match_threshold: threshold,
         });
+
+      if (semanticError) {
+        console.warn(`[Search] Semantic search RPC error: ${semanticError.message}`);
+      }
 
       if (!semanticError && semanticResults && semanticResults.length > 0) {
         // Paginate results
@@ -228,6 +239,8 @@ async function handleSearch(supabase: any, url: URL): Promise<Response> {
           offset,
           search_type: "hybrid",
         });
+      } else if (!semanticError) {
+        console.log(`[Search] Semantic search returned 0 results for "${query}" (tools may not have embeddings)`);
       }
     } catch (embeddingError) {
       console.warn(`[Search] Semantic search failed, falling back to text: ${embeddingError}`);

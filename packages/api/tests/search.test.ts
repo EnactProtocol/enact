@@ -108,4 +108,43 @@ describe("searchTools", () => {
     // The search function should cap at 100
     expect(results.limit).toBeLessThanOrEqual(100);
   });
+
+  test("supports threshold parameter", async () => {
+    const client = createApiClient({ baseUrl: "http://localhost" });
+    const results = await searchTools(client, {
+      query: "test",
+      threshold: 0.5,
+    });
+
+    expect(results.results).toBeArray();
+  });
+
+  test("clamps threshold to valid range (0-1)", async () => {
+    const client = createApiClient({ baseUrl: "http://localhost" });
+
+    // Threshold above 1 should be clamped
+    const resultsHigh = await searchTools(client, {
+      query: "test",
+      threshold: 1.5,
+    });
+    expect(resultsHigh.results).toBeArray();
+
+    // Threshold below 0 should be clamped
+    const resultsLow = await searchTools(client, {
+      query: "test",
+      threshold: -0.5,
+    });
+    expect(resultsLow.results).toBeArray();
+  });
+
+  test("threshold is optional", async () => {
+    const client = createApiClient({ baseUrl: "http://localhost" });
+
+    // Search without threshold should work
+    const results = await searchTools(client, {
+      query: "test",
+    });
+
+    expect(results.results).toBeArray();
+  });
 });

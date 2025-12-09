@@ -47,9 +47,7 @@ async function main() {
   program
     .name("enact")
     .description("Enact - Verified, portable protocol for AI-executable tools")
-    .version(version)
-    .option("--json", "Output as JSON")
-    .option("-v, --verbose", "Enable verbose output");
+    .version(version);
 
   // Configure all commands
   configureSetupCommand(program);

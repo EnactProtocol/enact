@@ -1,7 +1,7 @@
 ---
 enact: "2.0.0"
 name: "enact/hello-ruby"
-version: "1.0.0"
+version: "1.0.1"
 description: "A simple Ruby greeting tool"
 license: "MIT"
 from: "ruby:3.3-alpine"
