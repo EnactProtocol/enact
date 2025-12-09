@@ -6,6 +6,7 @@ set -e
 # Example: ./scripts/release.sh 0.2.0
 
 VERSION=$1
+ROOT_DIR=$(pwd)
 
 if [ -z "$VERSION" ]; then
   echo "Usage: ./scripts/release.sh <version>"
@@ -43,16 +44,47 @@ bun run lint
 echo "🔨 Building..."
 bun run build
 
-# Update versions in all packages
+# Update versions in all packages using node to modify package.json directly
+# This avoids issues with npm version not liking workspace:* dependencies
 echo "📝 Updating package versions to $VERSION..."
-cd packages/shared && npm version $VERSION --no-git-tag-version && cd ../..
-cd packages/secrets && npm version $VERSION --no-git-tag-version && cd ../..
-cd packages/trust && npm version $VERSION --no-git-tag-version && cd ../..
-cd packages/api && npm version $VERSION --no-git-tag-version && cd ../..
-cd packages/cli && npm version $VERSION --no-git-tag-version && cd ../..
 
-# Update root package.json
-npm version $VERSION --no-git-tag-version
+update_version() {
+  local pkg_json="$1"
+  if [ -f "$pkg_json" ]; then
+    node -e "
+      const fs = require('fs');
+      const pkg = JSON.parse(fs.readFileSync('$pkg_json', 'utf8'));
+      pkg.version = '$VERSION';
+      fs.writeFileSync('$pkg_json', JSON.stringify(pkg, null, 2) + '\n');
+    "
+    echo "  ✓ Updated $(dirname $pkg_json)"
+  fi
+}
+
+# Update all package versions
+update_version "$ROOT_DIR/package.json"
+update_version "$ROOT_DIR/packages/trust/package.json"
+update_version "$ROOT_DIR/packages/secrets/package.json"
+update_version "$ROOT_DIR/packages/shared/package.json"
+update_version "$ROOT_DIR/packages/execution/package.json"
+update_version "$ROOT_DIR/packages/api/package.json"
+update_version "$ROOT_DIR/packages/cli/package.json"
+# Note: mcp-server is not published to npm yet
+
+# Also update the version constant in CLI index.ts
+CLI_INDEX="$ROOT_DIR/packages/cli/src/index.ts"
+if [ -f "$CLI_INDEX" ]; then
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    sed -i '' "s/export const version = \".*\"/export const version = \"$VERSION\"/" "$CLI_INDEX"
+  else
+    sed -i "s/export const version = \".*\"/export const version = \"$VERSION\"/" "$CLI_INDEX"
+  fi
+  echo "  ✓ Updated CLI version constant"
+fi
+
+# Rebuild after version update
+echo "🔨 Rebuilding with new version..."
+bun run build
 
 # Commit version bump
 echo "📦 Committing version bump..."
