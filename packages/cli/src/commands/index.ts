@@ -5,6 +5,7 @@
  */
 
 export { configureSetupCommand } from "./setup";
+export { configureInitCommand } from "./init";
 export { configureRunCommand } from "./run";
 export { configureExecCommand } from "./exec";
 export { configureInstallCommand } from "./install";

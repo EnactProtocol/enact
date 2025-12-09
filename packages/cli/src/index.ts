@@ -16,6 +16,7 @@ import {
   configureEnvCommand,
   configureExecCommand,
   configureGetCommand,
+  configureInitCommand,
   configureInspectCommand,
   configureInstallCommand,
   configureListCommand,
@@ -52,6 +53,7 @@ async function main() {
 
   // Configure all commands
   configureSetupCommand(program);
+  configureInitCommand(program);
   configureRunCommand(program);
   configureExecCommand(program);
   configureInstallCommand(program);
