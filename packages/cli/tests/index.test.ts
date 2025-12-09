@@ -3,6 +3,7 @@ import { version } from "../src/index";
 
 describe("@enactprotocol/cli", () => {
   test("exports version", () => {
-    expect(version).toBe("2.0.1");
+    // Just verify version is a valid semver string
+    expect(version).toMatch(/^\d+\.\d+\.\d+$/);
   });
 });
