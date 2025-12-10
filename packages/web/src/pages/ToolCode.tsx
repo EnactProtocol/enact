@@ -6,21 +6,20 @@ import type { FileContentResponse, ToolFilesResponse, ToolInfo } from "@/lib/api
 import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, ArrowLeft, Check, ChevronRight, Copy, FileCode } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
-export default function ToolCode() {
-  const {
-    owner,
-    category,
-    name,
-    "*": filePath,
-  } = useParams<{ owner: string; category?: string; name: string; "*": string }>();
+interface ToolCodeProps {
+  toolName: string;
+  initialFilePath: string;
+}
+
+export default function ToolCode({ toolName, initialFilePath }: ToolCodeProps) {
   const navigate = useNavigate();
-  // Support both 2-segment (owner/name) and 3-segment (owner/category/name) tool names
-  const toolName = category ? `${owner}/${category}/${name}` : `${owner}/${name}`;
+  // Extract the display name (last segment of the tool name)
+  const displayName = toolName.split("/").pop() || toolName;
 
   const [copied, setCopied] = useState(false);
-  const currentFile = filePath || "";
+  const currentFile = initialFilePath || "";
 
   // Fetch tool info
   const {
@@ -62,13 +61,19 @@ export default function ToolCode() {
     if (!currentFile && filesData?.files.length) {
       const firstFile = filesData.files.find((f) => f.type === "file");
       if (firstFile) {
-        navigate(`/tools/${toolName}/code/${firstFile.path}`, { replace: true });
+        navigate(`/tools/${toolName}/-/blob/${firstFile.path}`, { replace: true });
       }
     }
   }, [currentFile, filesData, navigate, toolName]);
 
   const handleSelectFile = (path: string) => {
-    navigate(`/tools/${toolName}/code/${path}`);
+    // Check if it's a directory or file by looking at the file tree
+    const isDirectory = filesData?.files.some((f) => f.path.startsWith(path + "/"));
+    if (isDirectory) {
+      navigate(`/tools/${toolName}/-/tree/${path}`);
+    } else {
+      navigate(`/tools/${toolName}/-/blob/${path}`);
+    }
   };
 
   const handleCopyPath = async () => {
@@ -131,7 +136,7 @@ export default function ToolCode() {
                 className="flex items-center gap-1 text-sm text-gray-5 hover:text-gray-6"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Back to {name}
+                Back to {displayName}
               </Link>
               <span className="text-gray-3">|</span>
               <div className="flex items-center gap-1 text-sm">
@@ -147,10 +152,10 @@ export default function ToolCode() {
             <div className="flex items-center gap-1 mt-2 text-sm">
               <button
                 type="button"
-                onClick={() => navigate(`/tools/${toolName}/code`)}
+                onClick={() => navigate(`/tools/${toolName}/-/tree`)}
                 className="text-brand-blue hover:underline"
               >
-                {name}
+                {displayName}
               </button>
               {pathParts.map((part, i) => (
                 <span key={part} className="flex items-center gap-1">
@@ -162,7 +167,7 @@ export default function ToolCode() {
                       type="button"
                       onClick={() => {
                         const subPath = pathParts.slice(0, i + 1).join("/");
-                        navigate(`/tools/${toolName}/code/${subPath}`);
+                        navigate(`/tools/${toolName}/-/tree/${subPath}`);
                       }}
                       className="text-brand-blue hover:underline"
                     >

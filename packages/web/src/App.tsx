@@ -4,7 +4,6 @@ import Browse from "./pages/Browse";
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
 import Tool from "./pages/Tool";
-import ToolCode from "./pages/ToolCode";
 import AuthCallback from "./pages/auth/AuthCallback";
 import ChooseUsername from "./pages/auth/ChooseUsername";
 import CliAuth from "./pages/auth/CliAuth";
@@ -18,11 +17,8 @@ export default function App() {
       <Route path="/" element={<Layout />}>
         <Route index element={<Home />} />
         <Route path="browse" element={<Browse />} />
-        {/* Support tool names with 2 or 3 segments: owner/name or owner/category/name */}
-        <Route path="tools/:owner/:name" element={<Tool />} />
-        <Route path="tools/:owner/:category/:name" element={<Tool />} />
-        <Route path="tools/:owner/:name/code/*" element={<ToolCode />} />
-        <Route path="tools/:owner/:category/:name/code/*" element={<ToolCode />} />
+        {/* Tool names can have any number of segments: owner/name, owner/cat/name, etc. */}
+        <Route path="tools/*" element={<Tool />} />
         <Route path="login" element={<Login />} />
         <Route path="*" element={<NotFound />} />
       </Route>

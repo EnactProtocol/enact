@@ -1,3 +1,4 @@
+import { type FileNode, buildFileTree } from "@/components/code/FileTree";
 import AttestButton from "@/components/trust/AttestButton";
 import Badge from "@/components/ui/Badge";
 import CopyButton from "@/components/ui/CopyButton";
@@ -10,11 +11,58 @@ import { AlertCircle, Download, File, Folder, Shield } from "lucide-react";
 import Markdown from "react-markdown";
 import { Link, useParams } from "react-router-dom";
 import remarkGfm from "remark-gfm";
+import ToolCode from "./ToolCode";
+
+// Parse tool path from wildcard route - handles any number of segments
+// Uses "/-/blob/" as the separator (like GitLab) to avoid collision with tool names
+function parseToolPath(path: string | undefined): {
+  toolName: string;
+  isCodeView: boolean;
+  filePath: string;
+} {
+  if (!path) return { toolName: "", isCodeView: false, filePath: "" };
+
+  // Look for "/-/blob/" separator (safe marker that won't conflict with tool names)
+  const blobMarkerIndex = path.indexOf("/-/blob/");
+
+  if (blobMarkerIndex !== -1) {
+    const toolName = path.slice(0, blobMarkerIndex);
+    const filePath = path.slice(blobMarkerIndex + 8); // length of "/-/blob/"
+    return { toolName, isCodeView: true, filePath };
+  }
+
+  // Also check for "/-/tree" (directory view without specific file)
+  const treeMarkerIndex = path.indexOf("/-/tree");
+  if (treeMarkerIndex !== -1) {
+    const toolName = path.slice(0, treeMarkerIndex);
+    // Everything after "/-/tree" or "/-/tree/" is the directory path
+    const afterMarker = path.slice(treeMarkerIndex + 7); // length of "/-/tree"
+    const filePath = afterMarker.startsWith("/") ? afterMarker.slice(1) : "";
+    return { toolName, isCodeView: true, filePath };
+  }
+
+  // It's a tool detail view: the entire path is the tool name
+  return { toolName: path, isCodeView: false, filePath: "" };
+}
+
+// Extract owner (first segment) and display name (last segment) from tool name
+function parseToolName(toolName: string): { owner: string; displayName: string } {
+  const parts = toolName.split("/");
+  return {
+    owner: parts[0] || "",
+    displayName: parts[parts.length - 1] || toolName,
+  };
+}
 
 export default function Tool() {
-  const { owner, category, name } = useParams<{ owner: string; category?: string; name: string }>();
-  // Support both 2-segment (owner/name) and 3-segment (owner/category/name) tool names
-  const toolName = category ? `${owner}/${category}/${name}` : `${owner}/${name}`;
+  const { "*": fullPath } = useParams<{ "*": string }>();
+  const { toolName, isCodeView, filePath } = parseToolPath(fullPath);
+  const { owner, displayName } = parseToolName(toolName);
+
+  // If it's a code view, delegate to ToolCode component
+  if (isCodeView && toolName) {
+    return <ToolCode toolName={toolName} initialFilePath={filePath} />;
+  }
 
   const {
     data: tool,
@@ -44,15 +92,15 @@ export default function Tool() {
     enabled: !!tool?.latestVersion && !!enactFile,
   });
 
-  // Sort files: directories first, then files alphabetically
-  const sortedFiles =
-    filesData?.files
-      .filter((f) => !f.path.includes("/")) // Only top-level files
-      .sort((a, b) => {
-        if (a.type === "directory" && b.type !== "directory") return -1;
-        if (a.type !== "directory" && b.type === "directory") return 1;
-        return a.path.localeCompare(b.path);
-      }) || [];
+  // Build file tree from paths, then get top-level items (files and directories)
+  const fileTree: FileNode[] = filesData ? buildFileTree(filesData.files.map((f) => f.path)) : [];
+
+  // Sort: directories first, then files alphabetically
+  const sortedFiles = [...fileTree].sort((a, b) => {
+    if (a.type === "directory" && b.type !== "directory") return -1;
+    if (a.type !== "directory" && b.type === "directory") return 1;
+    return a.name.localeCompare(b.name);
+  });
 
   if (isLoading) {
     return (
@@ -89,7 +137,7 @@ export default function Tool() {
       <div className="mb-8">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">{name}</h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">{displayName}</h1>
             <p className="text-gray-500">{owner}</p>
           </div>
           {isVerified && (
@@ -120,7 +168,7 @@ export default function Tool() {
               <div className="flex items-center gap-2 text-sm">
                 <span className="font-medium text-gray-900">{owner}</span>
                 <span className="text-gray-400">/</span>
-                <span className="font-semibold text-gray-900">{name}</span>
+                <span className="font-semibold text-gray-900">{displayName}</span>
               </div>
             </div>
             <div className="divide-y divide-gray-100">
@@ -128,7 +176,11 @@ export default function Tool() {
                 sortedFiles.map((file) => (
                   <Link
                     key={file.path}
-                    to={`/tools/${toolName}/code?path=${encodeURIComponent(file.path)}`}
+                    to={
+                      file.type === "directory"
+                        ? `/tools/${toolName}/-/tree/${file.path}`
+                        : `/tools/${toolName}/-/blob/${file.path}`
+                    }
                     className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition-colors"
                   >
                     {file.type === "directory" ? (
@@ -137,15 +189,8 @@ export default function Tool() {
                       <File className="w-4 h-4 text-gray-400" />
                     )}
                     <span className="text-gray-900 hover:text-brand-blue hover:underline flex-1">
-                      {file.path}
+                      {file.name}
                     </span>
-                    {file.type === "file" && (
-                      <span className="text-xs text-gray-400">
-                        {file.size < 1024
-                          ? `${file.size} B`
-                          : `${(file.size / 1024).toFixed(1)} KB`}
-                      </span>
-                    )}
                   </Link>
                 ))
               ) : (
