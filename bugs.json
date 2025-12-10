@@ -35,6 +35,13 @@
       "workaround": "None - local verification is broken until endpoint is fixed",
       "investigation_notes": "Verified that: (1) Attestation metadata exists at /tools/.../attestations endpoint, (2) Bundle fetch endpoint at /tools/.../trust/attestations/{auditor} returns 404, (3) verifyAllAttestations() catches the error and returns empty array",
       "fix": "Added the /tools/{name}/versions/{version}/trust/attestations/{auditor} route and handleGetAttestationBundle() function to packages/server/supabase/functions/tools/index.ts. The route was only defined in attestations/index.ts but the client calls the tools function. REQUIRES DEPLOYMENT: Run 'supabase functions deploy tools' to deploy the fix to production."
+    },
+    {
+      "name": "enact -v should show version",
+      "description": "Running 'enact -v' or 'enact --version' should display the CLI version number, but it currently does not work as expected.",
+      "expected_behavior": "The 'enact -v' and 'enact --version' commands should print the current version of the CLI (e.g., '0.1.0').",
+      "status": "open",
+      "location": "packages/cli/src/index.ts or main CLI entry point"
     }
   ]
 }
