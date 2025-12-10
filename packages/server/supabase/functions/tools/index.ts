@@ -134,6 +134,20 @@ Deno.serve(async (req) => {
       return addCorsHeaders(await handleSubmitAttestation(supabase, req, toolName, version, verifyBundle));
     }
 
+    // GET /tools/{name}/versions/{version}/trust/attestations/{auditor} -> get Sigstore bundle
+    if (
+      pathParts.includes("trust") &&
+      pathParts[pathParts.indexOf("trust") + 1] === "attestations" &&
+      pathParts.length > pathParts.indexOf("trust") + 2 &&
+      req.method === "GET"
+    ) {
+      const trustIndex = pathParts.indexOf("trust");
+      const auditor = decodeURIComponent(pathParts[trustIndex + 2]);
+      const version = pathParts[trustIndex - 1];
+      const toolName = pathParts.slice(1, trustIndex - 2).join("/");
+      return addCorsHeaders(await handleGetAttestationBundle(supabase, toolName, version, auditor));
+    }
+
     // GET /tools/{name}/versions/{version} -> get version info (must be before generic GET /tools/{name})
     if (pathParts[0] === "tools" && pathParts[pathParts.length - 2] === "versions" && req.method === "GET") {
       const version = pathParts[pathParts.length - 1];
@@ -828,6 +842,40 @@ function isBinaryFile(filePath: string, content: Uint8Array): boolean {
   }
 
   return false;
+}
+
+/**
+ * Handle get attestation bundle (Sigstore bundle for local verification)
+ */
+async function handleGetAttestationBundle(
+  supabase: any,
+  toolName: string,
+  version: string,
+  auditor: string
+): Promise<Response> {
+  // Get attestation with bundle
+  const { data: attestation, error } = await supabase
+    .from("attestations")
+    .select(`
+      bundle,
+      tool_versions!inner(
+        version,
+        tools!inner(name)
+      )
+    `)
+    .eq("tool_versions.tools.name", toolName)
+    .eq("tool_versions.version", version)
+    .eq("auditor", auditor)
+    .eq("revoked", false)
+    .single();
+
+  if (error || !attestation) {
+    return Errors.notFound(
+      `Attestation not found for ${toolName}@${version} by ${auditor}`
+    );
+  }
+
+  return jsonResponse(attestation.bundle);
 }
 
 /**

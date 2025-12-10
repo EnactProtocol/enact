@@ -27,6 +27,7 @@ import {
   type EnactToolAttestationOptions,
   type SigstoreBundle,
   createEnactToolStatement,
+  extractCertificateFromBundle,
   signAttestation,
 } from "@enactprotocol/trust";
 import type { Command } from "commander";
@@ -156,7 +157,8 @@ function displayDryRun(
  */
 async function promptAddToTrustList(
   auditorEmail: string,
-  isInteractive: boolean
+  isInteractive: boolean,
+  issuer?: string
 ): Promise<boolean> {
   if (!isInteractive) {
     return false;
@@ -164,7 +166,8 @@ async function promptAddToTrustList(
 
   try {
     // Convert email to provider:identity format (e.g., github:alice)
-    const providerIdentity = emailToProviderIdentity(auditorEmail);
+    // Pass the issuer so we can correctly determine the provider
+    const providerIdentity = emailToProviderIdentity(auditorEmail, issuer);
 
     // Check if already in local trust list
     const trustedAuditors = getTrustedAuditors();
@@ -399,9 +402,11 @@ async function signRemoteTool(
       keyValue("Rekor log index", String(attestationResult.rekorLogIndex));
     }
 
-    // Prompt to add to trust list
+    // Prompt to add to trust list - extract issuer from bundle for correct identity format
     if (_ctx.isInteractive && !options.json) {
-      await promptAddToTrustList(attestationResult.auditor, _ctx.isInteractive);
+      const certificate = extractCertificateFromBundle(result.bundle);
+      const issuer = certificate?.identity?.issuer;
+      await promptAddToTrustList(attestationResult.auditor, _ctx.isInteractive, issuer);
     }
 
     if (options.json) {
@@ -442,6 +447,28 @@ async function signLocalTool(
   }
 
   const manifest = loaded.manifest;
+
+  // Warn about local signing workflow - attestation hash won't match published bundle
+  if (_ctx.isInteractive && !options.dryRun) {
+    newline();
+    warning("Local signing creates an attestation for the manifest content hash.");
+    dim("If you plan to publish this tool, the published bundle will have a different hash.");
+    dim("The attestation won't match and verification will fail.");
+    newline();
+    info("Recommended workflow:");
+    dim(`  1. ${colors.command(`enact publish ${pathArg}`)}     # Publish first`);
+    dim(
+      `  2. ${colors.command(`enact sign ${manifest.name}@${manifest.version ?? "1.0.0"}`)}  # Then sign the published version`
+    );
+    newline();
+
+    const shouldContinue = await confirm("Continue with local signing anyway?", false);
+    if (!shouldContinue) {
+      info("Signing cancelled. Use the recommended workflow above.");
+      return;
+    }
+    newline();
+  }
 
   // Validate manifest
   const validation = validateManifest(manifest);
@@ -574,8 +601,11 @@ async function signLocalTool(
         };
 
         // Prompt to add auditor to trust list (if interactive and not in JSON mode)
+        // Extract issuer from bundle for correct identity format
         if (!options.json && _ctx.isInteractive) {
-          await promptAddToTrustList(attestationResult.auditor, _ctx.isInteractive);
+          const certificate = extractCertificateFromBundle(result.bundle);
+          const issuer = certificate?.identity?.issuer;
+          await promptAddToTrustList(attestationResult.auditor, _ctx.isInteractive, issuer);
         }
       } catch (err) {
         warning("Failed to submit attestation to registry");

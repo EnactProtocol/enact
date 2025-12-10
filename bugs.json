@@ -1,0 +1,40 @@
+{
+  "bugs": [
+    {
+      "name": "Trust identity format mismatch on sign",
+      "description": "When signing a tool and adding the identity to trusted auditors, the sign command calls emailToProviderIdentity() without passing the OIDC issuer. This causes it to fall back to email domain matching. For emails with non-standard domains (e.g., @jointheleague.org), it stores just the email (e.g., 'keith.groves@jointheleague.org') instead of the provider-prefixed format (e.g., 'github:keith.groves@jointheleague.org'). However, during verification, the issuer IS available from the certificate and is passed to emailToProviderIdentity(), resulting in the correct 'github:email' format. This mismatch causes trust verification to fail.",
+      "expected_behavior": "The sign command should extract the issuer from the Sigstore certificate and pass it to emailToProviderIdentity() so that the identity added to config matches what verification produces. Alternatively, verification should also check against the raw email format for backwards compatibility.",
+      "status": "fixed",
+      "location": "packages/cli/src/commands/sign/index.ts - promptAddToTrustList()",
+      "workaround": "Manually edit ~/.enact/config.yaml to prefix the identity with the provider (e.g., 'github:email@domain.com')",
+      "fix": "Modified promptAddToTrustList() to accept an issuer parameter and extract it from the Sigstore certificate bundle using extractCertificateFromBundle(). The issuer is now passed to emailToProviderIdentity() in both signRemoteTool() and signLocalTool()."
+    },
+    {
+      "name": "Local sign before publish creates hash mismatch",
+      "description": "When running 'enact sign ./path' before 'enact publish ./path', the attestation is created for the manifest content hash (e.g., sha256:5b312921...). However, 'enact publish' creates a bundle with a different hash (e.g., sha256:95e67e4a...). During verification, the attestation's subject hash doesn't match the published bundle hash, causing cryptographic verification to fail with 'Cryptographically verified: 0'.",
+      "expected_behavior": "Either: (1) The sign command should compute the same bundle hash that publish will use, (2) Publish should automatically re-sign with the correct bundle hash, or (3) The workflow should enforce publish-then-sign order (as remote signing does correctly).",
+      "status": "fixed",
+      "location": "packages/cli/src/commands/sign/index.ts and packages/cli/src/commands/publish/index.ts",
+      "workaround": "Use remote signing after publishing: 'enact publish ./path' then 'enact sign toolname@version'",
+      "fix": "Added a warning in signLocalTool() that explains the hash mismatch issue and recommends the correct workflow (publish first, then sign remotely). Users are prompted to confirm if they want to continue with local signing anyway."
+    },
+    {
+      "name": "enact get command does not parse @version syntax",
+      "description": "The 'enact get' command uses '--ver <version>' option instead of parsing the '@version' suffix from the tool name. Running 'enact get enact/test/remote-sign-demo@0.1.1' treats the entire string as the tool name and returns 'Tool not found'. This is inconsistent with other commands like 'sign' and 'install' which do parse the '@version' syntax.",
+      "expected_behavior": "The 'enact get' command should parse 'name@version' syntax for consistency with other commands. 'enact get tool@1.0.0' should be equivalent to 'enact get tool --ver 1.0.0'.",
+      "status": "open",
+      "location": "packages/cli/src/commands/get/index.ts",
+      "workaround": "Use 'enact get toolname --ver 0.1.1' instead of 'enact get toolname@0.1.1'"
+    },
+    {
+      "name": "Attestation bundle fetch endpoint returns NOT_FOUND",
+      "description": "The getAttestationBundle() function in packages/api/src/attestations.ts calls '/tools/{name}/versions/{version}/trust/attestations/{auditor}' to fetch the full Sigstore bundle, but this endpoint returns 404 NOT_FOUND. The attestation metadata exists at '/tools/{name}/versions/{version}/attestations' but the bundle fetch endpoint doesn't work. This causes verifyAllAttestations() to fail for all attestations, resulting in '0 attestation(s)' during install even though the attestation was successfully submitted.",
+      "expected_behavior": "The '/tools/{name}/versions/{version}/trust/attestations/{auditor}' endpoint should return the full Sigstore bundle for local verification, or the endpoint URL should be corrected to match the server implementation.",
+      "status": "fixed",
+      "location": "packages/server/supabase/functions/tools/index.ts",
+      "workaround": "None - local verification is broken until endpoint is fixed",
+      "investigation_notes": "Verified that: (1) Attestation metadata exists at /tools/.../attestations endpoint, (2) Bundle fetch endpoint at /tools/.../trust/attestations/{auditor} returns 404, (3) verifyAllAttestations() catches the error and returns empty array",
+      "fix": "Added the /tools/{name}/versions/{version}/trust/attestations/{auditor} route and handleGetAttestationBundle() function to packages/server/supabase/functions/tools/index.ts. The route was only defined in attestations/index.ts but the client calls the tools function. REQUIRES DEPLOYMENT: Run 'supabase functions deploy tools' to deploy the fix to production."
+    }
+  ]
+}

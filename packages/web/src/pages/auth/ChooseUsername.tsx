@@ -7,7 +7,6 @@ import { useAuth } from "../../contexts/AuthContext";
 export default function ChooseUsername() {
   const { user, profile, createProfile, checkUsernameAvailable, loading } = useAuth();
   const [username, setUsername] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [checking, setChecking] = useState(false);
   const [available, setAvailable] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -25,13 +24,9 @@ export default function ChooseUsername() {
     }
   }, [user, profile, loading, navigate, redirectTo]);
 
-  // Pre-fill display name from user metadata
+  // Suggest username from GitHub username or email
   useEffect(() => {
     if (user?.user_metadata) {
-      const name = user.user_metadata.full_name || user.user_metadata.name || "";
-      setDisplayName(name);
-
-      // Suggest username from GitHub username or email
       const suggestedUsername =
         user.user_metadata.user_name ||
         user.user_metadata.preferred_username ||
@@ -122,7 +117,7 @@ export default function ChooseUsername() {
 
     setSubmitting(true);
     try {
-      await createProfile(username, displayName || undefined);
+      await createProfile(username);
       navigate(redirectTo);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create profile");
@@ -201,22 +196,6 @@ export default function ChooseUsername() {
               {available === false && !error && (
                 <p className="text-xs text-red-600 mt-1">This username is already taken</p>
               )}
-            </div>
-
-            {/* Display name field */}
-            <div>
-              <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-1">
-                Display name <span className="text-gray-400">(optional)</span>
-              </label>
-              <input
-                id="displayName"
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Your Name"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-colors"
-                autoComplete="name"
-              />
             </div>
 
             {/* Error message */}

@@ -1,0 +1,8 @@
+name: enact/test/remote-sign-demo
+version: 0.1.1
+description: A test tool to demonstrate remote signing with Enact
+command: echo "Hello from the remote signing demo! The current time is $(date)"
+tags:
+  - test
+  - demo
+  - signing

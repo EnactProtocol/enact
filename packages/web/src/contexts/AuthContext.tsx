@@ -17,14 +17,11 @@ interface AuthContextType {
   loading: boolean;
   profileLoading: boolean;
   needsUsername: boolean;
-  signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (email: string, password: string) => Promise<{ needsConfirmation: boolean }>;
   signInWithGitHub: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   checkUsernameAvailable: (username: string) => Promise<boolean>;
-  createProfile: (username: string, displayName?: string) => Promise<void>;
+  createProfile: (username: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
 
@@ -91,29 +88,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
 
-  const signInWithEmail = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) throw error;
-  };
-
-  const signUpWithEmail = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    if (error) throw error;
-
-    // Check if email confirmation is required
-    const needsConfirmation = !data.session && !!data.user;
-    return { needsConfirmation };
-  };
-
   const signInWithGitHub = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "github",
@@ -130,13 +104,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
-    });
-    if (error) throw error;
-  };
-
-  const resetPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
     });
     if (error) throw error;
   };
@@ -173,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data === null;
   };
 
-  const createProfile = async (username: string, displayName?: string) => {
+  const createProfile = async (username: string) => {
     if (!user) {
       throw new Error("Must be logged in to create profile");
     }
@@ -185,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .insert({
         id: user.id,
         username: normalizedUsername,
-        display_name: displayName || null,
+        display_name: null,
         avatar_url: user.user_metadata?.avatar_url || null,
       })
       .select()
@@ -210,11 +177,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         profileLoading,
         needsUsername,
-        signInWithEmail,
-        signUpWithEmail,
         signInWithGitHub,
         signInWithGoogle,
-        resetPassword,
         signOut,
         checkUsernameAvailable,
         createProfile,
