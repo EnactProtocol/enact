@@ -12,6 +12,9 @@ export default function CodeViewer({ code, filePath, showLineNumbers = true }: C
   const [highlightedHtml, setHighlightedHtml] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Normalize line endings (remove \r from Windows-style \r\n)
+  const normalizedCode = code.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+
   useEffect(() => {
     let cancelled = false;
 
@@ -19,7 +22,10 @@ export default function CodeViewer({ code, filePath, showLineNumbers = true }: C
       setIsLoading(true);
       try {
         const lang = getLanguageFromPath(filePath);
-        const html = await highlightCode(code, lang, "github-dark");
+        let html = await highlightCode(normalizedCode, lang, "github-dark");
+        // Remove newlines between .line spans to prevent double-spacing
+        // Shiki outputs: </span>\n<span class="line"> which causes whitespace issues
+        html = html.replace(/>\n<span class="line">/g, '><span class="line">');
         if (!cancelled) {
           setHighlightedHtml(html);
         }
@@ -27,7 +33,7 @@ export default function CodeViewer({ code, filePath, showLineNumbers = true }: C
         console.error("Failed to highlight code:", err);
         if (!cancelled) {
           // Fallback to plain text
-          setHighlightedHtml(`<pre><code>${escapeHtml(code)}</code></pre>`);
+          setHighlightedHtml(`<pre><code>${escapeHtml(normalizedCode)}</code></pre>`);
         }
       } finally {
         if (!cancelled) {
@@ -41,7 +47,7 @@ export default function CodeViewer({ code, filePath, showLineNumbers = true }: C
     return () => {
       cancelled = true;
     };
-  }, [code, filePath]);
+  }, [normalizedCode, filePath]);
 
   if (isLoading) {
     return (
@@ -54,12 +60,12 @@ export default function CodeViewer({ code, filePath, showLineNumbers = true }: C
   if (!highlightedHtml) {
     return (
       <pre className="p-4 text-sm font-mono text-gray-300 bg-gray-900 rounded overflow-x-auto">
-        <code>{code}</code>
+        <code>{normalizedCode}</code>
       </pre>
     );
   }
 
-  const lines = code.split("\n");
+  const lines = normalizedCode.split("\n");
 
   return (
     <div className="relative overflow-x-auto bg-[#0d1117] rounded-lg">
@@ -67,7 +73,10 @@ export default function CodeViewer({ code, filePath, showLineNumbers = true }: C
         {showLineNumbers && (
           <div className="flex-shrink-0 py-4 pr-4 text-right select-none border-r border-gray-800">
             {lines.map((_, i) => (
-              <div key={`line-${i + 1}`} className="px-3 text-xs leading-6 text-gray-500 font-mono">
+              <div
+                key={`line-${i + 1}`}
+                className="px-3 text-sm leading-6 text-gray-500 font-mono h-6"
+              >
                 {i + 1}
               </div>
             ))}
@@ -84,14 +93,20 @@ export default function CodeViewer({ code, filePath, showLineNumbers = true }: C
           margin: 0;
           padding: 0;
           background: transparent !important;
+          white-space: pre;
         }
         .code-viewer code {
           font-size: 0.875rem;
           line-height: 1.5rem;
           font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+          display: block;
         }
         .code-viewer .line {
           display: block;
+          min-height: 1.5rem;
+        }
+        .code-viewer .line:empty::after {
+          content: ' ';
         }
       `}</style>
     </div>
