@@ -42,7 +42,15 @@ export default function ToolCode({ toolName, initialFilePath }: ToolCodeProps) {
     enabled: !!tool?.latestVersion,
   });
 
-  // Fetch file content when a file is selected
+  // Build file tree
+  const fileTree: FileNode[] = filesData ? buildFileTree(filesData.files.map((f) => f.path)) : [];
+
+  // Check if currentFile is a directory (tree view) or file (blob view)
+  const isDirectory =
+    currentFile && filesData?.files.some((f) => f.path.startsWith(currentFile + "/"));
+  const isFile = currentFile && filesData?.files.some((f) => f.path === currentFile);
+
+  // Fetch file content only when a file (not directory) is selected
   const {
     data: fileContent,
     isLoading: contentLoading,
@@ -50,21 +58,29 @@ export default function ToolCode({ toolName, initialFilePath }: ToolCodeProps) {
   } = useQuery<FileContentResponse>({
     queryKey: ["file-content", toolName, tool?.latestVersion, currentFile],
     queryFn: () => getFileContent(apiClient, toolName, tool!.latestVersion, currentFile),
-    enabled: !!tool?.latestVersion && !!currentFile,
+    enabled: !!tool?.latestVersion && !!currentFile && isFile === true,
   });
 
-  // Build file tree
-  const fileTree: FileNode[] = filesData ? buildFileTree(filesData.files.map((f) => f.path)) : [];
-
-  // Auto-select first file if none selected
+  // Auto-select first file if none selected, or if current path is a directory
   useEffect(() => {
-    if (!currentFile && filesData?.files.length) {
-      const firstFile = filesData.files.find((f) => f.type === "file");
-      if (firstFile) {
-        navigate(`/tools/${toolName}/-/blob/${firstFile.path}`, { replace: true });
+    if (filesData?.files.length) {
+      if (!currentFile) {
+        // No file selected - pick the first file
+        const firstFile = filesData.files.find((f) => f.type === "file");
+        if (firstFile) {
+          navigate(`/tools/${toolName}/-/blob/${firstFile.path}`, { replace: true });
+        }
+      } else if (isDirectory) {
+        // Current path is a directory - pick the first file in that directory
+        const firstFileInDir = filesData.files.find(
+          (f) => f.type === "file" && f.path.startsWith(currentFile + "/")
+        );
+        if (firstFileInDir) {
+          navigate(`/tools/${toolName}/-/blob/${firstFileInDir.path}`, { replace: true });
+        }
       }
     }
-  }, [currentFile, filesData, navigate, toolName]);
+  }, [currentFile, filesData, navigate, toolName, isDirectory]);
 
   const handleSelectFile = (path: string) => {
     // Check if it's a directory or file by looking at the file tree
