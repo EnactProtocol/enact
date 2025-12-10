@@ -9,9 +9,15 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 export default function ToolCode() {
-  const { owner, name, "*": filePath } = useParams<{ owner: string; name: string; "*": string }>();
+  const {
+    owner,
+    category,
+    name,
+    "*": filePath,
+  } = useParams<{ owner: string; category?: string; name: string; "*": string }>();
   const navigate = useNavigate();
-  const toolName = `${owner}/${name}`;
+  // Support both 2-segment (owner/name) and 3-segment (owner/category/name) tool names
+  const toolName = category ? `${owner}/${category}/${name}` : `${owner}/${name}`;
 
   const [copied, setCopied] = useState(false);
   const currentFile = filePath || "";
@@ -56,13 +62,13 @@ export default function ToolCode() {
     if (!currentFile && filesData?.files.length) {
       const firstFile = filesData.files.find((f) => f.type === "file");
       if (firstFile) {
-        navigate(`/tools/${owner}/${name}/code/${firstFile.path}`, { replace: true });
+        navigate(`/tools/${toolName}/code/${firstFile.path}`, { replace: true });
       }
     }
-  }, [currentFile, filesData, navigate, owner, name]);
+  }, [currentFile, filesData, navigate, toolName]);
 
   const handleSelectFile = (path: string) => {
-    navigate(`/tools/${owner}/${name}/code/${path}`);
+    navigate(`/tools/${toolName}/code/${path}`);
   };
 
   const handleCopyPath = async () => {
@@ -121,7 +127,7 @@ export default function ToolCode() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Link
-                to={`/tools/${owner}/${name}`}
+                to={`/tools/${toolName}`}
                 className="flex items-center gap-1 text-sm text-gray-5 hover:text-gray-6"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -141,7 +147,7 @@ export default function ToolCode() {
             <div className="flex items-center gap-1 mt-2 text-sm">
               <button
                 type="button"
-                onClick={() => navigate(`/tools/${owner}/${name}/code`)}
+                onClick={() => navigate(`/tools/${toolName}/code`)}
                 className="text-brand-blue hover:underline"
               >
                 {name}
@@ -156,7 +162,7 @@ export default function ToolCode() {
                       type="button"
                       onClick={() => {
                         const subPath = pathParts.slice(0, i + 1).join("/");
-                        navigate(`/tools/${owner}/${name}/code/${subPath}`);
+                        navigate(`/tools/${toolName}/code/${subPath}`);
                       }}
                       className="text-brand-blue hover:underline"
                     >

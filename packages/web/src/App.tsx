@@ -18,8 +18,11 @@ export default function App() {
       <Route path="/" element={<Layout />}>
         <Route index element={<Home />} />
         <Route path="browse" element={<Browse />} />
+        {/* Support tool names with 2 or 3 segments: owner/name or owner/category/name */}
         <Route path="tools/:owner/:name" element={<Tool />} />
+        <Route path="tools/:owner/:category/:name" element={<Tool />} />
         <Route path="tools/:owner/:name/code/*" element={<ToolCode />} />
+        <Route path="tools/:owner/:category/:name/code/*" element={<ToolCode />} />
         <Route path="login" element={<Login />} />
         <Route path="*" element={<NotFound />} />
       </Route>

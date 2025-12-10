@@ -12,8 +12,9 @@ import { Link, useParams } from "react-router-dom";
 import remarkGfm from "remark-gfm";
 
 export default function Tool() {
-  const { owner, name } = useParams<{ owner: string; name: string }>();
-  const toolName = `${owner}/${name}`;
+  const { owner, category, name } = useParams<{ owner: string; category?: string; name: string }>();
+  // Support both 2-segment (owner/name) and 3-segment (owner/category/name) tool names
+  const toolName = category ? `${owner}/${category}/${name}` : `${owner}/${name}`;
 
   const {
     data: tool,
