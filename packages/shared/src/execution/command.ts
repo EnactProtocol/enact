@@ -2,17 +2,44 @@
  * Command interpolation and parsing
  *
  * Handles ${parameter} substitution in command templates with proper escaping.
+ *
+ * ## Quoting Behavior
+ *
+ * Enact automatically applies shell-escaping (quoting) to parameter values
+ * that contain special characters. This means you should NOT add quotes
+ * around parameters in your command templates:
+ *
+ * ✅ Correct: `command: "node script.js ${input}"`
+ * ❌ Incorrect: `command: "node script.js '${input}'"` (causes double-quoting)
+ *
+ * ### Modifiers
+ *
+ * - `${param}` - Normal substitution with auto-quoting
+ * - `${param:raw}` - Raw substitution without any quoting (use with caution)
+ *
+ * ### Smart Quote Detection
+ *
+ * If a parameter is surrounded by quotes in the template (e.g., `'${param}'`),
+ * Enact will:
+ * 1. Strip the surrounding quotes from the template
+ * 2. Apply its own quoting as needed
+ * 3. Emit a warning to help tool authors fix their templates
  */
 
 import type { CommandToken, InterpolationOptions, ParsedCommand } from "./types";
 
 /**
- * Pattern to match ${parameter} in command strings
+ * Pattern to match ${parameter} or ${parameter:modifier} in command strings
+ * Captures: paramName and optional modifier (e.g., "raw")
  */
-const PARAM_PATTERN = /\$\{([^}]+)\}/g;
+const PARAM_PATTERN = /\$\{([^}:]+)(?::([^}]+))?\}/g;
 
 /**
  * Parse a command template into tokens
+ *
+ * Detects:
+ * - Parameters with modifiers: ${param:raw}
+ * - Parameters surrounded by quotes: '${param}' or "${param}"
  *
  * @param command - Command template with ${parameter} placeholders
  * @returns Parsed command with tokens and parameter list
@@ -29,28 +56,62 @@ export function parseCommand(command: string): ParsedCommand {
 
   match = PARAM_PATTERN.exec(command);
   while (match !== null) {
-    // Add literal text before this match
-    if (match.index > lastIndex) {
+    const paramName = match[1];
+    const modifier = match[2]; // e.g., "raw"
+    const isRaw = modifier === "raw";
+
+    // Check if preceded by a quote
+    let startIndex = match.index;
+    let surroundingQuotes: "single" | "double" | undefined;
+
+    // Look for surrounding quotes pattern: '${param}' or "${param}"
+    const charBefore = startIndex > 0 ? command[startIndex - 1] : "";
+    const charAfter = command[startIndex + match[0].length];
+
+    if (charBefore === "'" && charAfter === "'") {
+      surroundingQuotes = "single";
+      startIndex--; // Include the opening quote in the consumed range
+    } else if (charBefore === '"' && charAfter === '"') {
+      surroundingQuotes = "double";
+      startIndex--; // Include the opening quote in the consumed range
+    }
+
+    // Add literal text before this match (excluding any opening quote we're consuming)
+    if (startIndex > lastIndex) {
       tokens.push({
         type: "literal",
-        value: command.slice(lastIndex, match.index),
+        value: command.slice(lastIndex, startIndex),
       });
     }
 
     // Add the parameter token
-    const paramName = match[1];
     if (paramName) {
-      tokens.push({
+      const token: CommandToken = {
         type: "parameter",
         name: paramName,
-      });
+      };
+
+      // Only add optional properties if they have values
+      if (isRaw) {
+        token.raw = true;
+      }
+      if (surroundingQuotes) {
+        token.surroundingQuotes = surroundingQuotes;
+      }
+
+      tokens.push(token);
 
       if (!parameters.includes(paramName)) {
         parameters.push(paramName);
       }
     }
 
+    // Update lastIndex, skipping the closing quote if we detected surrounding quotes
     lastIndex = match.index + match[0].length;
+    if (surroundingQuotes) {
+      lastIndex++; // Skip the closing quote
+    }
+
     match = PARAM_PATTERN.exec(command);
   }
 
@@ -132,6 +193,11 @@ export function valueToString(value: unknown, jsonifyObjects = true): string {
 /**
  * Interpolate a command template with parameter values
  *
+ * Handles:
+ * - Normal parameters: `${param}` - auto-quoted as needed
+ * - Raw parameters: `${param:raw}` - no quoting applied
+ * - Quoted parameters: `'${param}'` - quotes stripped, warning emitted
+ *
  * @param command - Command template or parsed command
  * @param params - Parameter values
  * @param options - Interpolation options
@@ -143,7 +209,12 @@ export function interpolateCommand(
   params: Record<string, unknown>,
   options: InterpolationOptions = {}
 ): string {
-  const { escape: shouldEscape = true, jsonifyObjects = true, onMissing = "error" } = options;
+  const {
+    escape: shouldEscape = true,
+    jsonifyObjects = true,
+    onMissing = "error",
+    onWarning,
+  } = options;
 
   const parsed = typeof command === "string" ? parseCommand(command) : command;
 
@@ -155,6 +226,19 @@ export function interpolateCommand(
     } else {
       const paramName = token.name;
       const value = params[paramName];
+      const isRaw = token.raw === true;
+      const hadSurroundingQuotes = token.surroundingQuotes;
+
+      // Emit warning if surrounding quotes were detected and stripped
+      if (hadSurroundingQuotes && onWarning) {
+        const quoteChar = hadSurroundingQuotes === "single" ? "'" : '"';
+        onWarning({
+          code: "DOUBLE_QUOTING",
+          message: `Parameter '${paramName}' was surrounded by ${hadSurroundingQuotes} quotes in the command template. This would cause double-quoting. The quotes have been automatically removed.`,
+          parameter: paramName,
+          suggestion: `Change ${quoteChar}\${${paramName}}${quoteChar} to \${${paramName}} in your command template.`,
+        });
+      }
 
       if (value === undefined) {
         switch (onMissing) {
@@ -169,7 +253,13 @@ export function interpolateCommand(
         }
       } else {
         const stringValue = valueToString(value, jsonifyObjects);
-        parts.push(shouldEscape ? shellEscape(stringValue) : stringValue);
+
+        // Determine if we should escape this value
+        // - Raw modifier (${param:raw}) disables escaping
+        // - Global escape option can disable escaping
+        const shouldEscapeThis = shouldEscape && !isRaw;
+
+        parts.push(shouldEscapeThis ? shellEscape(stringValue) : stringValue);
       }
     }
   }

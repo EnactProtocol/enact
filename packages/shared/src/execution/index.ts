@@ -31,6 +31,8 @@ export type {
   ParsedCommand,
   CommandToken,
   InterpolationOptions,
+  CommandWarning,
+  CommandWarningCode,
   // Validation types
   InputValidationResult,
   InputValidationError,

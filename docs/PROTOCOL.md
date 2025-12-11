@@ -78,7 +78,7 @@ name: "alice/utils/hello-rust"
 description: "A Rust greeting tool"
 from: "rust:1.75-alpine"
 build: "rustc hello.rs -o hello"
-command: "./hello '${name}'"
+command: "./hello ${name}"
 inputSchema:
   type: object
   properties:

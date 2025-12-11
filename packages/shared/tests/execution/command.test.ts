@@ -11,6 +11,7 @@ import {
   prepareCommand,
   shellEscape,
 } from "../../src/execution/command";
+import type { CommandWarning } from "../../src/execution/types";
 
 describe("Command Interpolation", () => {
   describe("parseCommand", () => {
@@ -68,6 +69,63 @@ describe("Command Interpolation", () => {
       const result = parseCommand("echo ${name} ${name} ${name}");
 
       expect(result.parameters).toEqual(["name"]);
+    });
+
+    test("parses :raw modifier", () => {
+      const result = parseCommand("echo ${data:raw}");
+
+      expect(result.parameters).toEqual(["data"]);
+      expect(result.tokens).toHaveLength(2);
+      expect(result.tokens[1]).toEqual({ type: "parameter", name: "data", raw: true });
+    });
+
+    test("detects single-quoted parameter", () => {
+      const result = parseCommand("echo '${message}'");
+
+      expect(result.tokens).toHaveLength(2);
+      expect(result.tokens[0]).toEqual({ type: "literal", value: "echo " });
+      expect(result.tokens[1]).toEqual({
+        type: "parameter",
+        name: "message",
+        surroundingQuotes: "single",
+      });
+    });
+
+    test("detects double-quoted parameter", () => {
+      const result = parseCommand('echo "${message}"');
+
+      expect(result.tokens).toHaveLength(2);
+      expect(result.tokens[1]).toEqual({
+        type: "parameter",
+        name: "message",
+        surroundingQuotes: "double",
+      });
+    });
+
+    test("handles mix of quoted and unquoted parameters", () => {
+      const result = parseCommand("cmd '${a}' ${b} \"${c}\"");
+
+      expect(result.parameters).toEqual(["a", "b", "c"]);
+      expect(result.tokens[1]).toMatchObject({ name: "a", surroundingQuotes: "single" });
+      expect(result.tokens[3]).toMatchObject({ name: "b" });
+      expect(
+        (result.tokens[3] as { surroundingQuotes?: string }).surroundingQuotes
+      ).toBeUndefined();
+      expect(result.tokens[5]).toMatchObject({ name: "c", surroundingQuotes: "double" });
+    });
+
+    test("does not detect quotes that don't surround the parameter", () => {
+      // Single quote before but not after
+      const result1 = parseCommand("echo '${a} foo");
+      expect(
+        (result1.tokens[1] as { surroundingQuotes?: string }).surroundingQuotes
+      ).toBeUndefined();
+
+      // Mismatched quotes
+      const result2 = parseCommand("echo '${a}\"");
+      expect(
+        (result2.tokens[1] as { surroundingQuotes?: string }).surroundingQuotes
+      ).toBeUndefined();
     });
   });
 
@@ -153,6 +211,103 @@ describe("Command Interpolation", () => {
       );
 
       expect(result).toBe("echo [1,2,3]");
+    });
+
+    test("handles :raw modifier - no escaping", () => {
+      const result = interpolateCommand("echo ${data:raw}", {
+        data: "hello world",
+      });
+
+      // Without :raw, "hello world" would become 'hello world' (quoted)
+      // With :raw, it stays as-is
+      expect(result).toBe("echo hello world");
+    });
+
+    test("handles :raw modifier with JSON", () => {
+      const result = interpolateCommand("echo ${json:raw}", {
+        json: { key: "value" },
+      });
+
+      // JSON is stringified but not quoted
+      expect(result).toBe('echo {"key":"value"}');
+    });
+
+    test("strips surrounding single quotes and applies proper escaping", () => {
+      // This is the key fix for the double-quoting issue
+      const result = interpolateCommand("node script.js '${input}'", {
+        input: '[{"name":"Alice"}]',
+      });
+
+      // The surrounding quotes are stripped, and the value is properly escaped
+      // JSON with special chars gets single-quoted by shellEscape
+      expect(result).toBe('node script.js \'[{"name":"Alice"}]\'');
+    });
+
+    test("strips surrounding double quotes and applies proper escaping", () => {
+      const result = interpolateCommand('node script.js "${input}"', {
+        input: "hello world",
+      });
+
+      // The surrounding quotes are stripped, value gets quoted by shellEscape
+      expect(result).toBe("node script.js 'hello world'");
+    });
+
+    test("emits warning when stripping surrounding quotes", () => {
+      const warnings: CommandWarning[] = [];
+
+      interpolateCommand(
+        "echo '${message}'",
+        { message: "test" },
+        {
+          onWarning: (w) => warnings.push(w),
+        }
+      );
+
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]?.code).toBe("DOUBLE_QUOTING");
+      expect(warnings[0]?.parameter).toBe("message");
+      expect(warnings[0]?.suggestion).toContain("${message}");
+    });
+
+    test("no warning for unquoted parameters", () => {
+      const warnings: CommandWarning[] = [];
+
+      interpolateCommand(
+        "echo ${message}",
+        { message: "test" },
+        {
+          onWarning: (w) => warnings.push(w),
+        }
+      );
+
+      expect(warnings).toHaveLength(0);
+    });
+
+    test("handles complex JSON input without double-quoting", () => {
+      // This is the exact case from the user's feedback
+      const result = interpolateCommand(
+        "node dist/index.js ${input} ${input_format} ${output_format}",
+        {
+          input: '[{"name":"Alice"}]',
+          input_format: "json",
+          output_format: "csv",
+        }
+      );
+
+      // JSON gets quoted, simple strings don't
+      expect(result).toBe('node dist/index.js \'[{"name":"Alice"}]\' json csv');
+    });
+
+    test("handles quoted parameter template that would have caused double-quoting", () => {
+      // Without the fix, this would produce: node dist/index.js ''[{"name":"Alice"}]''
+      // With the fix, surrounding quotes are stripped first
+      const result = interpolateCommand("node dist/index.js '${input}'", {
+        input: '[{"name":"Alice"}]',
+      });
+
+      // Should NOT have double quotes
+      expect(result).not.toContain("''");
+      expect(result).toBe('node dist/index.js \'[{"name":"Alice"}]\'');
     });
   });
 

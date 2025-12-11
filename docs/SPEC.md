@@ -70,7 +70,7 @@ name: "alice/utils/hello-rust"
 description: "A Rust-based greeting tool"
 from: "rust:1.75-alpine"
 build: "rustc hello.rs -o hello"
-command: "./hello '${name}'"
+command: "./hello ${name}"
 inputSchema:
   type: object
   properties:
@@ -117,11 +117,11 @@ These fields must be present in the YAML frontmatter of every `enact.md` file.
 - **Format:** Uses `${parameter}` syntax for variable substitution
 - **Examples:**
   ```yaml
-  command: "echo 'Hello ${name}!'"
-  command: "npx prettier@3.3.3 --write '${file}'"
-  command: "python src/process.py --file='${file}' --operation='${operation}'"
+  command: "echo Hello ${name}!"
+  command: "npx prettier@3.3.3 --write ${file}"
+  command: "python src/process.py --file=${file} --operation=${operation}"
   ```
-- **Best Practice:** Use exact versions for reproducibility
+- **Best Practice:** Use exact versions for reproducibility. Do NOT quote `${param}` placeholders - Enact handles quoting automatically
 - **Notes:**
   - Required for container-executed tools
   - Omitted for LLM-driven tools (tools without deterministic execution)
@@ -817,7 +817,7 @@ The `command` field uses string interpolation (e.g., `${input}`). While convenie
    ```yaml
    command: "python process.py --config input.json"
    ```
-3. **Quote Arguments:** If you must use interpolation, always wrap variables in single quotes: `'${variable}'`.
+3. **Parameter Substitution:** Enact automatically shell-escapes parameter values. Do NOT add quotes around `${variable}` - Enact handles this automatically to prevent double-quoting issues.
 
 ### Secret Management
 Tools often require API keys or credentials. **Never hardcode secrets in `enact.md`.**

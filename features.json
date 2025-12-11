@@ -1,0 +1,61 @@
+{
+  "features": [
+    {
+      "name": "Directory mounting for file operations",
+      "description": "Allow tools to access local files by mounting host directories into the container. Support both automatic file detection and explicit mount flags.",
+      "motivation": "Many tools need to operate on local files (code formatters, linters, file processors). Currently, the tool's source directory is mounted to /work, but users can't easily pass local files as inputs. This feature enables tools to process files from anywhere on the host system.",
+      "proposed_behavior": [
+        "Auto-detection: If an input value is a local file path (./src/file.js), auto-mount the parent directory and rewrite the path",
+        "Explicit mounting: --mount ./src:/workspace flag for manual control",
+        "Multiple mounts supported: --mount ./src:/src --mount ./data:/data",
+        "Security: Only explicitly provided paths are mounted (no arbitrary access)",
+        "Path rewriting: Input paths are rewritten to container paths automatically"
+      ],
+      "cli_examples": [
+        "enact run formatter --input file=./src/index.js  # Auto-mounts ./src to /input/src",
+        "enact run formatter --mount ./src:/workspace --input file=/workspace/index.js  # Explicit",
+        "enact run processor --mount ./data:/data --mount ./output:/output --input in=/data/file.csv"
+      ],
+      "implementation_notes": [
+        "Add --mount option to run command (array of src:dest pairs)",
+        "Add file detection logic to check if input values are local paths",
+        "Extend mountDirs in ExecutionOptions to include user-specified mounts",
+        "Handle path normalization and validation",
+        "Consider read-only mounts for safety (--mount ./src:/workspace:ro)"
+      ],
+      "status": "proposed",
+      "priority": "high",
+      "related_files": [
+        "packages/cli/src/commands/run/index.ts - run command handler",
+        "packages/execution/src/provider.ts - mountDirs already supported",
+        "packages/execution/src/types.ts - ExecutionOptions interface"
+      ]
+    },
+    {
+      "name": "Username-based trust configuration",
+      "description": "Instead of saving the full provider:email format (e.g., 'github:keith.groves@jointheleague.org') in the trust config, save just the enact username (e.g., 'keithagroves'). During verification, the system would look up the user's profile to get their verified email/identity and match against attestation certificates.",
+      "motivation": "The current system requires storing long provider:email strings that are hard to remember and can break if users change their email. Using enact usernames would be simpler and more user-friendly, similar to how GitHub lets you @mention users by username rather than email.",
+      "proposed_behavior": [
+        "Trust config accepts enact usernames (e.g., 'trust: [keithagroves, alice]')",
+        "During verification, the system looks up each username's profile via the API",
+        "The profile contains the user's verified identities (linked GitHub/Google accounts)",
+        "Verification matches attestation certificate identity against any of the user's verified identities",
+        "Fallback: if a trust entry contains ':' or '@', treat it as a direct identity (backwards compatible)"
+      ],
+      "implementation_notes": [
+        "Need an API endpoint like GET /users/{username}/identities that returns the user's verified OIDC identities",
+        "Update isIdentityTrusted() and hasTrustedAttestation() to resolve usernames to identities",
+        "Consider caching resolved identities to avoid API calls on every verification",
+        "Must handle offline/API-unavailable scenarios gracefully"
+      ],
+      "status": "proposed",
+      "priority": "medium",
+      "related_files": [
+        "packages/shared/src/config.ts - isIdentityTrusted(), getTrustedIdentities()",
+        "packages/api/src/trust.ts - getUserTrust(), hasTrustedAttestation()",
+        "packages/api/src/attestations.ts - verifyAllAttestations()",
+        "packages/cli/src/commands/trust/index.ts - trust command handlers"
+      ]
+    }
+  ]
+}

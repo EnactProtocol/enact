@@ -1,5 +1,6 @@
 import { Route, Routes } from "react-router-dom";
 import Layout from "./components/layout/Layout";
+import { usePageTracking } from "./hooks/usePageTracking";
 import Browse from "./pages/Browse";
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
@@ -12,6 +13,8 @@ import CliSuccess from "./pages/auth/CliSuccess";
 import Login from "./pages/auth/Login";
 
 export default function App() {
+  usePageTracking();
+
   return (
     <Routes>
       <Route path="/" element={<Layout />}>

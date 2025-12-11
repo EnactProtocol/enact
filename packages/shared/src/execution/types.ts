@@ -308,7 +308,9 @@ export interface ParsedCommand {
 /**
  * A token in a parsed command
  */
-export type CommandToken = { type: "literal"; value: string } | { type: "parameter"; name: string };
+export type CommandToken =
+  | { type: "literal"; value: string }
+  | { type: "parameter"; name: string; raw?: boolean; surroundingQuotes?: "single" | "double" };
 
 /**
  * Command interpolation options
@@ -320,6 +322,27 @@ export interface InterpolationOptions {
   jsonifyObjects?: boolean;
   /** Missing parameter handling */
   onMissing?: "error" | "empty" | "keep";
+  /** Callback for warnings (e.g., potential double-quoting) */
+  onWarning?: (warning: CommandWarning) => void;
+}
+
+/**
+ * Warning types for command processing
+ */
+export type CommandWarningCode = "DOUBLE_QUOTING" | "RAW_MODIFIER_USED";
+
+/**
+ * Warning about command processing issues
+ */
+export interface CommandWarning {
+  /** Warning code for programmatic handling */
+  code: CommandWarningCode;
+  /** Human-readable warning message */
+  message: string;
+  /** Parameter name that triggered the warning */
+  parameter: string;
+  /** Suggested fix */
+  suggestion?: string;
 }
 
 // ============================================================================
