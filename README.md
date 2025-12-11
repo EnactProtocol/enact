@@ -46,6 +46,25 @@ enact run examples/hello-simple --input name=World
 
 ---
 
+## Enact Registry
+
+**[https://enact.tools](https://enact.tools)** is the official Enact registry where you can:
+
+- **Browse tools** — Explore the catalog of published tools
+- **Sign up** — Create an account to start publishing your own tools
+- **Publish tools** — Push your tools to the registry with `enact publish`
+- **Manage your profile** — Track your published tools and usage
+
+```bash
+# Login to the registry
+enact login
+
+# Publish your tool
+enact publish
+```
+
+---
+
 ## Architecture
 
 This monorepo contains all core Enact components:
@@ -241,7 +260,8 @@ Apache-2.0 — see [LICENSE](./LICENSE).
 
 ## Community
 
-* **Registry:** [https://siikwkfgsmouioodghho.supabase.co/functions/v1](https://siikwkfgsmouioodghho.supabase.co/functions/v1)
+* **Website:** [https://enact.tools](https://enact.tools)
+* **Registry API:** [https://siikwkfgsmouioodghho.supabase.co/functions/v1](https://siikwkfgsmouioodghho.supabase.co/functions/v1)
 * **Issues:** [https://github.com/EnactProtocol/enact-cli-2.0/issues](https://github.com/EnactProtocol/enact-cli-2.0/issues)
 * **Discussions:** [https://github.com/EnactProtocol/enact-cli-2.0/discussions](https://github.com/EnactProtocol/enact-cli-2.0/discussions)
 
