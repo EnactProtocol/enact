@@ -4,8 +4,9 @@
  * Create a basic tool template in the current directory.
  */
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { getSecret } from "@enactprotocol/secrets";
 import type { Command } from "commander";
 import type { CommandContext, GlobalOptions } from "../../types";
@@ -22,9 +23,32 @@ const SUPABASE_ANON_KEY =
   process.env.SUPABASE_ANON_KEY ??
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpaWt3a2Znc21vdWlvb2RnaGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2MTkzMzksImV4cCI6MjA4MDE5NTMzOX0.kxnx6-IPFhmGx6rzNx36vbyhFMFZKP_jFqaDbKnJ_E0";
 
+/** Get the templates directory path */
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const TEMPLATES_DIR = join(__dirname, "templates");
+
 interface InitOptions extends GlobalOptions {
   name?: string;
   force?: boolean;
+  tool?: boolean;
+  agent?: boolean;
+  claude?: boolean;
+}
+
+/**
+ * Load a template file and replace placeholders
+ */
+function loadTemplate(templateName: string, replacements: Record<string, string> = {}): string {
+  const templatePath = join(TEMPLATES_DIR, templateName);
+  let content = readFileSync(templatePath, "utf-8");
+
+  // Replace all {{PLACEHOLDER}} patterns
+  for (const [key, value] of Object.entries(replacements)) {
+    content = content.replaceAll(`{{${key}}}`, value);
+  }
+
+  return content;
 }
 
 /**
@@ -106,64 +130,51 @@ async function getCurrentUsername(): Promise<string | null> {
 }
 
 /**
- * Generate the tool template content
- */
-function generateToolTemplate(toolName: string): string {
-  return `---
-name: ${toolName}
-description: A simple tool that echoes a greeting
-version: 0.1.0
-enact: "2.0"
-
-from: alpine:latest
-
-inputSchema:
-  type: object
-  properties:
-    name:
-      type: string
-      description: Name to greet
-      default: World
-  required: []
-
-command: |
-  echo "Hello, \${name}!"
----
-
-# ${toolName}
-
-A simple greeting tool created with \`enact init\`.
-
-## Usage
-
-\`\`\`bash
-enact run ./ --args '{"name": "Alice"}'
-\`\`\`
-
-## Customization
-
-Edit this file to create your own tool:
-
-1. Update the \`name\` and \`description\` in the frontmatter
-2. Modify the \`inputSchema\` to define your tool's inputs
-3. Change the \`command\` to run your desired shell commands
-4. Update this documentation section
-
-## Learn More
-
-- [Enact Documentation](https://enact.dev/docs)
-- [Tool Manifest Reference](https://enact.dev/docs/manifest)
-`;
-}
-
-/**
  * Init command handler
  */
 async function initHandler(options: InitOptions, ctx: CommandContext): Promise<void> {
   const targetDir = ctx.cwd;
-  const manifestPath = join(targetDir, "enact.md");
 
-  // Check if manifest already exists
+  // Determine mode: --agent, --claude, or --tool (default)
+  const isAgentMode = options.agent;
+  const isClaudeMode = options.claude;
+  // Default to tool mode if no flag specified
+
+  // Handle --agent mode: create AGENTS.md for projects using Enact tools
+  if (isAgentMode) {
+    const agentsPath = join(targetDir, "AGENTS.md");
+    if (existsSync(agentsPath) && !options.force) {
+      warning(`AGENTS.md already exists at: ${agentsPath}`);
+      info("Use --force to overwrite");
+      return;
+    }
+    writeFileSync(agentsPath, loadTemplate("agent-agents.md"), "utf-8");
+    success(`Created AGENTS.md: ${agentsPath}`);
+    info("");
+    info("This file helps AI agents understand how to use Enact tools in your project.");
+    info("Run 'enact search <query>' to find tools, 'enact install <tool>' to add them.");
+    return;
+  }
+
+  // Handle --claude mode: create CLAUDE.md
+  if (isClaudeMode) {
+    const claudePath = join(targetDir, "CLAUDE.md");
+    if (existsSync(claudePath) && !options.force) {
+      warning(`CLAUDE.md already exists at: ${claudePath}`);
+      info("Use --force to overwrite");
+      return;
+    }
+    writeFileSync(claudePath, loadTemplate("claude.md"), "utf-8");
+    success(`Created CLAUDE.md: ${claudePath}`);
+    info("");
+    info("This file helps Claude understand how to use Enact tools in your project.");
+    return;
+  }
+
+  // Handle --tool mode (default): create enact.md + AGENTS.md for tool development
+  const manifestPath = join(targetDir, "enact.md");
+  const agentsPath = join(targetDir, "AGENTS.md");
+
   if (existsSync(manifestPath) && !options.force) {
     warning(`Tool manifest already exists at: ${manifestPath}`);
     info("Use --force to overwrite");
@@ -185,17 +196,28 @@ async function initHandler(options: InitOptions, ctx: CommandContext): Promise<v
     }
   }
 
-  // Generate and write the template
-  const content = generateToolTemplate(toolName);
+  // Load templates with placeholder replacement
+  const replacements = { TOOL_NAME: toolName };
+  const manifestContent = loadTemplate("tool-enact.md", replacements);
+  const agentsContent = loadTemplate("tool-agents.md", replacements);
 
   // Ensure directory exists
   if (!existsSync(targetDir)) {
     mkdirSync(targetDir, { recursive: true });
   }
 
-  writeFileSync(manifestPath, content, "utf-8");
+  // Write enact.md
+  writeFileSync(manifestPath, manifestContent, "utf-8");
+  success(`Created tool manifest: ${manifestPath}`);
 
-  success(`Created tool template: ${manifestPath}`);
+  // Write AGENTS.md (only if it doesn't exist or --force is used)
+  if (!existsSync(agentsPath) || options.force) {
+    writeFileSync(agentsPath, agentsContent, "utf-8");
+    success(`Created AGENTS.md: ${agentsPath}`);
+  } else {
+    info("AGENTS.md already exists, skipping (use --force to overwrite)");
+  }
+
   info("");
   info("Next steps:");
   info("  1. Edit enact.md to customize your tool");
@@ -209,9 +231,12 @@ async function initHandler(options: InitOptions, ctx: CommandContext): Promise<v
 export function configureInitCommand(program: Command): void {
   program
     .command("init")
-    .description("Create a new tool template in the current directory")
-    .option("-n, --name <name>", "Tool name (default: username/my-tool or my-tool)")
-    .option("-f, --force", "Overwrite existing enact.md file")
+    .description("Initialize Enact in the current directory")
+    .option("-n, --name <name>", "Tool name (default: username/my-tool)")
+    .option("-f, --force", "Overwrite existing files")
+    .option("--tool", "Create a new Enact tool (default)")
+    .option("--agent", "Create AGENTS.md for projects that use Enact tools")
+    .option("--claude", "Create CLAUDE.md with Claude-specific instructions")
     .option("-v, --verbose", "Show detailed output")
     .action(async (options: InitOptions) => {
       const ctx: CommandContext = {

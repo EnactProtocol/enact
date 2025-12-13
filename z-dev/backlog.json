@@ -1,0 +1,224 @@
+{
+  "backlog": [
+    {
+      "id": "private-tools",
+      "name": "Private Tools Support",
+      "description": "Allow users to publish private tools that are only accessible to the owner or invited collaborators.",
+      "status": "planned",
+      "priority": "high",
+      "phases": [
+        {
+          "phase": 1,
+          "name": "Basic Private/Public",
+          "tasks": [
+            "Add visibility column to tools table (public, private, unlisted)",
+            "Update RLS policies to filter by visibility + ownership",
+            "Add --private flag to enact publish",
+            "Filter private tools from search results",
+            "Require auth for accessing private tools"
+          ]
+        },
+        {
+          "phase": 2,
+          "name": "Unlisted & Visibility Management",
+          "tasks": [
+            "Add --unlisted flag to enact publish",
+            "Create enact visibility command to change visibility after publishing"
+          ]
+        },
+        {
+          "phase": 3,
+          "name": "Team Access Grants",
+          "tasks": [
+            "Create tool_access table for collaborator grants",
+            "Add enact access grant/revoke/list commands",
+            "Support read/write/admin access levels"
+          ]
+        },
+        {
+          "phase": 4,
+          "name": "Organization Tools",
+          "depends_on": ["org-namespaces"],
+          "tasks": [
+            "Add org_id to tools table",
+            "Add org-private visibility level",
+            "Org members can view/install org-private tools",
+            "Admins/owners can publish to org namespace"
+          ]
+        }
+      ],
+      "related_docs": ["docs/private-tools-plan.md"]
+    },
+    {
+      "id": "init-templates",
+      "name": "Enhanced enact init with Templates",
+      "description": "Support multiple init modes for different use cases: tool development, agent projects, and AI-specific configs.",
+      "status": "completed",
+      "priority": "high",
+      "completed_features": [
+        "enact init --tool (default) - creates enact.md + AGENTS.md for tool development",
+        "enact init --agent - creates AGENTS.md for projects that use Enact tools",
+        "enact init --claude - creates CLAUDE.md with Claude-specific instructions",
+        "Templates loaded from separate .md files for maintainability"
+      ],
+      "related_files": [
+        "packages/cli/src/commands/init/index.ts",
+        "packages/cli/src/commands/init/templates/"
+      ]
+    },
+    {
+      "id": "streamable-mcp-server",
+      "name": "Streamable HTTP MCP Server",
+      "description": "Implement MCP server using the new Streamable HTTP transport for stateless, scalable deployment.",
+      "status": "proposed",
+      "priority": "high",
+      "tasks": [
+        "Implement Streamable HTTP transport (replaces deprecated HTTP+SSE)",
+        "Support stateless request/response mode",
+        "Support optional SSE streaming for long-running tools",
+        "Session management with Mcp-Session-Id header",
+        "Deploy as serverless function (Cloudflare Workers / Vercel)",
+        "Authentication via Bearer token",
+        "Rate limiting and request validation"
+      ],
+      "notes": "Streamable HTTP is the new recommended transport for remote MCP servers. Supports both simple request/response and streaming via SSE when needed."
+    },
+    {
+      "id": "mcp-server-improvements",
+      "name": "MCP Server Feature Improvements",
+      "description": "Enhance the Model Context Protocol server for better AI agent integration.",
+      "status": "proposed",
+      "priority": "medium",
+      "depends_on": ["streamable-mcp-server"],
+      "tasks": [
+        "Add tool discovery/search as MCP resource",
+        "Improve error messages for AI consumption",
+        "Support tool chaining/pipelines",
+        "Add prompts for common workflows"
+      ]
+    },
+    {
+      "id": "tool-versioning",
+      "name": "Tool Version Management",
+      "description": "Better support for managing and specifying tool versions.",
+      "status": "proposed",
+      "priority": "medium",
+      "tasks": [
+        "Support version ranges (^1.0.0, ~1.2.0, >=1.0.0)",
+        "Add enact update command to update tools to latest compatible version",
+        "Show available updates in enact list",
+        "Lock file support (.enact/tools.lock.json)"
+      ]
+    },
+    {
+      "id": "tool-metrics",
+      "name": "Tool Usage Metrics & Analytics",
+      "description": "Track and display tool usage statistics.",
+      "status": "proposed",
+      "priority": "low",
+      "tasks": [
+        "Track download counts per version",
+        "Track run counts (opt-in telemetry)",
+        "Display popularity/trending tools in search",
+        "Add enact stats command for tool authors"
+      ]
+    },
+    {
+      "id": "org-namespaces",
+      "name": "Organization Namespaces",
+      "description": "Allow organizations to own namespaces and manage team access to org-private tools.",
+      "status": "proposed",
+      "priority": "high",
+      "tasks": [
+        "Create organizations table",
+        "Create org_members table with roles (owner, admin, member)",
+        "Support org/tool namespace pattern",
+        "Org-level trust settings",
+        "Member management CLI (enact org create/invite/members/remove)",
+        "Org-wide private tools (org-private visibility)"
+      ],
+      "enables": ["private-tools:phase-4"],
+      "related_docs": ["docs/private-tools-plan.md"]
+    },
+    {
+      "id": "tool-templates",
+      "name": "Tool Scaffolding Templates",
+      "description": "Provide starter templates for common tool types.",
+      "status": "proposed",
+      "priority": "low",
+      "tasks": [
+        "Python tool template with common patterns",
+        "Node.js/TypeScript tool template",
+        "Rust tool template",
+        "API wrapper tool template",
+        "enact init --template <name> flag"
+      ]
+    },
+    {
+      "id": "local-tool-linking",
+      "name": "Local Tool Development Linking",
+      "description": "Like npm link, allow linking local tool directories for development.",
+      "status": "proposed",
+      "priority": "medium",
+      "tasks": [
+        "enact link command to symlink local tool",
+        "enact unlink command",
+        "Detect linked tools in enact list",
+        "Hot reload on tool changes (watch mode)"
+      ]
+    },
+    {
+      "id": "tool-dependencies",
+      "name": "Tool Dependencies",
+      "description": "Allow tools to declare dependencies on other tools.",
+      "status": "proposed",
+      "priority": "low",
+      "tasks": [
+        "Add dependencies field to manifest",
+        "Auto-install dependencies on tool install",
+        "Dependency resolution and version compatibility",
+        "Circular dependency detection"
+      ]
+    },
+    {
+      "id": "web-dashboard",
+      "name": "Web Dashboard Improvements",
+      "description": "Enhance the web interface for tool discovery and management.",
+      "status": "proposed",
+      "priority": "low",
+      "tasks": [
+        "Tool detail page with README rendering",
+        "Interactive tool runner (try in browser)",
+        "User profile pages",
+        "Organization pages",
+        "Tool analytics dashboard for authors"
+      ]
+    },
+    {
+      "id": "attestation-ui",
+      "name": "Attestation Visualization",
+      "description": "Better visualization of trust chain and attestations.",
+      "status": "proposed",
+      "priority": "low",
+      "tasks": [
+        "Show attestation chain in CLI (enact trust check)",
+        "Web UI for viewing attestations",
+        "Transparency log explorer",
+        "Badge/seal for verified tools"
+      ]
+    },
+    {
+      "id": "offline-mode",
+      "name": "Offline Mode Support",
+      "description": "Better support for running tools without internet access.",
+      "status": "proposed",
+      "priority": "low",
+      "tasks": [
+        "Cache tool bundles locally",
+        "Offline attestation verification (cached certs)",
+        "Warn when running in offline mode",
+        "Pre-cache command for CI/CD"
+      ]
+    }
+  ]
+}

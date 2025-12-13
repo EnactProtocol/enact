@@ -23,7 +23,7 @@
     "directory": "packages/cli"
   },
   "scripts": {
-    "build": "tsc --build",
+    "build": "tsc --build && cp -r src/commands/init/templates dist/commands/init/",
     "clean": "rm -rf dist",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
