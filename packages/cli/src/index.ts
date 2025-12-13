@@ -76,9 +76,17 @@ async function main() {
   configureYankCommand(program);
   configureUnyankCommand(program);
 
-  // Global error handler
+  // Global error handler - handle Commander's help/version exits gracefully
   program.exitOverride((err) => {
-    if (err.code === "commander.help" || err.code === "commander.version") {
+    // Commander throws errors for help, version, and other "exit" scenarios
+    // We want these to exit cleanly without printing error messages
+    if (
+      err.code === "commander.help" ||
+      err.code === "commander.helpDisplayed" ||
+      err.code === "commander.version" ||
+      err.code === "commander.executeSubCommandAsync" ||
+      err.message?.includes("outputHelp")
+    ) {
       process.exit(0);
     }
     throw err;
@@ -86,7 +94,12 @@ async function main() {
 
   try {
     await program.parseAsync(process.argv);
-  } catch (err) {
+  } catch (err: unknown) {
+    // Don't print error for help/version (Commander may still throw)
+    const errObj = err as { code?: string; message?: string };
+    if (errObj?.code?.startsWith("commander.") || errObj?.message?.includes("outputHelp")) {
+      process.exit(0);
+    }
     error(formatError(err));
     process.exit(1);
   }
