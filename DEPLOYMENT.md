@@ -237,7 +237,7 @@ Enact uses the "optionalDependencies" deployment strategy (same as esbuild, turb
 │   └── @enactprotocol/enact-win32-x64     (Windows)
 ```
 
-When users run `npm install -g @enactprotocol/enact`:
+When users run `npm install -g enact-cli` (or `@enactprotocol/enact`):
 1. npm reads `os` and `cpu` fields in each optional dependency
 2. npm only downloads the package matching their platform
 3. The wrapper script (`bin/enact.js`) loads and executes the correct binary

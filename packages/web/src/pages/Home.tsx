@@ -374,7 +374,7 @@ export default function Home() {
                 <div>
                   <h3 className="font-semibold mb-2 text-gray-6">1. Install the CLI</h3>
                   <pre className="bg-gray-6 text-gray-1 p-4 rounded-lg overflow-x-auto">
-                    <code>npm install -g @enactprotocol/cli</code>
+                    <code>npm install -g enact-cli</code>
                   </pre>
                 </div>
                 <div>

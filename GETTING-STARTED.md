@@ -13,13 +13,13 @@ Enact is a verified, portable protocol for AI-executable tools. This guide will 
 
 ```bash
 # Install globally with npm
-npm install -g @enactprotocol/cli
+npm install -g enact-cli
 
 # Or with bun
-bun install -g @enactprotocol/cli
+bun install -g enact-cli
 
 # Or use npx without installing
-npx @enactprotocol/cli --help
+npx enact-cli --help
 ```
 
 ## Quick Start

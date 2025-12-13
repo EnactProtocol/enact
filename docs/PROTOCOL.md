@@ -29,7 +29,7 @@ Each tool includes a self-contained `enact.md` manifest describing its inputs, o
 ### 1. Install the CLI
 
 ```bash
-npm install -g @enactprotocol/cli
+npm install -g enact-cli
 ```
 
 ### 2. Create an Enact account

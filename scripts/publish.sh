@@ -289,9 +289,9 @@ echo -e "${GREEN}║  ✅ Done!                                                 
 echo -e "${GREEN}╚═══════════════════════════════════════════════════════════╝${NC}"
 echo ""
 echo "Install with:"
-echo -e "  ${CYAN}npm install -g @enactprotocol/enact${NC}"
-echo "  or"
 echo -e "  ${CYAN}npm install -g enact-cli${NC}"
+echo "  or"
+echo -e "  ${CYAN}npm install -g @enactprotocol/enact${NC}"
 echo ""
 
 if [[ -n "$DRY_RUN" ]]; then

@@ -22,10 +22,10 @@ Enact provides an end-to-end infrastructure for creating, publishing, and runnin
 
 ```bash
 # Install globally
-npm install -g @enactprotocol/cli
+npm install -g enact-cli
 
 # Or using bun
-bun install -g @enactprotocol/cli
+bun install -g enact-cli
 ```
 
 ### Basic Usage
