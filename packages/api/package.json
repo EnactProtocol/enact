@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/api",
-  "version": "2.0.6",
+  "version": "2.0.8",
   "description": "Enact registry API client v2 - OAuth auth, search, download, publish, attestations, and trust",
   "type": "module",
   "main": "dist/index.js",

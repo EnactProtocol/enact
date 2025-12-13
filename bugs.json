@@ -42,6 +42,14 @@
       "expected_behavior": "The 'enact -v' and 'enact --version' commands should print the current version of the CLI (e.g., '0.1.0').",
       "status": "open",
       "location": "packages/cli/src/index.ts or main CLI entry point"
+    },
+    {
+      "name": "enact get --verbose shows wrong latest version",
+      "description": "Running 'enact get toolname --verbose' fetches the rawManifest for the 'latestVersion' but the latestVersion field returns an older version (e.g., 1.0.0) instead of the most recently published version (e.g., 1.0.1). This causes the rawManifest content to be missing or stale when using --verbose without specifying --ver.",
+      "expected_behavior": "The latestVersion field should return the highest semver version, or the most recently published version. 'enact get toolname --verbose' should show the rawManifest for the actual latest version.",
+      "status": "open",
+      "location": "packages/server/supabase/functions/tools/index.ts - handleGetTool() or the tools table latest_version column update logic",
+      "workaround": "Use 'enact get toolname --ver <version> --verbose' to specify the exact version"
     }
   ]
 }

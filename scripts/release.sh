@@ -69,7 +69,14 @@ update_version "$ROOT_DIR/packages/shared/package.json"
 update_version "$ROOT_DIR/packages/execution/package.json"
 update_version "$ROOT_DIR/packages/api/package.json"
 update_version "$ROOT_DIR/packages/cli/package.json"
-# Note: mcp-server is not published to npm yet
+# Binary distribution packages
+update_version "$ROOT_DIR/packages/enact/package.json"
+update_version "$ROOT_DIR/packages/enact-darwin-arm64/package.json"
+update_version "$ROOT_DIR/packages/enact-darwin-x64/package.json"
+update_version "$ROOT_DIR/packages/enact-linux-arm64/package.json"
+update_version "$ROOT_DIR/packages/enact-linux-x64/package.json"
+update_version "$ROOT_DIR/packages/enact-win32-x64/package.json"
+# Note: mcp-server, server, web are not published to npm
 
 # Also update the version constant in CLI index.ts
 CLI_INDEX="$ROOT_DIR/packages/cli/src/index.ts"
@@ -85,6 +92,10 @@ fi
 # Rebuild after version update
 echo "🔨 Rebuilding with new version..."
 bun run build
+
+# Build binary for current platform
+echo "🔧 Building binary for current platform..."
+bun run build:binary:local
 
 # Commit version bump
 echo "📦 Committing version bump..."
@@ -102,11 +113,18 @@ git push origin "v$VERSION"
 echo ""
 echo "✅ Release v$VERSION created and pushed!"
 echo ""
-echo "GitHub Actions will now:"
-echo "  1. Run tests"
-echo "  2. Build binaries for all platforms"
-echo "  3. Publish to npm"
-echo "  4. Create GitHub release with binaries"
+echo "Next steps:"
 echo ""
-echo "Monitor progress at:"
-echo "  https://github.com/EnactProtocol/enact-cli-2.0/actions"
+echo "  1. GitHub Actions will build binaries for all platforms"
+echo "     Monitor: https://github.com/EnactProtocol/enact/actions"
+echo ""
+echo "  2. To publish to npm (after CI completes or manually now):"
+echo "     ./scripts/publish.sh"
+echo ""
+echo "  Options:"
+echo "     ./scripts/publish.sh --dry-run      # Preview what will be published"
+echo "     ./scripts/publish.sh --only-lib     # Only library packages"
+echo "     ./scripts/publish.sh --only-binary  # Only binary packages"
+echo ""
+echo "  Note: Only your current platform binary is included locally."
+echo "  Other platforms will show a fallback message until CI builds complete."
