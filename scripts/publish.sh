@@ -146,13 +146,18 @@ publish_package() {
   
   cd "$temp_pkg_dir"
   
-  if npm publish --access public $DRY_RUN 2>&1 | head -5; then
-    echo -e "   ${GREEN}✓ Published${NC}"
+  # Run npm publish directly (not captured) so it can prompt for browser auth
+  if npm publish --access public $DRY_RUN; then
+    if [[ -n "$DRY_RUN" ]]; then
+      echo -e "   ${CYAN}✓ Would publish (dry-run)${NC}"
+    else
+      echo -e "   ${GREEN}✓ Published${NC}"
+    fi
     PUBLISHED_PACKAGES+=("$pkg_name")
     cd - > /dev/null
     return 0
   else
-    echo -e "   ${YELLOW}⚠ May already exist at this version${NC}"
+    echo -e "   ${YELLOW}⚠ Failed or already exists at this version${NC}"
     FAILED_PACKAGES+=("$pkg_name")
     cd - > /dev/null
     return 1
@@ -215,6 +220,44 @@ if [[ -z "$SKIP_BINARY" ]]; then
 
   publish_package "@enactprotocol/enact" "packages/enact"
   echo ""
+
+  # ============================================================
+  # PHASE 4: Publish as enact-cli alias (for easy discoverability)
+  # ============================================================
+  echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  echo -e "${BLUE}  Phase 4: enact-cli Alias Package${NC}"
+  echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  echo ""
+
+  # Create a temporary enact-cli package that mirrors @enactprotocol/enact
+  ENACT_CLI_DIR="$TEMP_DIR/enact-cli"
+  cp -r "packages/enact" "$ENACT_CLI_DIR"
+  
+  # Update package.json for enact-cli
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    sed -i '' 's/"name": "@enactprotocol\/enact"/"name": "enact-cli"/g' "$ENACT_CLI_DIR/package.json"
+    sed -i '' "s/\"workspace:\*\"/\"${VERSION}\"/g" "$ENACT_CLI_DIR/package.json"
+  else
+    sed -i 's/"name": "@enactprotocol\/enact"/"name": "enact-cli"/g' "$ENACT_CLI_DIR/package.json"
+    sed -i "s/\"workspace:\*\"/\"${VERSION}\"/g" "$ENACT_CLI_DIR/package.json"
+  fi
+  
+  echo -e "${YELLOW}📦 enact-cli@${VERSION}${NC}"
+  cd "$ENACT_CLI_DIR"
+  
+  if npm publish --access public $DRY_RUN; then
+    if [[ -n "$DRY_RUN" ]]; then
+      echo -e "   ${CYAN}✓ Would publish (dry-run)${NC}"
+    else
+      echo -e "   ${GREEN}✓ Published${NC}"
+    fi
+    PUBLISHED_PACKAGES+=("enact-cli")
+  else
+    echo -e "   ${YELLOW}⚠ Failed or already exists at this version${NC}"
+    FAILED_PACKAGES+=("enact-cli")
+  fi
+  cd - > /dev/null
+  echo ""
 fi
 
 # ============================================================
@@ -247,6 +290,8 @@ echo -e "${GREEN}╚════════════════════
 echo ""
 echo "Install with:"
 echo -e "  ${CYAN}npm install -g @enactprotocol/enact${NC}"
+echo "  or"
+echo -e "  ${CYAN}npm install -g enact-cli${NC}"
 echo ""
 
 if [[ -n "$DRY_RUN" ]]; then

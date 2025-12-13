@@ -1,0 +1,70 @@
+name: Build Platform Binaries
+
+on:
+  workflow_dispatch:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-14          # ARM64 runner
+            platform: darwin-arm64
+            binary: enact
+          - os: macos-13          # x64 runner
+            platform: darwin-x64
+            binary: enact
+          - os: ubuntu-latest
+            platform: linux-x64
+            binary: enact
+          - os: windows-latest
+            platform: win32-x64
+            binary: enact.exe
+
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      
+      - name: Install dependencies
+        run: bun install
+      
+      - name: Build binary
+        run: |
+          bun build packages/cli/src/index.ts \
+            --compile \
+            --minify \
+            --outfile packages/enact-${{ matrix.platform }}/bin/${{ matrix.binary }}
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: enact-${{ matrix.platform }}
+          path: packages/enact-${{ matrix.platform }}/bin/${{ matrix.binary }}
+          retention-days: 30
+
+  # Optional: Create a combined artifact
+  combine:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: binaries
+      
+      - name: List binaries
+        run: |
+          echo "Built binaries:"
+          find binaries -type f -exec ls -lh {} \;
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: all-binaries
+          path: binaries/
+          retention-days: 30
