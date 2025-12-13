@@ -198,7 +198,7 @@ The repository includes complete CI/CD workflows:
 - Triggers on changes to `packages/server/supabase/migrations/**`
 - Pushes migrations to production database
 
-**`release.yml`** - Handles package versioning and npm publishing
+**`release.yml`** - Builds platform binaries and creates GitHub releases
 
 **No workflow creation needed** - the workflows are ready to use once you configure secrets in Phase 5.
 
@@ -216,22 +216,143 @@ Go to repo Settings → Secrets and variables → Actions:
 |--------|-------------|---------|
 | `SUPABASE_ACCESS_TOKEN` | Personal access token from [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens) | `deploy-functions.yml`, `migrate-db.yml` |
 | `SUPABASE_ANON_KEY` | Project anon key (safe for public) | `deploy-web.yml` (embedded in frontend build) |
-| `NPM_TOKEN` | npm access token from [npmjs.com/settings/tokens](https://www.npmjs.com/settings/tokens) - create with "Automation" type | `release.yml` (future - currently manual) |
 
 **Note:** R2 secrets (access keys) are configured directly in Supabase console via `supabase secrets set`, not as GitHub secrets. They're stored securely in Supabase and used by Edge Functions at runtime.
 
 ---
 
-## Manual npm Publishing
+## npm Publishing
 
-npm packages are published manually for now (pending npm trusted publishers setup).
+### Architecture: optionalDependencies Strategy
+
+Enact uses the "optionalDependencies" deployment strategy (same as esbuild, turbo, etc.) for distributing platform-specific binaries:
+
+```
+@enactprotocol/enact (main package - thin wrapper)
+├── optionalDependencies:
+│   ├── @enactprotocol/enact-darwin-arm64  (Mac M1/M2)
+│   ├── @enactprotocol/enact-darwin-x64    (Intel Mac)
+│   ├── @enactprotocol/enact-linux-arm64   (Linux ARM)
+│   ├── @enactprotocol/enact-linux-x64     (Linux x64)
+│   └── @enactprotocol/enact-win32-x64     (Windows)
+```
+
+When users run `npm install -g @enactprotocol/enact`:
+1. npm reads `os` and `cpu` fields in each optional dependency
+2. npm only downloads the package matching their platform
+3. The wrapper script (`bin/enact.js`) loads and executes the correct binary
+
+### Packages to Publish
+
+| Package | Description |
+|---------|-------------|
+| **Library Packages** | |
+| `@enactprotocol/trust` | Sigstore signing & verification |
+| `@enactprotocol/secrets` | Secure keychain storage |
+| `@enactprotocol/shared` | Core types & utilities |
+| `@enactprotocol/execution` | Tool execution engine |
+| `@enactprotocol/api` | Registry API client |
+| `@enactprotocol/cli` | Command-line interface (library) |
+| **Platform Binaries** | |
+| `@enactprotocol/enact-darwin-arm64` | Mac M1/M2 binary |
+| `@enactprotocol/enact-darwin-x64` | Intel Mac binary |
+| `@enactprotocol/enact-linux-arm64` | Linux ARM binary |
+| `@enactprotocol/enact-linux-x64` | Linux x64 binary |
+| `@enactprotocol/enact-win32-x64` | Windows binary |
+| **Main Package** | |
+| `@enactprotocol/enact` | Wrapper that loads correct platform binary |
+
+---
+
+## Option A: Automated Publishing with npm Trusted Publishers (Recommended)
+
+npm Trusted Publishers uses OIDC authentication from GitHub Actions—no npm tokens needed.
+
+### Step 1: Configure Trusted Publishers on npmjs.com
+
+For **each package** listed above, go to the package settings on npmjs.com:
+
+1. Navigate to package → Settings → Trusted Publishers
+2. Click "GitHub Actions"
+3. Configure:
+   - **Organization**: `EnactProtocol`
+   - **Repository**: `enact`
+   - **Workflow filename**: `release.yml`
+   - **Environment**: (leave blank or use `production`)
+
+### Step 2: Update GitHub Actions Workflow
+
+The workflow needs `id-token: write` permission for OIDC. Example workflow:
+
+```yaml
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  id-token: write   # Required for npm trusted publishers (OIDC)
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - name: Update npm (requires 11.5.1+)
+        run: npm install -g npm@latest
+      
+      - uses: oven-sh/setup-bun@v2
+      
+      - run: bun install
+      - run: bun run build
+      
+      # npm publish automatically uses OIDC when trusted publisher is configured
+      - run: npm publish --access public
+        working-directory: packages/trust
+      # ... repeat for other packages
+```
+
+### Step 3: Recommended Security Settings
+
+After trusted publishers are working, on each package's settings:
+1. Go to Settings → Publishing access
+2. Select "Require two-factor authentication and disallow tokens"
+3. This ensures only your GitHub Actions workflow can publish
+
+---
+
+## Option B: Manual Publishing (Local)
+
+Use this for development or when CI isn't set up.
 
 ### Prerequisites
 
 1. Login to npm: `npm login`
 2. Ensure you have publish access to `@enactprotocol` org
 
-### Publish Steps
+### Quick Publish (All Packages)
+
+```bash
+# Run the automated publish script
+./scripts/publish-enact-binaries.sh
+
+# Or do a dry run first
+./scripts/publish-enact-binaries.sh --dry-run
+
+# Skip library packages if already published
+./scripts/publish-enact-binaries.sh --skip-lib
+```
+
+### Manual Step-by-Step
 
 ```bash
 cd /path/to/enact
@@ -239,44 +360,52 @@ cd /path/to/enact
 # 1. Build all packages
 bun run build
 
-# 2. Convert workspace:* dependencies to real versions
-VERSION=2.0.0  # Set to current version
-for pkg in packages/*/package.json; do
-  sed -i '' 's/"workspace:\*"/"'$VERSION'"/g' "$pkg"
-done
+# 2. Build binary for your current platform
+bun run build:binary:local
 
-# 3. Publish in dependency order (trust first, cli last)
-cd packages/trust && npm publish --access public
-cd ../secrets && npm publish --access public
-cd ../shared && npm publish --access public  
-cd ../execution && npm publish --access public
-cd ../api && npm publish --access public
-cd ../cli && npm publish --access public
-
-# 4. Revert package.json changes (don't commit the sed changes)
-git checkout packages/*/package.json
+# 3. Run the publish script
+./scripts/publish-enact-binaries.sh
 ```
 
-### Packages Published
+The script will:
+1. Replace `workspace:*` with actual versions
+2. Publish library packages (trust → secrets → shared → execution → api → cli)
+3. Publish platform-specific binary packages
+4. Publish the main `@enactprotocol/enact` wrapper
 
-| Package | Description |
-|---------|-------------|
-| `@enactprotocol/trust` | Sigstore signing & verification |
-| `@enactprotocol/secrets` | Secure keychain storage |
-| `@enactprotocol/shared` | Core types & utilities |
-| `@enactprotocol/execution` | Tool execution engine |
-| `@enactprotocol/api` | Registry API client |
-| `@enactprotocol/cli` | Command-line interface |
+### Building Binaries for All Platforms
 
-### Required Variables
+Binaries must be built natively on each platform. Options:
 
-| Variable | Description |
-|----------|-------------|
-| `SUPABASE_PROJECT_REF` | Project reference ID (e.g., `siikwkfgsmouioodghho`) |
+**Option 1: GitHub Actions (Recommended)**
+The `release.yml` workflow builds binaries on:
+- `ubuntu-latest` → linux-x64, linux-arm64
+- `macos-latest` → darwin-x64, darwin-arm64  
+- `windows-latest` → win32-x64
+
+**Option 2: Manual Cross-Platform Builds**
+```bash
+# On Mac M1
+bun run build:binary:local  # Creates packages/enact-darwin-arm64/bin/enact
+
+# On Intel Mac
+bun run build:binary:local  # Creates packages/enact-darwin-x64/bin/enact
+
+# On Linux x64
+bun run build:binary:local  # Creates packages/enact-linux-x64/bin/enact
+
+# etc.
+```
 
 ---
 
 ## Phase 6: DNS & Domain Setup
+
+### Required GitHub Variables
+
+| Variable | Description |
+|----------|-------------|
+| `SUPABASE_PROJECT_REF` | Project reference ID (e.g., `siikwkfgsmouioodghho`) |
 
 ### 6.1 Configure enact.tools
 
