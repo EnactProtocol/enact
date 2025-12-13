@@ -4,9 +4,8 @@
  * Create a basic tool template in the current directory.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { getSecret } from "@enactprotocol/secrets";
 import type { Command } from "commander";
 import type { CommandContext, GlobalOptions } from "../../types";
@@ -23,10 +22,230 @@ const SUPABASE_ANON_KEY =
   process.env.SUPABASE_ANON_KEY ??
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpaWt3a2Znc21vdWlvb2RnaGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2MTkzMzksImV4cCI6MjA4MDE5NTMzOX0.kxnx6-IPFhmGx6rzNx36vbyhFMFZKP_jFqaDbKnJ_E0";
 
-/** Get the templates directory path */
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const TEMPLATES_DIR = join(__dirname, "templates");
+/**
+ * Embedded templates (for single-binary compatibility)
+ */
+const TEMPLATES: Record<string, string> = {
+  "tool-enact.md": `---
+name: {{TOOL_NAME}}
+description: A simple tool that echoes a greeting
+version: 0.1.0
+enact: "2.0"
+
+from: alpine:latest
+
+inputSchema:
+  type: object
+  properties:
+    name:
+      type: string
+      description: Name to greet
+      default: World
+  required: []
+
+command: |
+  echo "Hello, \${name}!"
+---
+
+# {{TOOL_NAME}}
+
+A simple greeting tool created with \`enact init\`.
+
+## Usage
+
+\`\`\`bash
+enact run ./ --args '{"name": "Alice"}'
+\`\`\`
+
+## Customization
+
+Edit this file to create your own tool:
+
+1. Update the \`name\` and \`description\` in the frontmatter
+2. Modify the \`inputSchema\` to define your tool's inputs
+3. Change the \`command\` to run your desired shell commands
+4. Update this documentation section
+
+## Learn More
+
+- [Enact Documentation](https://enact.dev/docs)
+- [Tool Manifest Reference](https://enact.dev/docs/manifest)
+`,
+
+  "tool-agents.md": `# AGENTS.md
+
+Enact tool: containerized, signed executable. Manifest: \`enact.md\` (YAML frontmatter + Markdown docs).
+
+## Commands
+\`\`\`bash
+enact run ./ --args '{"name": "Test"}'  # Run locally
+enact run ./ --args '{}' --dry-run      # Preview execution
+enact sign ./ && enact publish ./       # Sign and publish
+\`\`\`
+
+## enact.md Structure
+\`\`\`yaml
+---
+name: {{TOOL_NAME}}        # org/category/tool format
+description: What it does
+version: 1.0.0                    # semver
+from: python:3.12-slim            # pin versions, not :latest
+build: pip install requests       # cached by Dagger
+command: python /work/main.py \${input}
+timeout: 30s
+inputSchema:
+  type: object
+  properties:
+    input: { type: string }
+  required: [input]
+env:
+  API_KEY:                        # declare secrets (set via: enact env set API_KEY --secret)
+---
+# Tool Name
+Documentation here (usage examples, etc.)
+\`\`\`
+
+## Parameter Substitution
+- \`\${param}\` — auto-quoted (handles spaces, JSON, special chars)
+- \`\${param:raw}\` — unquoted (use carefully)
+- **Never manually quote**: \`"\${param}"\` causes double-quoting
+
+## Output
+Always output valid JSON when \`outputSchema\` is defined:
+\`\`\`python
+import json, sys
+print(json.dumps({"result": data}))  # stdout = tool output
+sys.exit(1)  # non-zero = error
+\`\`\`
+
+## File Access
+Tool runs in container with \`/work\` as working directory. Source files copied there.
+
+## Adding Dependencies
+- Python: \`build: pip install package1 package2\`
+- Node: \`build: ["npm install", "npm run build"]\`
+- System: \`build: apt-get update && apt-get install -y libfoo\`
+- Compiled: \`build: rustc /work/main.rs -o /work/tool\`
+
+Build steps are cached — first run slow, subsequent runs instant.
+`,
+
+  "agent-agents.md": `# AGENTS.md
+
+This project uses Enact tools — containerized, cryptographically-signed executables.
+
+## Running Tools
+\`\`\`bash
+enact run <tool-name> --args '{"key": "value"}'   # Run installed tool
+enact run ./path/to/tool --args '{}'              # Run local tool
+\`\`\`
+
+## Finding & Installing Tools
+\`\`\`bash
+enact search "pdf extraction"                     # Search registry
+enact get author/category/tool                    # View tool info
+enact install author/category/tool                # Add to project (.enact/tools.json)
+enact install author/category/tool --global       # Add globally
+enact list                                        # List project tools
+\`\`\`
+
+## Tool Output
+Tools output JSON to stdout. Parse with jq or your language's JSON parser:
+\`\`\`bash
+enact run tool --args '{}' | jq '.result'
+\`\`\`
+
+## Creating Local Tools
+Create \`tools/<name>/enact.md\` with:
+\`\`\`yaml
+---
+name: my-tool
+description: What it does
+command: echo "Hello \${name}"
+inputSchema:
+  type: object
+  properties:
+    name: { type: string }
+---
+# My Tool
+Documentation here.
+\`\`\`
+Run with: \`enact run ./tools/<name> --args '{"name": "World"}'\`
+
+## Environment & Secrets
+\`\`\`bash
+enact env set API_KEY --secret --namespace author/tool  # Set secret
+enact env list                                          # List env vars
+\`\`\`
+`,
+
+  "claude.md": `# CLAUDE.md
+
+This project uses Enact tools — containerized, signed executables you can run via CLI.
+
+## Quick Reference
+\`\`\`bash
+enact run <tool> --args '{"key": "value"}'   # Run a tool
+enact search "keyword"                        # Find tools
+enact install author/tool                     # Install tool
+enact list                                    # List installed tools
+\`\`\`
+
+## Running Tools
+Tools take JSON input and return JSON output:
+\`\`\`bash
+# Run and capture output
+result=$(enact run author/utils/formatter --args '{"code": "const x=1"}')
+
+# Parse with jq
+enact run tool --args '{}' | jq '.data'
+\`\`\`
+
+## Creating Tools
+Create \`enact.md\` in a directory:
+\`\`\`yaml
+---
+name: namespace/category/tool
+description: Clear description for search
+version: 1.0.0
+from: python:3.12-slim            # Docker image
+build: pip install requests       # Install dependencies (cached)
+command: python /work/main.py \${input}
+inputSchema:
+  type: object
+  properties:
+    input: { type: string, description: "The input to process" }
+  required: [input]
+---
+# Tool Name
+Usage documentation here.
+\`\`\`
+
+Key points:
+- \`\${param}\` is auto-quoted — never add manual quotes
+- \`from:\` pin image versions (not \`:latest\`)
+- \`build:\` steps are cached by Dagger
+- Output JSON to stdout, errors to stderr
+- Non-zero exit = failure
+
+## Tool Development Workflow
+\`\`\`bash
+enact run ./ --args '{"input": "test"}'       # Test locally
+enact run ./ --args '{}' --dry-run            # Preview command
+enact sign ./ && enact publish ./             # Publish
+\`\`\`
+
+## Secrets
+Declare in enact.md, set via CLI:
+\`\`\`yaml
+env:
+  API_KEY:    # Declared but not set
+\`\`\`
+\`\`\`bash
+enact env set API_KEY --secret --namespace author/tool
+\`\`\`
+`,
+};
 
 interface InitOptions extends GlobalOptions {
   name?: string;
@@ -37,11 +256,13 @@ interface InitOptions extends GlobalOptions {
 }
 
 /**
- * Load a template file and replace placeholders
+ * Load a template and replace placeholders
  */
 function loadTemplate(templateName: string, replacements: Record<string, string> = {}): string {
-  const templatePath = join(TEMPLATES_DIR, templateName);
-  let content = readFileSync(templatePath, "utf-8");
+  let content = TEMPLATES[templateName];
+  if (!content) {
+    throw new Error(`Template not found: ${templateName}`);
+  }
 
   // Replace all {{PLACEHOLDER}} patterns
   for (const [key, value] of Object.entries(replacements)) {

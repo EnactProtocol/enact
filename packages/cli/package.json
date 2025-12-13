@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/cli",
-  "version": "2.0.13",
+  "version": "2.0.14",
   "description": "Command-line interface for Enact - the npm for AI tools",
   "type": "module",
   "main": "./dist/index.js",
@@ -23,7 +23,7 @@
     "directory": "packages/cli"
   },
   "scripts": {
-    "build": "tsc --build && node -e \"const fs=require('fs');const path=require('path');const src='src/commands/init/templates';const dest='dist/commands/init/templates';fs.mkdirSync(dest,{recursive:true});fs.readdirSync(src).forEach(f=>fs.copyFileSync(path.join(src,f),path.join(dest,f)))\"",
+    "build": "tsc --build",
     "clean": "rm -rf dist",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
