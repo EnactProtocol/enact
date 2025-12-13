@@ -32,7 +32,7 @@ import {
 } from "./commands";
 import { error, formatError } from "./utils";
 
-export const version = "2.0.12";
+export const version = "2.0.13";
 
 // Export types for external use
 export type { GlobalOptions, CommandContext } from "./types";
