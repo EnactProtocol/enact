@@ -23,7 +23,7 @@
     "directory": "packages/cli"
   },
   "scripts": {
-    "build": "tsc --build && cp -r src/commands/init/templates dist/commands/init/",
+    "build": "tsc --build && node -e \"const fs=require('fs');const path=require('path');const src='src/commands/init/templates';const dest='dist/commands/init/templates';fs.mkdirSync(dest,{recursive:true});fs.readdirSync(src).forEach(f=>fs.copyFileSync(path.join(src,f),path.join(dest,f)))\"",
     "clean": "rm -rf dist",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
