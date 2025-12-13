@@ -130,18 +130,13 @@ async function createBundleFromDir(toolDir: string): Promise<Uint8Array> {
 }
 
 /**
- * Load README from tool directory
+ * Load the raw enact.md file content (full documentation with frontmatter)
  */
-function loadReadme(toolDir: string): string | undefined {
-  const readmeNames = ["README.md", "readme.md", "README", "readme"];
-
-  for (const name of readmeNames) {
-    const readmePath = join(toolDir, name);
-    if (existsSync(readmePath)) {
-      return readFileSync(readmePath, "utf-8");
-    }
+function loadEnactMd(toolDir: string): string | undefined {
+  const enactMdPath = join(toolDir, "enact.md");
+  if (existsSync(enactMdPath)) {
+    return readFileSync(enactMdPath, "utf-8");
   }
-
   return undefined;
 }
 
@@ -304,10 +299,10 @@ async function publishHandler(
     return;
   }
 
-  // Load README if available
-  const readme = loadReadme(toolDir);
-  if (readme) {
-    info("Found README.md");
+  // Load the full enact.md content (frontmatter + documentation)
+  const enactMdContent = loadEnactMd(toolDir);
+  if (enactMdContent) {
+    info("Found enact.md documentation");
   }
 
   // Create bundle
@@ -323,7 +318,7 @@ async function publishHandler(
       name: toolName,
       manifest: manifest as unknown as Record<string, unknown>,
       bundle,
-      readme,
+      rawManifest: enactMdContent,
     });
   });
 

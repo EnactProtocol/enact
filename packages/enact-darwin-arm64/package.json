@@ -1,0 +1,15 @@
+{
+  "name": "@enactprotocol/enact-darwin-arm64",
+  "version": "2.0.5",
+  "description": "Enact prebuilt binary for darwin-arm64",
+  "license": "Apache-2.0",
+  "os": ["darwin"],
+  "cpu": ["arm64"],
+  "main": "./index.js",
+  "files": ["bin", "index.js"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EnactProtocol/enact.git",
+    "directory": "packages/enact-darwin-arm64"
+  }
+}

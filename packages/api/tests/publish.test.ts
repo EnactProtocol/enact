@@ -77,7 +77,7 @@ describe("publish module", () => {
       expect(result.bundleHash).toBeDefined();
     });
 
-    test("supports optional readme", async () => {
+    test("supports optional rawManifest", async () => {
       const client = createApiClient({ authToken: "valid-token" });
       const bundle = new TextEncoder().encode("mock bundle content");
 
@@ -90,7 +90,7 @@ describe("publish module", () => {
           description: "A documented tool",
         },
         bundle,
-        readme: "# My Tool\n\nThis is a great tool!",
+        rawManifest: "---\\nenact: 2.0.0\\n...\\n---\\n# My Tool\\n\\nThis is a great tool!",
       });
 
       expect(result.name).toBeTruthy();

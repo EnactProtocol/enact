@@ -1,0 +1,15 @@
+{
+  "name": "@enactprotocol/enact-linux-x64",
+  "version": "2.0.5",
+  "description": "Enact prebuilt binary for linux-x64",
+  "license": "Apache-2.0",
+  "os": ["linux"],
+  "cpu": ["x64"],
+  "main": "./index.js",
+  "files": ["bin", "index.js"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EnactProtocol/enact.git",
+    "directory": "packages/enact-linux-x64"
+  }
+}

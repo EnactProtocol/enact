@@ -68,6 +68,14 @@ Thumbs.db
 .bun/
 bun.lockb
 
+# Compiled platform binaries (built by CI, not committed)
+# Keep the .js dev shims, but ignore compiled binaries
+packages/enact-darwin-arm64/bin/enact
+packages/enact-darwin-x64/bin/enact
+packages/enact-linux-arm64/bin/enact
+packages/enact-linux-x64/bin/enact
+packages/enact-win32-x64/bin/enact.exe
+
 # Husky
 .husky/_
 

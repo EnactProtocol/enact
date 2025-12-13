@@ -1,6 +1,6 @@
 {
   "name": "enact-monorepo",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "private": true,
   "description": "Enact 2.0 - Verified, portable protocol for AI-executable tools",
   "workspaces": [
@@ -12,11 +12,18 @@
     "packages/server",
     "packages/mcp-server",
     "packages/cli",
+    "packages/enact",
+    "packages/enact-darwin-arm64",
+    "packages/enact-darwin-x64",
+    "packages/enact-linux-arm64",
+    "packages/enact-linux-x64",
+    "packages/enact-win32-x64",
     "packages/web"
   ],
   "scripts": {
     "postinstall": "node scripts/patch-sigstore.js",
     "build": "bun run build:trust && bun run build:secrets && bun run build:shared && bun run build:execution && bun run build:api && bun run build:server && bun run build:mcp-server && bun run build:cli && bun run build:web",
+    "build:binary:local": "bun run build:trust && bun run build:secrets && bun run build:shared && bun run build:execution && bun run build:api && bun run build:cli && node scripts/build-platform-binary.mjs",
     "build:trust": "cd packages/trust && bun run build",
     "build:secrets": "cd packages/secrets && bun run build",
     "build:shared": "cd packages/shared && bun run build",

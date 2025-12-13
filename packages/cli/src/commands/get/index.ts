@@ -44,7 +44,11 @@ function formatDate(date: Date): string {
 /**
  * Display tool info
  */
-function displayToolInfo(tool: ToolInfo, options: GetOptions): void {
+function displayToolInfo(
+  tool: ToolInfo,
+  options: GetOptions,
+  rawManifest?: string | undefined
+): void {
   header(tool.name);
   newline();
 
@@ -67,16 +71,19 @@ function displayToolInfo(tool: ToolInfo, options: GetOptions): void {
   newline();
   keyValue("Available Versions", tool.versions.map((v) => v.version).join(", "));
 
-  if (options.verbose) {
+  // Show raw manifest when --verbose is used
+  if (options.verbose && rawManifest) {
     newline();
-    dim("Use --version <ver> to see version-specific details");
+    header("Documentation (enact.md)");
+    newline();
+    console.log(rawManifest);
   }
 }
 
 /**
  * Display version-specific info
  */
-function displayVersionInfo(version: ToolVersionInfo): void {
+function displayVersionInfo(version: ToolVersionInfo, options: GetOptions): void {
   header(`${version.name}@${version.version}`);
   newline();
 
@@ -98,7 +105,13 @@ function displayVersionInfo(version: ToolVersionInfo): void {
     }
   }
 
-  if (version.manifest) {
+  // Show raw manifest (enact.md content) when --verbose is used
+  if (options.verbose && version.rawManifest) {
+    newline();
+    header("Documentation (enact.md)");
+    newline();
+    console.log(version.rawManifest);
+  } else if (version.manifest) {
     newline();
     dim("Manifest:");
     console.log(JSON.stringify(version.manifest, null, 2));
@@ -138,7 +151,7 @@ async function getHandler(
         return;
       }
 
-      displayVersionInfo(versionInfo);
+      displayVersionInfo(versionInfo, options);
     } else {
       // Get general tool info
       const toolInfo = await getToolInfo(client, toolName);
@@ -148,7 +161,14 @@ async function getHandler(
         return;
       }
 
-      displayToolInfo(toolInfo, options);
+      // If verbose, fetch the latest version to get the raw manifest
+      let rawManifest: string | undefined;
+      if (options.verbose && toolInfo.latestVersion) {
+        const versionInfo = await getToolVersion(client, toolName, toolInfo.latestVersion);
+        rawManifest = versionInfo.rawManifest;
+      }
+
+      displayToolInfo(toolInfo, options, rawManifest);
     }
 
     newline();

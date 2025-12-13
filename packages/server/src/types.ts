@@ -98,7 +98,8 @@ export interface ToolVersion {
   tool_id: string;
   version: string;
   manifest: Record<string, unknown>;
-  readme: string | null;
+  readme: string | null; // Reserved for future README.md support
+  raw_manifest: string | null; // The raw enact.md file content
   bundle_hash: string;
   bundle_size: number;
   bundle_path: string;

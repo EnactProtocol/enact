@@ -139,8 +139,10 @@ export interface ToolVersionDetails {
   yank_replacement?: string | undefined;
   /** When it was yanked */
   yanked_at?: string | undefined;
-  /** Full manifest object */
+  /** Full manifest object (parsed from enact.md frontmatter) */
   manifest: Record<string, unknown>;
+  /** The raw enact.md file content (frontmatter + markdown documentation) */
+  rawManifest?: string | undefined;
   /** Bundle information */
   bundle: BundleInfo;
   /** List of attestations */

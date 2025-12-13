@@ -47,7 +47,7 @@ export default function ToolCode({ toolName, initialFilePath }: ToolCodeProps) {
 
   // Check if currentFile is a directory (tree view) or file (blob view)
   const isDirectory =
-    currentFile && filesData?.files.some((f) => f.path.startsWith(currentFile + "/"));
+    currentFile && filesData?.files.some((f) => f.path.startsWith(`${currentFile}/`));
   const isFile = currentFile && filesData?.files.some((f) => f.path === currentFile);
 
   // Fetch file content only when a file (not directory) is selected
@@ -73,7 +73,7 @@ export default function ToolCode({ toolName, initialFilePath }: ToolCodeProps) {
       } else if (isDirectory) {
         // Current path is a directory - pick the first file in that directory
         const firstFileInDir = filesData.files.find(
-          (f) => f.type === "file" && f.path.startsWith(currentFile + "/")
+          (f) => f.type === "file" && f.path.startsWith(`${currentFile}/`)
         );
         if (firstFileInDir) {
           navigate(`/tools/${toolName}/-/blob/${firstFileInDir.path}`, { replace: true });
@@ -84,7 +84,7 @@ export default function ToolCode({ toolName, initialFilePath }: ToolCodeProps) {
 
   const handleSelectFile = (path: string) => {
     // Check if it's a directory or file by looking at the file tree
-    const isDirectory = filesData?.files.some((f) => f.path.startsWith(path + "/"));
+    const isDirectory = filesData?.files.some((f) => f.path.startsWith(`${path}/`));
     if (isDirectory) {
       navigate(`/tools/${toolName}/-/tree/${path}`);
     } else {

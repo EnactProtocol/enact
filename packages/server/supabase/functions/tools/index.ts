@@ -315,7 +315,7 @@ async function handlePublish(
   const formData = await req.formData();
   const manifestStr = formData.get("manifest") as string;
   const bundleFile = formData.get("bundle") as File;
-  const readme = formData.get("readme") as string | null;
+  const rawManifest = formData.get("raw_manifest") as string | null;
 
   if (!manifestStr || !bundleFile) {
     return Errors.validation("Missing manifest or bundle");
@@ -502,7 +502,7 @@ async function handlePublish(
       tool_id: tool.id,
       version,
       manifest,
-      readme,
+      raw_manifest: rawManifest,
       bundle_hash: hash,
       bundle_size: size,
       bundle_path: path,
@@ -604,6 +604,7 @@ async function handleGetVersion(
     yank_replacement: data.yank_replacement,
     yanked_at: data.yanked_at,
     manifest: data.manifest,
+    rawManifest: data.raw_manifest,
     bundle: {
       hash: data.bundle_hash,
       size: data.bundle_size,

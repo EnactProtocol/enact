@@ -80,6 +80,23 @@ describe("download module", () => {
       expect(version.bundle.size).toBeNumber();
       expect(version.bundle.downloadUrl).toBeDefined();
     });
+
+    test("includes rawManifest (enact.md content) when available", async () => {
+      const client = createApiClient({ baseUrl: "http://localhost" });
+      const version = await getToolVersion(client, "alice/utils/greeter", "1.2.0");
+
+      expect(version.rawManifest).toBeDefined();
+      expect(version.rawManifest).toBeString();
+      expect(version.rawManifest).toContain("# Greeter Tool");
+      expect(version.rawManifest).toContain("enact: 2.0.0");
+    });
+
+    test("rawManifest is undefined when not provided", async () => {
+      const client = createApiClient({ baseUrl: "http://localhost" });
+      const version = await getToolVersion(client, "bob/data/csv-parser", "2.0.0");
+
+      expect(version.rawManifest).toBeUndefined();
+    });
   });
 
   describe("getAttestations (v2)", () => {

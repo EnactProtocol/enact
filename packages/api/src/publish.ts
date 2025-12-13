@@ -116,7 +116,7 @@ export async function createBundle(toolDir: string): Promise<BundleInfo> {
  *   name: "alice/utils/greeter",
  *   manifest: { enact: "2.0.0", name: "alice/utils/greeter", version: "1.2.0", ... },
  *   bundle: bundle.data,
- *   readme: "# My Tool\n\nDescription..."
+ *   rawManifest: "---\nenact: 2.0.0\n...\n---\n# My Tool\n\nDescription..."
  * });
  * console.log(`Published: ${result.bundleHash}`);
  * ```
@@ -127,10 +127,11 @@ export async function publishTool(
     name: string;
     manifest: Record<string, unknown>;
     bundle: ArrayBuffer | Uint8Array;
-    readme?: string | undefined;
+    /** The raw enact.md file content (frontmatter + markdown documentation) */
+    rawManifest?: string | undefined;
   }
 ): Promise<PublishResult> {
-  const { name, manifest, bundle, readme } = options;
+  const { name, manifest, bundle, rawManifest } = options;
 
   // Create FormData for multipart upload
   const formData = new FormData();
@@ -145,9 +146,9 @@ export async function publishTool(
       : new Blob([bundle], { type: "application/gzip" });
   formData.append("bundle", bundleBlob, "bundle.tar.gz");
 
-  // Add optional readme
-  if (readme) {
-    formData.append("readme", readme);
+  // Add optional raw manifest (enact.md content)
+  if (rawManifest) {
+    formData.append("raw_manifest", rawManifest);
   }
 
   // Make multipart request (v2 endpoint is POST /tools/{name})

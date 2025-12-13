@@ -91,8 +91,10 @@ export interface ToolVersionInfo {
   yankReplacement?: string | undefined;
   /** Yanked timestamp */
   yankedAt?: Date | undefined;
-  /** Full manifest */
+  /** Full manifest (parsed from enact.md frontmatter) */
   manifest: Record<string, unknown>;
+  /** The raw enact.md file content (frontmatter + markdown documentation) */
+  rawManifest?: string | undefined;
   /** Bundle info */
   bundle: {
     hash: string;
@@ -161,6 +163,7 @@ function toToolVersionInfo(raw: ToolVersionDetails): ToolVersionInfo {
     yankReplacement: raw.yank_replacement,
     yankedAt: raw.yanked_at ? new Date(raw.yanked_at) : undefined,
     manifest: raw.manifest,
+    rawManifest: raw.rawManifest,
     bundle: {
       hash: raw.bundle.hash,
       size: raw.bundle.size,

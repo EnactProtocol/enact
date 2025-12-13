@@ -1,0 +1,11 @@
+#!/bin/bash
+# Wrapper script for local enact development
+# Resolve symlinks to get the real script directory
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+exec bun run "$SCRIPT_DIR/dist/index.js" "$@"

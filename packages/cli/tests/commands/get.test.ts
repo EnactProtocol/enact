@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import type { ToolVersionInfo } from "@enactprotocol/api";
 import { Command } from "commander";
 import { configureGetCommand } from "../../src/commands/get";
 
@@ -176,6 +177,89 @@ describe("get command", () => {
       expect(trustLevels).toContain("publisher");
       expect(trustLevels).toContain("auditor");
       expect(trustLevels).toContain("full");
+    });
+  });
+
+  describe("verbose mode displays enact.md", () => {
+    test("ToolVersionInfo type includes rawManifest field for enact.md content", () => {
+      // Test that the type includes rawManifest field for enact.md content
+      const mockVersion: ToolVersionInfo = {
+        name: "test/tool",
+        version: "1.0.0",
+        description: "Test tool",
+        license: "MIT",
+        yanked: false,
+        manifest: { enact: "2.0.0" },
+        rawManifest: "---\\nenact: 2.0.0\\n---\\n# Test Tool\\n\\nThis is a test tool.",
+        bundle: {
+          hash: "sha256:abc123",
+          size: 1024,
+          downloadUrl: "https://example.com/bundle.tar.gz",
+        },
+        attestations: [],
+        publishedBy: { username: "testuser" },
+        publishedAt: new Date(),
+        downloads: 100,
+      };
+
+      expect(mockVersion.rawManifest).toBeDefined();
+      expect(mockVersion.rawManifest).toContain("# Test Tool");
+    });
+
+    test("ToolVersionInfo allows undefined rawManifest", () => {
+      const mockVersion: ToolVersionInfo = {
+        name: "test/tool",
+        version: "1.0.0",
+        description: "Test tool",
+        license: "MIT",
+        yanked: false,
+        manifest: { enact: "2.0.0" },
+        // rawManifest is optional - not provided
+        bundle: {
+          hash: "sha256:abc123",
+          size: 1024,
+          downloadUrl: "https://example.com/bundle.tar.gz",
+        },
+        attestations: [],
+        publishedBy: { username: "testuser" },
+        publishedAt: new Date(),
+        downloads: 100,
+      };
+
+      expect(mockVersion.rawManifest).toBeUndefined();
+    });
+
+    test("enact.md content should contain frontmatter and markdown", () => {
+      const enactMdContent = `---
+enact: 2.0.0
+name: test/tool
+version: 1.0.0
+---
+
+# Test Tool
+
+Documentation here.`;
+
+      // Verify frontmatter is present
+      expect(enactMdContent).toContain("---");
+      expect(enactMdContent).toContain("enact: 2.0.0");
+
+      // Verify markdown content
+      expect(enactMdContent).toContain("# Test Tool");
+      expect(enactMdContent).toContain("Documentation here.");
+    });
+
+    test("verbose option is available on get command", () => {
+      const program = new Command();
+      configureGetCommand(program);
+
+      const getCmd = program.commands.find((cmd) => cmd.name() === "get");
+      const opts = getCmd?.options ?? [];
+
+      // Check both short and long form exist
+      const verboseOpt = opts.find((o) => o.long === "--verbose");
+      expect(verboseOpt).toBeDefined();
+      expect(verboseOpt?.short).toBe("-v");
     });
   });
 });

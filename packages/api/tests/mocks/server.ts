@@ -115,6 +115,38 @@ export const MOCK_VERSIONS: Record<string, ToolVersionDetails> = {
         required: ["name"],
       },
     },
+    rawManifest: `---
+enact: 2.0.0
+name: alice/utils/greeter
+version: 1.2.0
+description: Greets the user by name
+license: MIT
+from: alpine:latest
+command: echo 'Hello, \${name}!'
+timeout: 30s
+inputSchema:
+  type: object
+  properties:
+    name:
+      type: string
+  required:
+    - name
+---
+
+# Greeter Tool
+
+A simple tool that greets users by name.
+
+## Usage
+
+\`\`\`bash
+enact run alice/utils/greeter --name "World"
+\`\`\`
+
+## Examples
+
+- Greet a user: \`enact run alice/utils/greeter --name "Alice"\`
+`,
     bundle: {
       hash: "sha256:abc123def456",
       size: 1024,
@@ -163,6 +195,7 @@ export const MOCK_VERSIONS: Record<string, ToolVersionDetails> = {
         required: ["input_file"],
       },
     },
+    // No rawManifest for this tool - tests the case where rawManifest is not provided
     bundle: {
       hash: "sha256:xyz789abc012",
       size: 2048,

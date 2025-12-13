@@ -1,0 +1,24 @@
+{
+  "name": "@enactprotocol/enact",
+  "version": "2.0.5",
+  "description": "Enact CLI (thin wrapper that loads the correct platform binary)",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EnactProtocol/enact.git",
+    "directory": "packages/enact"
+  },
+  "bin": {
+    "enact": "./bin/enact.js"
+  },
+  "optionalDependencies": {
+    "@enactprotocol/enact-darwin-arm64": "workspace:*",
+    "@enactprotocol/enact-darwin-x64": "workspace:*",
+    "@enactprotocol/enact-linux-arm64": "workspace:*",
+    "@enactprotocol/enact-linux-x64": "workspace:*",
+    "@enactprotocol/enact-win32-x64": "workspace:*"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
