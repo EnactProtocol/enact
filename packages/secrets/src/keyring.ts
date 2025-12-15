@@ -5,48 +5,15 @@
  * - macOS: Keychain
  * - Windows: Credential Manager
  * - Linux: Secret Service (libsecret)
+ * - Fallback: Encrypted file storage (for headless/unsupported systems)
  *
  * All secrets are stored with:
  * - Service: "enact-cli"
  * - Account: "{namespace}:{SECRET_NAME}"
- *
- * NOTE: Uses dynamic import to handle environments where native modules
- * are not available (e.g., Bun compiled binaries). Falls back gracefully
- * with clear error messages.
  */
 
+import * as keyring from "@enactprotocol/keyring";
 import { KEYRING_SERVICE, type SecretMetadata } from "./types";
-
-// Lazy-loaded keyring module
-let _keyring: typeof import("@zowe/secrets-for-zowe-sdk").keyring | null = null;
-let _keyringLoadError: Error | null = null;
-let _keyringLoaded = false;
-
-/**
- * Dynamically load the keyring module.
- * This allows the CLI to start even if native modules aren't available.
- */
-async function getKeyring(): Promise<typeof import("@zowe/secrets-for-zowe-sdk").keyring> {
-  if (_keyringLoaded) {
-    if (_keyringLoadError) {
-      throw _keyringLoadError;
-    }
-    return _keyring!;
-  }
-
-  try {
-    const mod = await import("@zowe/secrets-for-zowe-sdk");
-    _keyring = mod.keyring;
-    _keyringLoaded = true;
-    return _keyring;
-  } catch (err) {
-    _keyringLoaded = true;
-    _keyringLoadError = new Error(
-      `Keyring not available. Native keychain access requires Node.js (not a compiled binary).\nSecrets can still be provided via environment variables or .env files.\nOriginal error: ${err instanceof Error ? err.message : String(err)}`
-    );
-    throw _keyringLoadError;
-  }
-}
 
 /**
  * Build the account string for keyring storage
@@ -81,7 +48,6 @@ export function parseAccount(account: string): {
  * @param value - The secret value to store
  */
 export async function setSecret(namespace: string, name: string, value: string): Promise<void> {
-  const keyring = await getKeyring();
   const account = buildAccount(namespace, name);
   await keyring.setPassword(KEYRING_SERVICE, account, value);
 }
@@ -94,7 +60,6 @@ export async function setSecret(namespace: string, name: string, value: string):
  * @returns The secret value, or null if not found
  */
 export async function getSecret(namespace: string, name: string): Promise<string | null> {
-  const keyring = await getKeyring();
   const account = buildAccount(namespace, name);
   const value = await keyring.getPassword(KEYRING_SERVICE, account);
   return value ?? null;
@@ -108,7 +73,6 @@ export async function getSecret(namespace: string, name: string): Promise<string
  * @returns true if deleted, false if not found
  */
 export async function deleteSecret(namespace: string, name: string): Promise<boolean> {
-  const keyring = await getKeyring();
   const account = buildAccount(namespace, name);
   return await keyring.deletePassword(KEYRING_SERVICE, account);
 }
@@ -120,7 +84,6 @@ export async function deleteSecret(namespace: string, name: string): Promise<boo
  * @returns Array of secret names in the namespace
  */
 export async function listSecrets(namespace: string): Promise<string[]> {
-  const keyring = await getKeyring();
   const credentials = await keyring.findCredentials(KEYRING_SERVICE);
   const prefix = `${namespace}:`;
 
@@ -135,7 +98,6 @@ export async function listSecrets(namespace: string): Promise<string[]> {
  * @returns Array of secret metadata
  */
 export async function listAllSecrets(): Promise<SecretMetadata[]> {
-  const keyring = await getKeyring();
   const credentials = await keyring.findCredentials(KEYRING_SERVICE);
 
   return credentials.map((cred) => {
@@ -161,16 +123,19 @@ export async function secretExists(namespace: string, name: string): Promise<boo
 
 /**
  * Check if the keyring is available on this system
+ * (Always returns true since we have fallback storage)
  *
  * @returns true if keyring operations are available
  */
 export async function isKeyringAvailable(): Promise<boolean> {
-  try {
-    const keyring = await getKeyring();
-    // Try to list credentials - this will fail if keyring is not available
-    await keyring.findCredentials(KEYRING_SERVICE);
-    return true;
-  } catch {
-    return false;
-  }
+  return true;
+}
+
+/**
+ * Check if using fallback encrypted file storage instead of OS keyring
+ *
+ * @returns true if using fallback storage
+ */
+export function isUsingFallbackStorage(): boolean {
+  return keyring.isUsingFallback();
 }

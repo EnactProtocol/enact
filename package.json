@@ -4,6 +4,7 @@
   "private": true,
   "description": "Enact 2.0 - Verified, portable protocol for AI-executable tools",
   "workspaces": [
+    "packages/keyring",
     "packages/trust",
     "packages/secrets",
     "packages/shared",

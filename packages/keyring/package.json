@@ -1,0 +1,35 @@
+{
+  "name": "@enactprotocol/keyring",
+  "version": "2.0.0",
+  "description": "Cross-platform OS keyring for secure credential storage (no native modules)",
+  "type": "module",
+  "main": "dist/keyring.js",
+  "types": "dist/keyring.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/keyring.js",
+      "types": "./dist/keyring.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "rm -rf dist",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "typescript": "^5.7.2"
+  },
+  "keywords": ["keyring", "keychain", "credentials", "secrets", "cross-platform"],
+  "author": "Enact Protocol",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EnactProtocol/enact-cli-2.0.git",
+    "directory": "packages/keyring"
+  }
+}
