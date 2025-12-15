@@ -1,6 +1,6 @@
 {
   "name": "enact-monorepo",
-  "version": "2.0.14",
+  "version": "2.0.15",
   "private": true,
   "description": "Enact 2.0 - Verified, portable protocol for AI-executable tools",
   "workspaces": [
