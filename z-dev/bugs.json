@@ -50,6 +50,30 @@
       "status": "open",
       "location": "packages/server/supabase/functions/tools/index.ts - handleGetTool() or the tools table latest_version column update logic",
       "workaround": "Use 'enact get toolname --ver <version> --verbose' to specify the exact version"
+    },
+    {
+      "name": "enact sign should prompt for version when signing remote tool without version",
+      "description": "When running 'enact sign author/tool' without a version suffix, the parseRemoteToolRef() function returns null because there's no '@' symbol. This causes the code to fall through to signLocalTool() which treats the input as a local path and fails with 'No manifest found at: author/tool'. The user sees a confusing error message instead of being prompted to select a version.",
+      "expected_behavior": "When a remote tool reference is provided without a version (e.g., 'enact sign enact/context7/docs'), the command should: (1) Detect this is a remote tool reference (contains '/' but no '@'), (2) Fetch available versions from the registry, (3) Prompt the user to select which version to sign, or (4) Default to the latest version if --latest flag is provided.",
+      "status": "open",
+      "location": "packages/cli/src/commands/sign/index.ts - parseRemoteToolRef() and signHandler()",
+      "workaround": "Always specify the version explicitly: 'enact sign author/tool@1.0.0'"
+    },
+    {
+      "name": "Sigstore signing fails with 'error creating signing certificate'",
+      "description": "When running 'enact sign author/tool@version' for a remote tool, after confirming the sign prompt, the signing process fails with 'error creating signing certificate'. The OIDC flow completes (browser opens, user authenticates, token received), but Fulcio rejects the certificate request. This occurs during the attest() call in sigstore-js when trying to obtain a signing certificate from Fulcio. There's a postinstall patch (scripts/patch-sigstore.js) that fixes BoringSSL compatibility for EC key signing, but there may be additional issues with the certificate request itself.",
+      "expected_behavior": "The signing flow should complete successfully: authenticate via OIDC, create attestation, obtain certificate from Fulcio, sign, log to Rekor, and submit to registry.",
+      "status": "fixed",
+      "location": "packages/trust/src/sigstore/signing.ts - signAttestation(), packages/trust/src/sigstore/oauth/",
+      "fix": "The issue was caused by using a stale compiled binary that didn't have the sigstore patches properly applied. The fix is to ensure all packages are rebuilt in the correct order: bun run build:trust && bun run build:cli && node scripts/build-platform-binary.mjs. The sigstore patches in scripts/patch-sigstore.js need to be applied at postinstall time."
+    },
+    {
+      "name": "Sign command offers to add identity that already exists in trust config",
+      "description": "After signing a tool, the CLI prompts 'Would you like to add this identity to ~/.enact/config.yaml?' even if the identity already exists in the trusted auditors list. The user can say Yes and it will add a duplicate entry or not properly detect the existing entry.",
+      "expected_behavior": "The sign command should check if the identity (in any format - email, provider:email, etc.) already exists in the trusted auditors list before offering to add it. If it exists, it should say 'This identity is already in your trusted auditors list' and skip the prompt.",
+      "status": "open",
+      "location": "packages/cli/src/commands/sign/index.ts - promptAddToTrustList()",
+      "workaround": "Decline the prompt if you know the identity is already trusted"
     }
   ]
 }

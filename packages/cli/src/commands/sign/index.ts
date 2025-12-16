@@ -287,6 +287,27 @@ async function signRemoteTool(
     "https://siikwkfgsmouioodghho.supabase.co/functions/v1";
   const client = createApiClient({ baseUrl: registryUrl });
 
+  // Check auth FIRST - remote signing requires authentication to submit to registry
+  // Do this before any other operations to fail fast with a clear error
+  const authToken = await getSecret(AUTH_NAMESPACE, ACCESS_TOKEN_KEY);
+  if (!authToken && !options.local) {
+    error("Not authenticated with registry");
+    newline();
+    dim("Remote tool signing requires authentication to submit the attestation.");
+    dim("Run 'enact auth login' to authenticate first.");
+    newline();
+    dim("Alternatively, use --local to sign without submitting to the registry");
+    dim("(the signature bundle will be saved locally but not recorded).");
+    process.exit(1);
+  }
+
+  // Warn if using --local with remote tools
+  if (options.local) {
+    warning("Using --local with remote tools: signature will not be submitted to registry");
+    dim("  The attestation will be saved locally but won't be associated with the tool.");
+    newline();
+  }
+
   // Fetch tool info from registry
   info(`Fetching ${toolRef.name}@${toolRef.version} from registry...`);
 
@@ -325,18 +346,14 @@ async function signRemoteTool(
     dim("  3. Request signing certificate from Fulcio");
     dim("  4. Sign attestation with ephemeral keypair");
     dim("  5. Log signature to Rekor transparency log");
-    dim("  6. Submit attestation to registry");
+    if (!options.local) {
+      dim("  6. Submit attestation to registry");
+    } else {
+      dim("  6. Save signature bundle locally (--local mode)");
+    }
     newline();
     warning("Note: Actual signing requires OIDC authentication.");
     return;
-  }
-
-  // Check auth before doing anything - remote signing always submits to registry
-  const authToken = await getSecret(AUTH_NAMESPACE, ACCESS_TOKEN_KEY);
-  if (!authToken) {
-    error("Not authenticated with registry");
-    dim("Run 'enact auth login' to authenticate before signing remote tools");
-    process.exit(1);
   }
 
   // Confirm signing
@@ -372,15 +389,61 @@ async function signRemoteTool(
         timeout: 120000, // 2 minutes for OIDC flow
       });
     } catch (err) {
-      if (err instanceof Error && err.message.includes("cancelled")) {
-        throw new Error("Signing cancelled by user");
+      if (err instanceof Error) {
+        if (err.message.includes("cancelled")) {
+          throw new Error("Signing cancelled by user");
+        }
+        // Provide more helpful error messages for common issues
+        if (err.message.includes("error creating signing certificate")) {
+          throw new Error(
+            "Failed to create signing certificate from Fulcio.\n" +
+              "This usually means the OIDC authentication flow was interrupted or failed.\n" +
+              "Please try again and complete the browser authentication."
+          );
+        }
+        if (err.message.includes("IDENTITY_TOKEN")) {
+          throw new Error(
+            "Failed to obtain identity token for signing.\n" +
+              "Please ensure you complete the browser authentication when prompted."
+          );
+        }
       }
       throw err;
     }
   });
 
+  // Handle --local mode for remote tools
+  if (options.local) {
+    // Save bundle locally instead of submitting to registry
+    const outputPath =
+      options.output ??
+      join(
+        process.cwd(),
+        `.sigstore-bundle-${toolInfo.name.replace(/\//g, "-")}-${toolInfo.version}.json`
+      );
+    writeFileSync(outputPath, JSON.stringify(result.bundle, null, 2));
+
+    newline();
+    success(`Signed ${toolInfo.name}@${toolInfo.version} (local only)`);
+    keyValue("Bundle saved to", outputPath);
+    newline();
+    warning("Attestation was NOT submitted to registry (--local mode)");
+    dim("  To submit this attestation later, you would need to use the registry API directly.");
+
+    if (options.json) {
+      json({
+        success: true,
+        tool: toolInfo.name,
+        version: toolInfo.version,
+        bundlePath: outputPath,
+        submittedToRegistry: false,
+      });
+    }
+    return;
+  }
+
   // Submit to registry
-  client.setAuthToken(authToken);
+  client.setAuthToken(authToken!);
 
   try {
     const attestationResult = await withSpinner(
@@ -422,6 +485,11 @@ async function signRemoteTool(
     error("Failed to submit attestation to registry");
     if (err instanceof Error) {
       dim(`  ${err.message}`);
+      // Provide more context for auth errors
+      if (err.message.includes("401") || err.message.includes("Unauthorized")) {
+        newline();
+        dim("  Your authentication may have expired. Try running 'enact auth login' again.");
+      }
     }
     process.exit(1);
   }

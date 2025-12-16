@@ -4,30 +4,36 @@ This document provides a comprehensive overview of all available commands in the
 
 ## Table of Contents
 
+### Setup & Initialization
+1. [setup](#1-setup---configure-enact) - Configure Enact
+2. [init](#2-init---initialize-project) - Initialize project
+
 ### Core Commands
-1. [run](#1-run---run-tools-declared-command) - Run tool's declared command
-2. [exec](#2-exec---execute-arbitrary-command-in-tools-environment) - Execute arbitrary command in tool's environment
-3. [install](#3-install---install-tool) - Install tool
-4. [search](#4-search---discover-tools) - Discover tools
-5. [sign](#5-sign---sign-tool) - Sign tool
-6. [publish](#6-publish---publish-tool) - Publish tool
-7. [get](#7-get---get-tool-info) - Get tool info
-8. [inspect](#8-inspect---inspect-tool-for-auditing) - Inspect tool for auditing
+3. [run](#3-run---run-tools-declared-command) - Run tool's declared command
+4. [exec](#4-exec---execute-arbitrary-command-in-tools-environment) - Execute arbitrary command in tool's environment
+5. [install](#5-install---install-tool) - Install tool
+6. [search](#6-search---discover-tools) - Discover tools
+7. [sign](#7-sign---sign-tool) - Sign tool
+8. [publish](#8-publish---publish-tool) - Publish tool
+9. [get](#9-get---get-tool-info) - Get tool info
+10. [inspect](#10-inspect---inspect-tool-for-auditing) - Inspect tool for auditing
 
 ### Trust & Security Commands
-9. [trust](#9-trust---manage-trust-settings) - Manage trust settings
-10. [report](#10-report---report-tool-issues) - Report tool issues
+11. [trust](#11-trust---manage-trust-settings) - Manage trust settings
+12. [report](#12-report---report-tool-issues) - Report tool issues
+13. [yank](#13-yank---yank-tool-version) - Yank a tool version
+14. [unyank](#14-unyank---restore-yanked-version) - Restore yanked version
 
 ### Environment & Configuration
-11. [env](#11-env---environment--secret-management) - Environment & secret management
-12. [config](#12-config---configuration) - Configuration
+15. [env](#15-env---environment--secret-management) - Environment & secret management
+16. [config](#16-config---configuration) - Configuration
 
 ### Utility Commands
-13. [cache](#13-cache---cache-management) - Cache management
-14. [list](#14-list---list-tools) - List tools
+17. [cache](#17-cache---cache-management) - Cache management
+18. [list](#18-list---list-tools) - List tools
 
 ### Authentication
-15. [auth](#15-auth---authentication) - Authentication
+19. [auth](#19-auth---authentication) - Authentication
 
 ---
 
@@ -38,12 +44,87 @@ Enact CLI manages containerized tools with cryptographic signing. It supports lo
 ## Global Options
 
 - `--help, -h` - Show help message
-- `--version, -v` - Show version information
+- `--version, -V` - Show version information
 - `--verbose` - Show detailed execution information
+
+## Setup & Initialization
+
+### 1. setup - Configure Enact
+
+**Purpose**: Set up Enact configuration (first-time setup or reconfiguration).
+
+**Usage**: `enact setup [options]`
+
+**Options**:
+- `--global, -g` - Initialize global configuration (`~/.enact/config.yaml`)
+- `--force, -f` - Overwrite existing configuration without prompting
+- `--verbose, -v` - Show detailed output
+
+**Behavior**:
+- Creates `~/.enact/` directory structure
+- Initializes `config.yaml` with default settings
+- Sets up authentication if needed
+
+**Examples**:
+```bash
+# Interactive setup
+enact setup
+
+# Force reconfigure global settings
+enact setup --global --force
+```
+
+---
+
+### 2. init - Initialize Project
+
+**Purpose**: Initialize Enact in the current directory. Can create tool manifests, agent guides, or Claude-specific instructions.
+
+**Usage**: `enact init [options]`
+
+**Options**:
+- `--name, -n <name>` - Tool name (default: `username/my-tool`)
+- `--force, -f` - Overwrite existing files
+- `--tool` - Create a new Enact tool (default)
+- `--agent` - Create `AGENTS.md` for projects that use Enact tools
+- `--claude` - Create `CLAUDE.md` with Claude-specific instructions
+- `--verbose, -v` - Show detailed output
+
+**Modes**:
+
+**Tool Mode (default)**:
+Creates a new Enact tool with:
+- `enact.yaml` - Tool manifest
+- `README.md` - Tool documentation
+- Basic project structure
+
+**Agent Mode**:
+Creates `AGENTS.md` with instructions for AI agents on how to use Enact tools in your project.
+
+**Claude Mode**:
+Creates `CLAUDE.md` with Claude Code-specific instructions for working with your project.
+
+**Examples**:
+```bash
+# Create a new tool
+enact init
+enact init --name myorg/utils/my-tool
+
+# Create agent instructions for existing project
+enact init --agent
+
+# Create Claude-specific instructions
+enact init --claude
+
+# Overwrite existing files
+enact init --tool --force
+```
+
+---
 
 ## Core Commands
 
-### 1. run - Run Tool's Declared Command
+### 3. run - Run Tool's Declared Command
 
 **Purpose**: Execute a tool's canonical, signed command.
 
