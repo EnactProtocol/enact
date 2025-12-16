@@ -183,7 +183,7 @@ if [[ -z "$SKIP_LIB" ]]; then
   )
 
   for pkg in "${LIB_PACKAGES[@]}"; do
-    publish_package "@enactprotocol/${pkg}" "packages/$pkg"
+    publish_package "@enactprotocol/${pkg}" "packages/$pkg" || true
     echo ""
   done
 fi
@@ -206,7 +206,7 @@ if [[ -z "$SKIP_BINARY" ]]; then
   )
 
   for pkg in "${PLATFORM_PACKAGES[@]}"; do
-    publish_package "@enactprotocol/${pkg}" "packages/$pkg"
+    publish_package "@enactprotocol/${pkg}" "packages/$pkg" || true
     echo ""
   done
 
@@ -218,7 +218,7 @@ if [[ -z "$SKIP_BINARY" ]]; then
   echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
   echo ""
 
-  publish_package "@enactprotocol/enact" "packages/enact"
+  publish_package "@enactprotocol/enact" "packages/enact" || true
   echo ""
 
   # ============================================================
