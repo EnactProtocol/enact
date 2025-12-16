@@ -22,7 +22,6 @@
     "packages/web"
   ],
   "scripts": {
-    "postinstall": "node scripts/patch-sigstore.js",
     "build": "bun run build:keyring && bun run build:trust && bun run build:secrets && bun run build:shared && bun run build:execution && bun run build:api && bun run build:server && bun run build:mcp-server && bun run build:cli && bun run build:web",
     "build:binary:local": "bun run build:keyring && bun run build:trust && bun run build:secrets && bun run build:shared && bun run build:execution && bun run build:api && bun run build:cli && node scripts/build-platform-binary.mjs",
     "build:keyring": "cd packages/keyring && bun run build",
