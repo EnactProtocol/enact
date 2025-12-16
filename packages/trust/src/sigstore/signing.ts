@@ -242,8 +242,19 @@ export async function signArtifact(
 
       return result;
     } catch (nativeError) {
-      // Check if this is a BoringSSL/crypto compatibility issue
+      // Log the actual error for debugging
       const errorMessage = nativeError instanceof Error ? nativeError.message : String(nativeError);
+      const errorStack = nativeError instanceof Error ? nativeError.stack : undefined;
+
+      // Log to stderr for debugging (only if ENACT_DEBUG is set)
+      if (process.env.ENACT_DEBUG) {
+        console.error("[sigstore-js error]", errorMessage);
+        if (errorStack) {
+          console.error("[sigstore-js stack]", errorStack);
+        }
+      }
+
+      // Check if this is a BoringSSL/crypto compatibility issue
       const isCryptoError =
         errorMessage.includes("NO_DEFAULT_DIGEST") || errorMessage.includes("public key routines");
 
@@ -367,8 +378,19 @@ export async function signAttestation(
 
       return result;
     } catch (nativeError) {
-      // Check if this is a BoringSSL/crypto compatibility issue
+      // Log the actual error for debugging
       const errorMessage = nativeError instanceof Error ? nativeError.message : String(nativeError);
+      const errorStack = nativeError instanceof Error ? nativeError.stack : undefined;
+
+      // Log to stderr for debugging (only if ENACT_DEBUG is set)
+      if (process.env.ENACT_DEBUG) {
+        console.error("[sigstore-js error]", errorMessage);
+        if (errorStack) {
+          console.error("[sigstore-js stack]", errorStack);
+        }
+      }
+
+      // Check if this is a BoringSSL/crypto compatibility issue
       const isCryptoError =
         errorMessage.includes("NO_DEFAULT_DIGEST") || errorMessage.includes("public key routines");
 

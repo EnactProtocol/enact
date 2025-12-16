@@ -24,6 +24,9 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Apply sigstore patches
+        run: node scripts/patch-sigstore.js
+
       - name: Build all packages
         run: bun run build
 
@@ -68,6 +71,9 @@ jobs:
 
       - name: Install dependencies
         run: bun install
+
+      - name: Apply sigstore patches
+        run: node scripts/patch-sigstore.js
 
       - name: Build CLI
         run: bun run build
