@@ -352,7 +352,7 @@ describe("init command", () => {
       rmSync(testDir, { recursive: true });
     });
 
-    test("AGENTS.md does not contain unnecessary verbosity", async () => {
+    test("AGENTS.md is comprehensive but reasonably sized", async () => {
       const program = new Command();
       program.exitOverride();
       configureInitCommand(program);
@@ -376,9 +376,10 @@ describe("init command", () => {
 
       const content = readFileSync(join(testDir, "AGENTS.md"), "utf-8");
 
-      // Should be concise - check line count is reasonable
+      // Should be comprehensive but not excessive
       const lines = content.split("\n").length;
-      expect(lines).toBeLessThan(100); // Should be concise
+      expect(lines).toBeLessThan(250); // Comprehensive guide under 250 lines
+      expect(lines).toBeGreaterThan(100); // But not too sparse
 
       // Clean up
       rmSync(testDir, { recursive: true });

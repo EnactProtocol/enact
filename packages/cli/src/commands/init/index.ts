@@ -72,62 +72,206 @@ Edit this file to create your own tool:
 - [Tool Manifest Reference](https://enact.dev/docs/manifest)
 `,
 
-  "tool-agents.md": `# AGENTS.md
+  "tool-agents.md": `# Enact Tool Development Guide
 
-Enact tool: containerized, signed executable. Manifest: \`enact.md\` (YAML frontmatter + Markdown docs).
+Enact tools are containerized, cryptographically-signed executables. Each tool is defined by an \`enact.md\` file (YAML frontmatter + Markdown docs).
 
-## Commands
-\`\`\`bash
-enact run ./ --args '{"name": "Test"}'  # Run locally
-enact run ./ --args '{}' --dry-run      # Preview execution
-enact sign ./ && enact publish ./       # Sign and publish
-\`\`\`
+## Quick Reference
+
+| Task | Command |
+|------|---------|
+| Run local tool | \`enact run ./ --input "key=value"\` |
+| Run with JSON | \`enact run ./ --args '{"key": "value"}'\` |
+| Dry run | \`enact run ./ --args '{}' --dry-run\` |
+| Sign & publish | \`enact sign ./ && enact publish ./\` |
 
 ## enact.md Structure
+
 \`\`\`yaml
 ---
-name: {{TOOL_NAME}}        # org/category/tool format
-description: What it does
-version: 1.0.0                    # semver
-from: python:3.12-slim            # pin versions, not :latest
-build: pip install requests       # cached by Dagger
+name: {{TOOL_NAME}}
+description: What the tool does
+version: 1.0.0
+enact: "2.0.0"
+
+from: python:3.12-slim            # Docker image (pin versions, not :latest)
+build: pip install requests       # Build steps (cached by Dagger)
 command: python /work/main.py \${input}
 timeout: 30s
+
 inputSchema:
   type: object
   properties:
-    input: { type: string }
+    input:
+      type: string
+      description: "Input to process"
   required: [input]
+
+outputSchema:
+  type: object
+  properties:
+    result:
+      type: string
+
 env:
-  API_KEY:                        # declare secrets (set via: enact env set API_KEY --secret)
+  API_KEY:
+    description: "External API key"
+    secret: true                  # Set via: enact env set API_KEY --secret
 ---
 # Tool Name
-Documentation here (usage examples, etc.)
+Documentation here.
 \`\`\`
+
+## Field Reference
+
+| Field | Description |
+|-------|-------------|
+| \`name\` | Hierarchical ID: \`org/category/tool\` |
+| \`description\` | What the tool does |
+| \`version\` | Semver version |
+| \`from\` | Docker image |
+| \`build\` | Build commands (string or array, cached) |
+| \`command\` | Shell command with \`\${param}\` substitution |
+| \`timeout\` | Max execution time (e.g., "30s", "5m") |
+| \`inputSchema\` | JSON Schema for inputs |
+| \`outputSchema\` | JSON Schema for outputs |
+| \`env\` | Environment variables and secrets |
 
 ## Parameter Substitution
-- \`\${param}\` — auto-quoted (handles spaces, JSON, special chars)
-- \`\${param:raw}\` — unquoted (use carefully)
-- **Never manually quote**: \`"\${param}"\` causes double-quoting
 
-## Output
-Always output valid JSON when \`outputSchema\` is defined:
-\`\`\`python
-import json, sys
-print(json.dumps({"result": data}))  # stdout = tool output
-sys.exit(1)  # non-zero = error
+Enact auto-quotes parameters. **Never manually quote:**
+
+\`\`\`yaml
+# WRONG - causes double-quoting
+command: python /work/main.py "\${input}"
+
+# RIGHT - Enact handles quoting
+command: python /work/main.py \${input}
 \`\`\`
 
-## File Access
-Tool runs in container with \`/work\` as working directory. Source files copied there.
+Modifiers:
+- \`\${param}\` — auto-quoted (handles spaces, JSON, special chars)
+- \`\${param:raw}\` — raw, no quoting (use carefully)
 
-## Adding Dependencies
-- Python: \`build: pip install package1 package2\`
-- Node: \`build: ["npm install", "npm run build"]\`
-- System: \`build: apt-get update && apt-get install -y libfoo\`
-- Compiled: \`build: rustc /work/main.rs -o /work/tool\`
+## Output
+
+Output valid JSON to stdout when \`outputSchema\` is defined:
+
+\`\`\`python
+import json, sys
+
+try:
+    result = do_work()
+    print(json.dumps({"status": "success", "result": result}))
+except Exception as e:
+    print(json.dumps({"status": "error", "message": str(e)}))
+    sys.exit(1)  # non-zero = error
+\`\`\`
+
+## Build Steps by Language
+
+**Python:**
+\`\`\`yaml
+from: python:3.12-slim
+build: pip install requests pandas
+\`\`\`
+
+**Node.js:**
+\`\`\`yaml
+from: node:20-alpine
+build:
+  - npm install
+  - npm run build
+\`\`\`
+
+**Rust:**
+\`\`\`yaml
+from: rust:1.83-slim
+build: rustc /work/main.rs -o /work/tool
+command: /work/tool \${input}
+\`\`\`
+
+**Go:**
+\`\`\`yaml
+from: golang:1.22-alpine
+build: cd /work && go build -o tool main.go
+command: /work/tool \${input}
+\`\`\`
+
+**System packages:**
+\`\`\`yaml
+build: apt-get update && apt-get install -y libfoo-dev
+\`\`\`
 
 Build steps are cached — first run slow, subsequent runs instant.
+
+## File Access
+
+Tools run in a container with \`/work\` as the working directory. All source files are copied there.
+
+## Secrets
+
+Declare in \`enact.md\`:
+\`\`\`yaml
+env:
+  API_KEY:
+    description: "API key for service"
+    secret: true
+\`\`\`
+
+Set before running:
+\`\`\`bash
+enact env set API_KEY --secret --namespace {{TOOL_NAME}}
+\`\`\`
+
+Access in code:
+\`\`\`python
+import os
+api_key = os.environ.get('API_KEY')
+\`\`\`
+
+## LLM Instruction Tools
+
+Tools without a \`command\` field are interpreted by LLMs:
+
+\`\`\`yaml
+---
+name: myorg/ai/reviewer
+description: AI-powered code review
+inputSchema:
+  type: object
+  properties:
+    code: { type: string }
+  required: [code]
+outputSchema:
+  type: object
+  properties:
+    issues: { type: array }
+    score: { type: number }
+---
+# Code Reviewer
+
+You are a senior engineer. Review the code for bugs, style, and security.
+Return JSON: {"issues": [...], "score": 75}
+\`\`\`
+
+## Publishing Checklist
+
+- [ ] \`name\` follows \`namespace/category/tool\` pattern
+- [ ] \`version\` set (semver)
+- [ ] \`description\` is clear and searchable
+- [ ] \`inputSchema\` / \`outputSchema\` defined
+- [ ] \`from\` uses pinned image version
+- [ ] \`timeout\` set appropriately
+- [ ] Tool tested locally with \`enact run ./\`
+
+## Troubleshooting
+
+\`\`\`bash
+enact run ./ --input "x=y" --verbose   # Verbose output
+enact run ./ --args '{}' --dry-run     # Preview command
+enact list                              # List installed tools
+\`\`\`
 `,
 
   "agent-agents.md": `# AGENTS.md
