@@ -176,7 +176,7 @@ describe("keyring", () => {
 
   describe("edge cases", () => {
     test("handles very long account names", async () => {
-      const longAccount = "a".repeat(200) + `-${Date.now()}`;
+      const longAccount = `${"a".repeat(200)}-${Date.now()}`;
       const password = "test-password";
 
       await setPassword(TEST_SERVICE, longAccount, password);

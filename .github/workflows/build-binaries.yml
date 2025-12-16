@@ -32,20 +32,8 @@ jobs:
         with:
           bun-version: latest
       
-      - name: Install dependencies (no cache)
-        run: |
-          rm -rf node_modules
-          bun install --frozen-lockfile
-
-      - name: Apply sigstore patches
-        run: node scripts/patch-sigstore.js
-      
-      - name: Verify patches applied
-        run: |
-          echo "=== Checking @sigstore/sign patch ==="
-          grep -n "sign('sha256'" node_modules/@sigstore/sign/dist/signer/fulcio/ephemeral.js || echo "PATCH NOT FOUND!"
-          echo "=== Checking @sigstore/core createPublicKey patch ==="
-          grep -n "PATCHED: Handle base64" node_modules/@sigstore/core/dist/crypto.js || echo "PATCH NOT FOUND!"
+      - name: Install dependencies
+        run: bun install
 
       - name: Build all packages
         run: bun run build

@@ -1,6 +1,6 @@
 {
   "name": "enact-monorepo",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "private": true,
   "description": "Enact 2.0 - Verified, portable protocol for AI-executable tools",
   "workspaces": [
@@ -67,6 +67,13 @@
   "engines": {
     "node": ">=20.0.0",
     "bun": ">=1.0.0"
+  },
+  "overrides": {
+    "@enactprotocol/sigstore-sign": "4.0.2",
+    "@enactprotocol/sigstore-core": "3.0.1",
+    "@enactprotocol/sigstore-bundle": "4.0.1",
+    "@enactprotocol/sigstore-verify": "3.0.1",
+    "@enactprotocol/sigstore-tuf": "4.0.1"
   },
   "packageManager": "bun@1.1.0",
   "keywords": ["ai", "tools", "mcp", "sigstore", "dagger", "verification"],

@@ -9,7 +9,7 @@
  * OAuth implementation that opens a browser for authentication.
  */
 
-import { type SignOptions, attest, sign } from "sigstore";
+import { type SignOptions, attest, sign } from "@enactprotocol/sigstore";
 import { attestWithCosign, isCosignAvailable, signWithCosign } from "./cosign";
 import { OAuthIdentityProvider } from "./oauth";
 import type {

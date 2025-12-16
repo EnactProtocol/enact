@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/trust",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Sigstore integration, attestations, and verification for Enact",
   "type": "module",
   "main": "./dist/index.js",
@@ -20,7 +20,14 @@
   "dependencies": {
     "open": "^11.0.0",
     "openid-client": "5",
-    "sigstore": "^4.0.0"
+    "@enactprotocol/sigstore": "4.0.1",
+    "@enactprotocol/sigstore-bundle": "4.0.1",
+    "@enactprotocol/sigstore-sign": "4.0.2",
+    "@enactprotocol/sigstore-verify": "3.0.1",
+    "@enactprotocol/sigstore-core": "3.0.1",
+    "@enactprotocol/sigstore-tuf": "4.0.1",
+    "@sigstore/protobuf-specs": "^0.5.0",
+    "@sigstore/rekor-types": "^3.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.1",

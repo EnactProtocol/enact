@@ -141,7 +141,7 @@ export async function setPassword(
       default:
         await fallbackSetPassword(service, account, password);
     }
-  } catch (err) {
+  } catch (_err) {
     // If keyring fails, try fallback
     useFallback = true;
     await fallbackSetPassword(service, account, password);

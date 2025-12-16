@@ -11,9 +11,9 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { bundleFromJSON } from "@sigstore/bundle";
+import { bundleFromJSON } from "@enactprotocol/sigstore-bundle";
+import { Verifier, toSignedEntity, toTrustMaterial } from "@enactprotocol/sigstore-verify";
 import { TrustedRoot } from "@sigstore/protobuf-specs";
-import { Verifier, toSignedEntity, toTrustMaterial } from "@sigstore/verify";
 import { extractIdentityFromBundle } from "./signing";
 import type {
   ExpectedIdentity,
@@ -30,11 +30,11 @@ import type {
 
 /**
  * Get the path to bundled TUF seeds
- * We need to navigate from the @sigstore/tuf main entry point to find seeds.json
+ * We need to navigate from the @enactprotocol/sigstore-tuf main entry point to find seeds.json
  */
 function getTufSeedsPath(): string {
   // The package.json main points to dist/index.js, but seeds.json is at package root
-  const tufPkgPath = require.resolve("@sigstore/tuf/package.json");
+  const tufPkgPath = require.resolve("@enactprotocol/sigstore-tuf/package.json");
   return path.join(path.dirname(tufPkgPath), "seeds.json");
 }
 

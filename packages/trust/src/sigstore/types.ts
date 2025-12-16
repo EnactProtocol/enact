@@ -3,7 +3,7 @@
  */
 
 // Import the actual sigstore bundle type (exported as Bundle from sigstore)
-import type { Bundle } from "sigstore";
+import type { Bundle } from "@enactprotocol/sigstore";
 
 // Re-export for use - sigstore exports SerializedBundle as Bundle
 export type SigstoreBundle = Bundle;
