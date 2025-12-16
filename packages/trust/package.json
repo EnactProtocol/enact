@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/trust",
-  "version": "2.0.16",
+  "version": "2.0.17",
   "description": "Sigstore integration, attestations, and verification for Enact",
   "type": "module",
   "main": "./dist/index.js",
