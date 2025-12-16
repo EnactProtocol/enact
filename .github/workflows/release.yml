@@ -66,6 +66,14 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Verify sigstore packages
+        shell: bash
+        run: |
+          echo "=== Checking @enactprotocol/sigstore-sign version ==="
+          cat node_modules/@enactprotocol/sigstore-sign/package.json | grep '"version"'
+          echo "=== Checking for @sigstore/bundle or @sigstore/core in dist ==="
+          grep -r "@sigstore/bundle\|@sigstore/core" node_modules/@enactprotocol/sigstore-sign/dist/ && echo "ERROR: Found @sigstore references!" && exit 1 || echo "OK: No problematic @sigstore references"
+
       - name: Build CLI
         run: bun run build
 
