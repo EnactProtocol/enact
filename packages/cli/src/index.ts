@@ -19,6 +19,7 @@ import {
   configureInitCommand,
   configureInspectCommand,
   configureInstallCommand,
+  configureLearnCommand,
   configureListCommand,
   configurePublishCommand,
   configureReportCommand,
@@ -32,7 +33,7 @@ import {
 } from "./commands";
 import { error, formatError } from "./utils";
 
-export const version = "2.1.5";
+export const version = "2.1.6";
 
 // Export types for external use
 export type { GlobalOptions, CommandContext } from "./types";
@@ -63,6 +64,7 @@ async function main() {
   // Registry commands (Phase 8)
   configureSearchCommand(program);
   configureGetCommand(program);
+  configureLearnCommand(program);
   configurePublishCommand(program);
   configureAuthCommand(program);
   configureCacheCommand(program);

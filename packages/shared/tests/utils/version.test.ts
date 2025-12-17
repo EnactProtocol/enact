@@ -292,6 +292,73 @@ describe("Version utilities", () => {
     test("returns null if all invalid", () => {
       expect(getHighestVersion(["invalid", "also-invalid"])).toBeNull();
     });
+
+    test("handles versions published out of order", () => {
+      // This tests the scenario where 1.0.1 is published after 1.0.0
+      // but array order doesn't reflect semver order
+      expect(getHighestVersion(["1.0.0", "1.0.1"])).toBe("1.0.1");
+      expect(getHighestVersion(["1.0.1", "1.0.0"])).toBe("1.0.1");
+    });
+
+    test("handles mixed major/minor/patch versions", () => {
+      expect(getHighestVersion(["1.0.0", "1.0.1", "1.1.0", "2.0.0", "0.9.0"])).toBe("2.0.0");
+    });
+  });
+
+  describe("getHighestNonYankedVersion (registry use case)", () => {
+    // Simulates the server-side logic for finding latest version
+    const getHighestNonYanked = (
+      versions: Array<{ version: string; yanked: boolean }>
+    ): string | null => {
+      const sorted = [...versions].sort((a, b) => -compareVersions(a.version, b.version));
+      const latest = sorted.find((v) => !v.yanked) ?? sorted[0];
+      return latest?.version ?? null;
+    };
+
+    test("returns highest non-yanked version", () => {
+      const versions = [
+        { version: "1.0.0", yanked: false },
+        { version: "1.0.1", yanked: true },
+        { version: "1.0.2", yanked: false },
+      ];
+      expect(getHighestNonYanked(versions)).toBe("1.0.2");
+    });
+
+    test("skips yanked highest version", () => {
+      const versions = [
+        { version: "1.0.0", yanked: false },
+        { version: "2.0.0", yanked: true },
+      ];
+      expect(getHighestNonYanked(versions)).toBe("1.0.0");
+    });
+
+    test("falls back to highest if all yanked", () => {
+      const versions = [
+        { version: "1.0.0", yanked: true },
+        { version: "2.0.0", yanked: true },
+      ];
+      expect(getHighestNonYanked(versions)).toBe("2.0.0");
+    });
+
+    test("handles unsorted input (bug fix scenario)", () => {
+      // This is the exact bug we fixed - versions not sorted by semver
+      const versions = [
+        { version: "1.0.0", yanked: false }, // published first
+        { version: "1.0.1", yanked: false }, // published second
+      ];
+      expect(getHighestNonYanked(versions)).toBe("1.0.1");
+
+      // Even if array order is reversed
+      const versionsReversed = [
+        { version: "1.0.1", yanked: false },
+        { version: "1.0.0", yanked: false },
+      ];
+      expect(getHighestNonYanked(versionsReversed)).toBe("1.0.1");
+    });
+
+    test("returns null for empty array", () => {
+      expect(getHighestNonYanked([])).toBeNull();
+    });
   });
 
   describe("incrementVersion", () => {
