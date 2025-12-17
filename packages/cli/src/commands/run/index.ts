@@ -61,6 +61,7 @@ import {
 
 interface RunOptions extends GlobalOptions {
   args?: string;
+  inputFile?: string;
   input?: string[];
   timeout?: string;
   noCache?: boolean;
@@ -70,14 +71,46 @@ interface RunOptions extends GlobalOptions {
 
 /**
  * Parse input arguments from various formats
+ *
+ * Priority order (later sources override earlier):
+ * 1. --input-file (JSON file)
+ * 2. --args (inline JSON)
+ * 3. --input (key=value pairs)
+ *
+ * Recommended for agents: Use --args or --input-file with JSON
  */
 function parseInputArgs(
   argsJson: string | undefined,
+  inputFile: string | undefined,
   inputFlags: string[] | undefined
 ): Record<string, unknown> {
   const inputs: Record<string, unknown> = {};
 
-  // Parse --args JSON
+  // Parse --input-file JSON file (loaded first, can be overridden)
+  if (inputFile) {
+    try {
+      const { readFileSync, existsSync } = require("node:fs");
+      const { resolve } = require("node:path");
+      const filePath = resolve(inputFile);
+
+      if (!existsSync(filePath)) {
+        throw new Error(`Input file not found: ${inputFile}`);
+      }
+
+      const content = readFileSync(filePath, "utf-8");
+      const parsed = JSON.parse(content);
+      if (typeof parsed === "object" && parsed !== null) {
+        Object.assign(inputs, parsed);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.startsWith("Input file not found")) {
+        throw err;
+      }
+      throw new Error(`Invalid JSON in input file: ${formatError(err)}`);
+    }
+  }
+
+  // Parse --args JSON (overrides file)
   if (argsJson) {
     try {
       const parsed = JSON.parse(argsJson);
@@ -89,7 +122,7 @@ function parseInputArgs(
     }
   }
 
-  // Parse --input key=value pairs
+  // Parse --input key=value pairs (overrides both)
   if (inputFlags) {
     for (const input of inputFlags) {
       const eqIndex = input.indexOf("=");
@@ -501,7 +534,7 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
   const manifest = resolution.manifest;
 
   // Parse inputs
-  const inputs = parseInputArgs(options.args, options.input);
+  const inputs = parseInputArgs(options.args, options.inputFile, options.input);
 
   // Apply defaults from schema
   const inputsWithDefaults = manifest.inputSchema
@@ -669,8 +702,9 @@ export function configureRunCommand(program: Command): void {
     .command("run")
     .description("Execute a tool with its manifest-defined command")
     .argument("<tool>", "Tool to run (name, path, or '.' for current directory)")
-    .option("-a, --args <json>", "Input arguments as JSON")
-    .option("-i, --input <key=value...>", "Input arguments as key=value pairs")
+    .option("-a, --args <json>", "Input arguments as JSON string (recommended)")
+    .option("-f, --input-file <path>", "Load input arguments from JSON file")
+    .option("-i, --input <key=value...>", "Input arguments as key=value pairs (simple values only)")
     .option("-t, --timeout <duration>", "Execution timeout (e.g., 30s, 5m)")
     .option("--no-cache", "Disable container caching")
     .option("--local", "Only resolve from local sources")

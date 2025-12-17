@@ -90,15 +90,17 @@ enact install username/toolname@v1.2.0 --global
 Execute an installed tool:
 
 ```bash
-# Run with arguments
+# Run with JSON arguments (recommended)
 enact run username/toolname --args '{"input": "value"}'
 
-# Run and provide inputs interactively
-enact run username/toolname
+# Run with arguments from a JSON file
+enact run username/toolname --input-file params.json
 
 # Run with timeout
-enact run username/toolname --timeout 60s
+enact run username/toolname --args '{}' --timeout 60s
 ```
+
+**Note**: JSON input (`--args` or `--input-file`) is recommended, especially for complex values or when automating with agents. This avoids shell escaping issues and properly handles optional parameters.
 
 ## Common Workflows
 

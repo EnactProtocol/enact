@@ -283,6 +283,13 @@ AI integration via Model Context Protocol - allows Claude and other AI assistant
 - [ ] Tool of the month highlights
 - [ ] Integration examples (GitHub Actions, Docker, etc.)
 
+### Input/Execution Enhancements
+- [ ] **Automatic TOOL_INPUT env var** - Pass `--args` JSON as `TOOL_INPUT` environment variable automatically, giving tools an alternative to string interpolation for complex inputs. Would enable:
+  - Optional params naturally absent (not empty strings)
+  - Complex nested data without shell escaping
+  - Consistent pattern across all tools
+  - See [docs/design/optional-parameters.md](docs/design/optional-parameters.md) for full exploration
+
 ---
 
 ## Version Milestones

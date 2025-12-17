@@ -80,8 +80,8 @@ Enact tools are containerized, cryptographically-signed executables. Each tool i
 
 | Task | Command |
 |------|---------|
-| Run local tool | \`enact run ./ --input "key=value"\` |
 | Run with JSON | \`enact run ./ --args '{"key": "value"}'\` |
+| Run from file | \`enact run ./ --input-file inputs.json\` |
 | Dry run | \`enact run ./ --args '{}' --dry-run\` |
 | Sign & publish | \`enact sign ./ && enact publish ./\` |
 
@@ -147,6 +147,20 @@ command: python /work/main.py "\${input}"
 
 # RIGHT - Enact handles quoting
 command: python /work/main.py \${input}
+\`\`\`
+
+**Optional params:** Missing optional params become empty strings. Always provide defaults:
+\`\`\`yaml
+inputSchema:
+  properties:
+    greeting: 
+      type: string
+      default: "Hello"  # Recommended for optional params
+\`\`\`
+
+Or handle empty in shell:
+\`\`\`yaml
+command: "echo \${greeting:-Hello} \${name}"
 \`\`\`
 
 Modifiers:
@@ -268,9 +282,9 @@ Return JSON: {"issues": [...], "score": 75}
 ## Troubleshooting
 
 \`\`\`bash
-enact run ./ --input "x=y" --verbose   # Verbose output
-enact run ./ --args '{}' --dry-run     # Preview command
-enact list                              # List installed tools
+enact run ./ --args '{"x": "y"}' --verbose   # Verbose output
+enact run ./ --args '{}' --dry-run             # Preview command
+enact list                                      # List installed tools
 \`\`\`
 `,
 

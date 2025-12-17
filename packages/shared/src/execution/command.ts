@@ -365,8 +365,16 @@ export function prepareCommand(
   params: Record<string, unknown>,
   options: InterpolationOptions = {}
 ): string[] {
+  // Default to empty string for missing params since validation
+  // already catches truly missing required params before this is called.
+  // This allows optional params without defaults to work correctly.
+  const effectiveOptions: InterpolationOptions = {
+    onMissing: "empty",
+    ...options,
+  };
+
   // Interpolate parameters
-  const interpolated = interpolateCommand(command, params, options);
+  const interpolated = interpolateCommand(command, params, effectiveOptions);
 
   // Check if we need shell wrapping
   if (needsShellWrap(interpolated)) {

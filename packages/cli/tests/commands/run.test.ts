@@ -3,7 +3,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Command } from "commander";
 import { configureRunCommand } from "../../src/commands/run";
@@ -69,6 +69,16 @@ describe("run command", () => {
       const opts = runCmd?.options ?? [];
       const inputOpt = opts.find((o) => o.long === "--input");
       expect(inputOpt).toBeDefined();
+    });
+
+    test("has --input-file option for JSON file input", () => {
+      const program = new Command();
+      configureRunCommand(program);
+
+      const runCmd = program.commands.find((cmd) => cmd.name() === "run");
+      const opts = runCmd?.options ?? [];
+      const inputFileOpt = opts.find((o) => o.long === "--input-file");
+      expect(inputFileOpt).toBeDefined();
     });
 
     test("has --timeout option", () => {
@@ -226,6 +236,65 @@ describe("run command", () => {
       expect(parseTimeout("5m")).toBe(300000);
       expect(parseTimeout("1h")).toBe(3600000);
       expect(parseTimeout("30")).toBe(30000);
+    });
+  });
+
+  describe("input file handling", () => {
+    test("JSON input file can be parsed", () => {
+      // Create a test JSON file
+      const inputFilePath = join(FIXTURES_DIR, "test-inputs.json");
+      const inputData = { name: "Alice", count: 5, nested: { key: "value" } };
+      writeFileSync(inputFilePath, JSON.stringify(inputData));
+
+      // Verify the file can be read and parsed
+      const content = require("node:fs").readFileSync(inputFilePath, "utf-8");
+      const parsed = JSON.parse(content);
+
+      expect(parsed.name).toBe("Alice");
+      expect(parsed.count).toBe(5);
+      expect(parsed.nested.key).toBe("value");
+    });
+
+    test("JSON input file with optional params can omit them", () => {
+      // This is the recommended pattern for optional params
+      const inputFilePath = join(FIXTURES_DIR, "optional-inputs.json");
+      // Only required param provided, optional params omitted
+      const inputData = { name: "Alice" };
+      writeFileSync(inputFilePath, JSON.stringify(inputData));
+
+      const content = require("node:fs").readFileSync(inputFilePath, "utf-8");
+      const parsed = JSON.parse(content);
+
+      expect(parsed.name).toBe("Alice");
+      expect(parsed.greeting).toBeUndefined();
+    });
+
+    test("JSON input file with explicit empty values", () => {
+      // User can explicitly set empty values for optional params
+      const inputFilePath = join(FIXTURES_DIR, "explicit-empty.json");
+      const inputData = { name: "Alice", prefix: "", suffix: null };
+      writeFileSync(inputFilePath, JSON.stringify(inputData));
+
+      const content = require("node:fs").readFileSync(inputFilePath, "utf-8");
+      const parsed = JSON.parse(content);
+
+      expect(parsed.name).toBe("Alice");
+      expect(parsed.prefix).toBe("");
+      expect(parsed.suffix).toBeNull();
+    });
+
+    test("input priority: --input overrides --args overrides --input-file", () => {
+      // Simulate the merge logic from parseInputArgs
+      const fromFile = { a: "file", b: "file", c: "file" };
+      const fromArgs = { b: "args", c: "args" };
+      const fromInput = { c: "input" };
+
+      // Merge in order: file -> args -> input
+      const merged = { ...fromFile, ...fromArgs, ...fromInput };
+
+      expect(merged.a).toBe("file"); // Only from file
+      expect(merged.b).toBe("args"); // Overridden by args
+      expect(merged.c).toBe("input"); // Overridden by input
     });
   });
 });

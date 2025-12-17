@@ -74,6 +74,23 @@
       "status": "open",
       "location": "packages/cli/src/commands/sign/index.ts - promptAddToTrustList()",
       "workaround": "Decline the prompt if you know the identity is already trusted"
+    },
+    {
+      "name": "Optional parameters in command templates require explicit values",
+      "description": "When a tool's command template uses positional parameter substitution (e.g., 'python main.py ${library_id} ${mode} ${topic} ${page}'), optional parameters marked in the inputSchema are not truly optional. Running 'enact run tool --args {\"library_id\": \"/vercel/next.js\"}' fails with 'Missing required parameter: topic' even though topic is not in the schema's required array. The command template expects all positional arguments to be present.",
+      "expected_behavior": "Optional parameters should use their default values when not provided. Enact should either: (1) Pass empty strings or default values for missing optional parameters in positional substitution, (2) Support JSON stdin as an alternative to positional args, or (3) Clearly document that command templates with positional args require all params.",
+      "status": "open",
+      "location": "packages/cli/src/commands/run/ - parameter substitution logic",
+      "workaround": "Provide all parameters including empty strings for optional ones: --args '{\"library_id\": \"/vercel/next.js\", \"mode\": \"code\", \"topic\": \"\", \"page\": 1}'",
+      "investigation_notes": "See feedback.md and feedback2.md for detailed UX analysis. The schema marks topic/mode/page as optional with defaults, but the command template requires all 4 positional args. Error message is misleading since it says 'required' for an optional param."
+    },
+    {
+      "name": "enact get does not show input schema details",
+      "description": "Running 'enact get toolname' or 'enact get toolname --verbose' does not display the tool's input schema (parameters, types, required vs optional, defaults). Users cannot discover what parameters a tool accepts without manually reading the tool's enact.md source file.",
+      "expected_behavior": "The 'enact get' command should have a --schema or --help flag that displays the full input schema including: parameter names, types, required/optional status, default values, descriptions, and enum options.",
+      "status": "open",
+      "location": "packages/cli/src/commands/get/index.ts",
+      "workaround": "Manually read the tool's enact.md file or repository documentation"
     }
   ]
 }
