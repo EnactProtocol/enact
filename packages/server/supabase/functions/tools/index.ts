@@ -224,15 +224,29 @@ async function handleSearch(supabase: any, url: URL): Promise<Response> {
         const toolIds = paginatedResults.map((t: any) => t.id);
         const { data: versions } = await supabase
           .from("tool_versions")
-          .select("tool_id, version")
-          .in("tool_id", toolIds)
-          .order("published_at", { ascending: false });
+          .select("tool_id, version, yanked")
+          .in("tool_id", toolIds);
 
+        // Group versions by tool and find highest non-yanked version
         const versionMap = new Map<string, string>();
+        const toolVersions = new Map<string, Array<{ version: string; yanked: boolean }>>();
         for (const v of versions ?? []) {
-          if (!versionMap.has(v.tool_id)) {
-            versionMap.set(v.tool_id, v.version);
+          if (!toolVersions.has(v.tool_id)) {
+            toolVersions.set(v.tool_id, []);
           }
+          toolVersions.get(v.tool_id)!.push({ version: v.version, yanked: v.yanked });
+        }
+        // Sort each tool's versions by semver and pick highest non-yanked
+        for (const [toolId, vers] of toolVersions) {
+          vers.sort((a, b) => {
+            const [aMaj = 0, aMin = 0, aPat = 0] = a.version.split('.').map(Number);
+            const [bMaj = 0, bMin = 0, bPat = 0] = b.version.split('.').map(Number);
+            if (bMaj !== aMaj) return bMaj - aMaj;
+            if (bMin !== aMin) return bMin - aMin;
+            return bPat - aPat;
+          });
+          const latest = vers.find(v => !v.yanked) ?? vers[0];
+          if (latest) versionMap.set(toolId, latest.version);
         }
 
         const results = paginatedResults.map((tool: any) => ({
@@ -277,17 +291,31 @@ async function handleSearch(supabase: any, url: URL): Promise<Response> {
     return Errors.internal(error.message);
   }
 
-  const results = (tools ?? []).map((tool: any) => ({
-    name: tool.name,
-    description: tool.description,
-    tags: tool.tags ?? [],
-    version: tool.tool_versions[0]?.version ?? "0.0.0",
-    author: {
-      username: extractNamespace(tool.name),
-      avatar_url: null,
-    },
-    downloads: tool.total_downloads,
-  }));
+  const results = (tools ?? []).map((tool: any) => {
+    // Sort versions by semver descending and find highest non-yanked
+    const sortedVersions = [...(tool.tool_versions ?? [])].sort((a: any, b: any) => {
+      const [aMaj = 0, aMin = 0, aPat = 0] = a.version.split('.').map(Number);
+      const [bMaj = 0, bMin = 0, bPat = 0] = b.version.split('.').map(Number);
+      if (bMaj !== aMaj) return bMaj - aMaj;
+      if (bMin !== aMin) return bMin - aMin;
+      return bPat - aPat;
+    });
+    const latestVersion = sortedVersions.find((v: any) => !v.yanked)?.version
+      ?? sortedVersions[0]?.version
+      ?? "0.0.0";
+
+    return {
+      name: tool.name,
+      description: tool.description,
+      tags: tool.tags ?? [],
+      version: latestVersion,
+      author: {
+        username: extractNamespace(tool.name),
+        avatar_url: null,
+      },
+      downloads: tool.total_downloads,
+    };
+  });
 
   return jsonResponse({
     tools: results,
@@ -552,6 +580,19 @@ async function handleGetTool(
     yanked: v.yanked,
   }));
 
+  // Sort versions by semver descending
+  versions.sort((a: any, b: any) => {
+    const [aMaj = 0, aMin = 0, aPat = 0] = a.version.split('.').map(Number);
+    const [bMaj = 0, bMin = 0, bPat = 0] = b.version.split('.').map(Number);
+    if (bMaj !== aMaj) return bMaj - aMaj;
+    if (bMin !== aMin) return bMin - aMin;
+    return bPat - aPat;
+  });
+
+  // Latest version is the highest non-yanked version, or highest overall if all yanked
+  const latestNonYanked = versions.find((v: any) => !v.yanked);
+  const latestVersion = latestNonYanked?.version ?? versions[0]?.version ?? "0.0.0";
+
   return jsonResponse({
     name: tool.name,
     description: tool.description,
@@ -564,7 +605,7 @@ async function handleGetTool(
     repository: tool.repository_url,
     created_at: tool.created_at,
     updated_at: tool.updated_at,
-    latest_version: versions[0]?.version ?? "0.0.0",
+    latest_version: latestVersion,
     versions,
     versions_total: versions.length,
     total_downloads: tool.total_downloads,
