@@ -302,6 +302,7 @@ enact run ./path/to/tool --args '{}'              # Run local tool
 \`\`\`bash
 enact search "pdf extraction"                     # Search registry
 enact get author/category/tool                    # View tool info
+enact learn author/category/tool                  # View tool documentation
 enact install author/category/tool                # Add to project (.enact/tools.json)
 enact install author/category/tool --global       # Add globally
 enact list                                        # List project tools
@@ -345,6 +346,7 @@ This project uses Enact tools — containerized, signed executables you can run 
 \`\`\`bash
 enact run <tool> --args '{"key": "value"}'   # Run a tool
 enact search "keyword"                        # Find tools
+enact learn author/tool                       # View tool documentation
 enact install author/tool                     # Install tool
 enact list                                    # List installed tools
 \`\`\`
@@ -637,7 +639,8 @@ async function initHandler(options: InitOptions, ctx: CommandContext): Promise<v
 
   info("");
   info("This file helps AI agents understand how to use Enact tools in your project.");
-  info("Run 'enact search <query>' to find tools, 'enact install <tool>' to add them.");
+  info("Run 'enact search <query>' to find tools, 'enact learn <tool>' to view docs,");
+  info("and 'enact install <tool>' to add them.");
 }
 
 /**
