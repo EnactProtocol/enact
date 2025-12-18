@@ -44,165 +44,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* Features Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12 text-gray-6">Why Enact?</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="card-hover text-center">
-              <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Shield className="w-6 h-6 text-teal-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2 text-gray-6">Verified</h3>
-              <p className="text-gray-5">
-                Cryptographic verification with Sigstore ensures tools are authentic and trustworthy
-              </p>
-            </div>
-
-            <div className="card-hover text-center">
-              <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Package className="w-6 h-6 text-pink-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2 text-gray-6">Portable</h3>
-              <p className="text-gray-5">
-                Containerized execution ensures tools run consistently across any environment
-              </p>
-            </div>
-
-            <div className="card-hover text-center">
-              <div className="w-12 h-12 bg-blueLight-1 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Terminal className="w-6 h-6 text-brand-blue" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2 text-gray-6">AI-Ready</h3>
-              <p className="text-gray-5">
-                Built for AI agents with structured manifests and MCP integration
-              </p>
-            </div>
-
-            <div className="card-hover text-center">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Zap className="w-6 h-6 text-brand-green" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2 text-gray-6">Fast</h3>
-              <p className="text-gray-5">
-                Quick discovery, installation, and execution with smart caching
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* npm for AI Tools Section */}
-      <section className="py-20 bg-gray-1">
-        <div className="container mx-auto px-4">
-          <div className="max-w-5xl mx-auto">
-            <h2 className="text-3xl font-bold text-center mb-4 text-gray-6">
-              Like npm, but for AI Tools
-            </h2>
-            <p className="text-center text-gray-5 mb-6 max-w-2xl mx-auto">
-              If you know npm, you already know Enact. Same familiar workflow, designed for AI
-              agents.
-            </p>
-
-            <div className="grid md:grid-cols-3 mb-12 gap-6">
-              <div className="text-center p-6">
-                <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Download className="w-6 h-6 text-teal-600" />
-                </div>
-                <h4 className="font-semibold text-gray-6 mb-2">Install</h4>
-                <p className="text-sm text-gray-5">
-                  Download verified tools to your local cache, ready to run
-                </p>
-              </div>
-              <div className="text-center p-6">
-                <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Play className="w-6 h-6 text-pink-600" />
-                </div>
-                <h4 className="font-semibold text-gray-6 mb-2">Run</h4>
-                <p className="text-sm text-gray-5">
-                  Execute tools in isolated containers with structured I/O
-                </p>
-              </div>
-              <div className="text-center p-6">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <ArrowRight className="w-6 h-6 text-green-600" />
-                </div>
-                <h4 className="font-semibold text-gray-6 mb-2">Publish</h4>
-                <p className="text-sm text-gray-5">
-                  Share your tools with cryptographic signing via Sigstore
-                </p>
-              </div>
-            </div>
-
-            {/* Enact Commands */}
-            <div className="card border-2 border-brand-blue mb-12">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-blueLight-1 rounded-lg flex items-center justify-center">
-                  <Terminal className="w-5 h-5 text-brand-blue" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-6">Enact CLI</h3>
-                <span className="text-sm text-brand-blue ml-auto">For AI Tools</span>
-              </div>
-              <div className="grid md:grid-cols-2 gap-4 font-mono text-sm">
-                <div className="bg-blueLight-1/50 hover:bg-red-100 rounded-lg p-3 text-gray-6 transition-colors cursor-pointer">
-                  <div className="flex items-center justify-between">
-                    <span>
-                      <span className="text-gray-4">$</span> enact search "resize images"
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-5 mt-1 font-sans">Find tools in the registry</p>
-                </div>
-                <div className="bg-blueLight-1/50 hover:bg-red-100 rounded-lg p-3 text-gray-6 transition-colors cursor-pointer">
-                  <div className="flex items-center justify-between">
-                    <span>
-                      <span className="text-gray-4">$</span> enact run alice/resizer
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-5 mt-1 font-sans">Execute a tool instantly</p>
-                </div>
-                <div className="bg-blueLight-1/50 hover:bg-red-100 rounded-lg p-3 text-gray-6 transition-colors cursor-pointer">
-                  <div className="flex items-center justify-between">
-                    <span>
-                      <span className="text-gray-4">$</span> enact install -g alice/resizer
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-5 mt-1 font-sans">Add to your project</p>
-                </div>
-                <div className="bg-blueLight-1/50 hover:bg-red-100 rounded-lg p-3 text-gray-6 transition-colors cursor-pointer">
-                  <div className="flex items-center justify-between">
-                    <span>
-                      <span className="text-gray-4">$</span> enact init
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-5 mt-1 font-sans">Create a new tool template</p>
-                </div>
-                <div className="bg-blueLight-1/50 hover:bg-red-100 rounded-lg p-3 text-gray-6 transition-colors cursor-pointer">
-                  <div className="flex items-center justify-between">
-                    <span>
-                      <span className="text-gray-4">$</span> enact publish
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-5 mt-1 font-sans">
-                    Share with cryptographic signing
-                  </p>
-                </div>
-                <div className="bg-blueLight-1/50 hover:bg-red-100 rounded-lg p-3 text-gray-6 transition-colors cursor-pointer">
-                  <div className="flex items-center justify-between">
-                    <span>
-                      <span className="text-gray-4">$</span> enact list
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-5 mt-1 font-sans">See installed tools</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Key differences */}
-          </div>
-        </div>
-      </section>
-
       {/* Made for Agents Section */}
       <section className="py-20">
         <div className="container mx-auto px-4">
@@ -364,6 +205,164 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Features Section */}
+
+      {/* npm for AI Tools Section */}
+      <section className="py-20 bg-gray-1">
+        <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto">
+            <h2 className="text-3xl font-bold text-center mb-4 text-gray-6">
+              Like npm, but for AI Tools
+            </h2>
+            <p className="text-center text-gray-5 mb-6 max-w-2xl mx-auto">
+              If you know npm, you already know Enact. Same familiar workflow, designed for AI
+              agents.
+            </p>
+
+            <div className="grid md:grid-cols-3 mb-12 gap-6">
+              <div className="text-center p-6">
+                <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Download className="w-6 h-6 text-teal-600" />
+                </div>
+                <h4 className="font-semibold text-gray-6 mb-2">Install</h4>
+                <p className="text-sm text-gray-5">
+                  Download verified tools to your local cache, ready to run
+                </p>
+              </div>
+              <div className="text-center p-6">
+                <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Play className="w-6 h-6 text-pink-600" />
+                </div>
+                <h4 className="font-semibold text-gray-6 mb-2">Run</h4>
+                <p className="text-sm text-gray-5">
+                  Execute tools in isolated containers with structured I/O
+                </p>
+              </div>
+              <div className="text-center p-6">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <ArrowRight className="w-6 h-6 text-green-600" />
+                </div>
+                <h4 className="font-semibold text-gray-6 mb-2">Publish</h4>
+                <p className="text-sm text-gray-5">
+                  Share your tools with cryptographic signing via Sigstore
+                </p>
+              </div>
+            </div>
+
+            {/* Enact Commands */}
+            <div className="card border-2 border-brand-blue mb-12">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-blueLight-1 rounded-lg flex items-center justify-center">
+                  <Terminal className="w-5 h-5 text-brand-blue" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-6">Enact CLI</h3>
+                <span className="text-sm text-brand-blue ml-auto">For AI Tools</span>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4 font-mono text-sm">
+                <div className="bg-blueLight-1/50 hover:bg-red-100 rounded-lg p-3 text-gray-6 transition-colors cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <span>
+                      <span className="text-gray-4">$</span> enact search "resize images"
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-5 mt-1 font-sans">Find tools in the registry</p>
+                </div>
+                <div className="bg-blueLight-1/50 hover:bg-red-100 rounded-lg p-3 text-gray-6 transition-colors cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <span>
+                      <span className="text-gray-4">$</span> enact run alice/resizer
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-5 mt-1 font-sans">Execute a tool instantly</p>
+                </div>
+                <div className="bg-blueLight-1/50 hover:bg-red-100 rounded-lg p-3 text-gray-6 transition-colors cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <span>
+                      <span className="text-gray-4">$</span> enact install -g alice/resizer
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-5 mt-1 font-sans">Add to your project</p>
+                </div>
+                <div className="bg-blueLight-1/50 hover:bg-red-100 rounded-lg p-3 text-gray-6 transition-colors cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <span>
+                      <span className="text-gray-4">$</span> enact init
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-5 mt-1 font-sans">Create a new tool template</p>
+                </div>
+                <div className="bg-blueLight-1/50 hover:bg-red-100 rounded-lg p-3 text-gray-6 transition-colors cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <span>
+                      <span className="text-gray-4">$</span> enact publish
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-5 mt-1 font-sans">
+                    Share with cryptographic signing
+                  </p>
+                </div>
+                <div className="bg-blueLight-1/50 hover:bg-red-100 rounded-lg p-3 text-gray-6 transition-colors cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <span>
+                      <span className="text-gray-4">$</span> enact list
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-5 mt-1 font-sans">See installed tools</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Key differences */}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center mb-12 text-gray-6">Why Enact?</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="card-hover text-center">
+              <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Shield className="w-6 h-6 text-teal-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-gray-6">Verified</h3>
+              <p className="text-gray-5">
+                Cryptographic verification with Sigstore ensures tools are authentic and trustworthy
+              </p>
+            </div>
+
+            <div className="card-hover text-center">
+              <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Package className="w-6 h-6 text-pink-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-gray-6">Portable</h3>
+              <p className="text-gray-5">
+                Containerized execution ensures tools run consistently across any environment
+              </p>
+            </div>
+
+            <div className="card-hover text-center">
+              <div className="w-12 h-12 bg-blueLight-1 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Terminal className="w-6 h-6 text-brand-blue" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-gray-6">AI-Ready</h3>
+              <p className="text-gray-5">
+                Built for AI agents with structured manifests and MCP integration
+              </p>
+            </div>
+
+            <div className="card-hover text-center">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Zap className="w-6 h-6 text-brand-green" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-gray-6">Fast</h3>
+              <p className="text-gray-5">
+                Quick discovery, installation, and execution with smart caching
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
       {/* Quick Start Section */}
       <section id="quick-start" className="py-20 bg-gray-1">
         <div className="container mx-auto px-4">

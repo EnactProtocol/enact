@@ -431,6 +431,30 @@ function loadTemplate(templateName: string, replacements: Record<string, string>
 }
 
 /**
+ * Create .enact/tools.json for project tool tracking
+ */
+function createEnactProjectDir(targetDir: string, force: boolean): boolean {
+  const enactDir = join(targetDir, ".enact");
+  const toolsJsonPath = join(enactDir, "tools.json");
+
+  // Check if tools.json already exists
+  if (existsSync(toolsJsonPath) && !force) {
+    info(".enact/tools.json already exists, skipping");
+    return false;
+  }
+
+  // Create .enact directory if it doesn't exist
+  if (!existsSync(enactDir)) {
+    mkdirSync(enactDir, { recursive: true });
+  }
+
+  // Write empty tools.json
+  const toolsJson = { tools: {} };
+  writeFileSync(toolsJsonPath, `${JSON.stringify(toolsJson, null, 2)}\n`, "utf-8");
+  return true;
+}
+
+/**
  * Get the current logged-in username
  */
 async function getCurrentUsername(): Promise<string | null> {
@@ -514,24 +538,64 @@ async function getCurrentUsername(): Promise<string | null> {
 async function initHandler(options: InitOptions, ctx: CommandContext): Promise<void> {
   const targetDir = ctx.cwd;
 
-  // Determine mode: --agent, --claude, or --tool (default)
-  const isAgentMode = options.agent;
+  // Determine mode: --tool, --claude, or --agent (default)
+  const isToolMode = options.tool;
   const isClaudeMode = options.claude;
-  // Default to tool mode if no flag specified
+  // Default to agent mode if no flag specified
 
-  // Handle --agent mode: create AGENTS.md for projects using Enact tools
-  if (isAgentMode) {
+  // Handle --tool mode: create enact.md + AGENTS.md for tool development
+  if (isToolMode) {
+    const manifestPath = join(targetDir, "enact.md");
     const agentsPath = join(targetDir, "AGENTS.md");
-    if (existsSync(agentsPath) && !options.force) {
-      warning(`AGENTS.md already exists at: ${agentsPath}`);
+
+    if (existsSync(manifestPath) && !options.force) {
+      warning(`Tool manifest already exists at: ${manifestPath}`);
       info("Use --force to overwrite");
       return;
     }
-    writeFileSync(agentsPath, loadTemplate("agent-agents.md"), "utf-8");
-    success(`Created AGENTS.md: ${agentsPath}`);
+
+    // Get username for the tool name
+    let toolName = options.name;
+
+    if (!toolName) {
+      const username = await getCurrentUsername();
+      if (username) {
+        toolName = `${username}/my-tool`;
+        info(`Using logged-in username: ${username}`);
+      } else {
+        toolName = "my-tool";
+        info("Not logged in - using generic tool name");
+        info("Run 'enact auth login' to use your username in tool names");
+      }
+    }
+
+    // Load templates with placeholder replacement
+    const replacements = { TOOL_NAME: toolName };
+    const manifestContent = loadTemplate("tool-enact.md", replacements);
+    const agentsContent = loadTemplate("tool-agents.md", replacements);
+
+    // Ensure directory exists
+    if (!existsSync(targetDir)) {
+      mkdirSync(targetDir, { recursive: true });
+    }
+
+    // Write enact.md
+    writeFileSync(manifestPath, manifestContent, "utf-8");
+    success(`Created tool manifest: ${manifestPath}`);
+
+    // Write AGENTS.md (only if it doesn't exist or --force is used)
+    if (!existsSync(agentsPath) || options.force) {
+      writeFileSync(agentsPath, agentsContent, "utf-8");
+      success(`Created AGENTS.md: ${agentsPath}`);
+    } else {
+      info("AGENTS.md already exists, skipping (use --force to overwrite)");
+    }
+
     info("");
-    info("This file helps AI agents understand how to use Enact tools in your project.");
-    info("Run 'enact search <query>' to find tools, 'enact install <tool>' to add them.");
+    info("Next steps:");
+    info("  1. Edit enact.md to customize your tool");
+    info("  2. Run 'enact run ./' to test your tool");
+    info("  3. Run 'enact publish' to share your tool");
     return;
   }
 
@@ -545,63 +609,35 @@ async function initHandler(options: InitOptions, ctx: CommandContext): Promise<v
     }
     writeFileSync(claudePath, loadTemplate("claude.md"), "utf-8");
     success(`Created CLAUDE.md: ${claudePath}`);
+
+    // Create .enact/tools.json
+    if (createEnactProjectDir(targetDir, options.force ?? false)) {
+      success("Created .enact/tools.json");
+    }
+
     info("");
     info("This file helps Claude understand how to use Enact tools in your project.");
     return;
   }
 
-  // Handle --tool mode (default): create enact.md + AGENTS.md for tool development
-  const manifestPath = join(targetDir, "enact.md");
+  // Handle default (agent) mode: create AGENTS.md for projects using Enact tools
   const agentsPath = join(targetDir, "AGENTS.md");
-
-  if (existsSync(manifestPath) && !options.force) {
-    warning(`Tool manifest already exists at: ${manifestPath}`);
+  if (existsSync(agentsPath) && !options.force) {
+    warning(`AGENTS.md already exists at: ${agentsPath}`);
     info("Use --force to overwrite");
     return;
   }
+  writeFileSync(agentsPath, loadTemplate("agent-agents.md"), "utf-8");
+  success(`Created AGENTS.md: ${agentsPath}`);
 
-  // Get username for the tool name
-  let toolName = options.name;
-
-  if (!toolName) {
-    const username = await getCurrentUsername();
-    if (username) {
-      toolName = `${username}/my-tool`;
-      info(`Using logged-in username: ${username}`);
-    } else {
-      toolName = "my-tool";
-      info("Not logged in - using generic tool name");
-      info("Run 'enact auth login' to use your username in tool names");
-    }
-  }
-
-  // Load templates with placeholder replacement
-  const replacements = { TOOL_NAME: toolName };
-  const manifestContent = loadTemplate("tool-enact.md", replacements);
-  const agentsContent = loadTemplate("tool-agents.md", replacements);
-
-  // Ensure directory exists
-  if (!existsSync(targetDir)) {
-    mkdirSync(targetDir, { recursive: true });
-  }
-
-  // Write enact.md
-  writeFileSync(manifestPath, manifestContent, "utf-8");
-  success(`Created tool manifest: ${manifestPath}`);
-
-  // Write AGENTS.md (only if it doesn't exist or --force is used)
-  if (!existsSync(agentsPath) || options.force) {
-    writeFileSync(agentsPath, agentsContent, "utf-8");
-    success(`Created AGENTS.md: ${agentsPath}`);
-  } else {
-    info("AGENTS.md already exists, skipping (use --force to overwrite)");
+  // Create .enact/tools.json
+  if (createEnactProjectDir(targetDir, options.force ?? false)) {
+    success("Created .enact/tools.json");
   }
 
   info("");
-  info("Next steps:");
-  info("  1. Edit enact.md to customize your tool");
-  info("  2. Run 'enact run ./' to test your tool");
-  info("  3. Run 'enact publish' to share your tool");
+  info("This file helps AI agents understand how to use Enact tools in your project.");
+  info("Run 'enact search <query>' to find tools, 'enact install <tool>' to add them.");
 }
 
 /**
@@ -613,9 +649,9 @@ export function configureInitCommand(program: Command): void {
     .description("Initialize Enact in the current directory")
     .option("-n, --name <name>", "Tool name (default: username/my-tool)")
     .option("-f, --force", "Overwrite existing files")
-    .option("--tool", "Create a new Enact tool (default)")
-    .option("--agent", "Create AGENTS.md for projects that use Enact tools")
-    .option("--claude", "Create CLAUDE.md with Claude-specific instructions")
+    .option("--tool", "Create a new Enact tool (enact.md + AGENTS.md)")
+    .option("--agent", "Create AGENTS.md + .enact/tools.json (default)")
+    .option("--claude", "Create CLAUDE.md + .enact/tools.json")
     .option("-v, --verbose", "Show detailed output")
     .action(async (options: InitOptions) => {
       const ctx: CommandContext = {

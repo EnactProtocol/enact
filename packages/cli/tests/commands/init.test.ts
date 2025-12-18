@@ -3,7 +3,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Command } from "commander";
 import { configureInitCommand } from "../../src/commands/init";
@@ -107,7 +107,59 @@ describe("init command", () => {
       }
     });
 
-    test("default mode creates enact.md", async () => {
+    test("default mode creates AGENTS.md for tool consumers", async () => {
+      const program = new Command();
+      program.exitOverride();
+      configureInitCommand(program);
+
+      const originalCwd = process.cwd();
+      process.chdir(testDir);
+
+      try {
+        await program.parseAsync(["node", "test", "init"]);
+      } catch {
+        // Command may throw due to exitOverride
+      } finally {
+        process.chdir(originalCwd);
+      }
+
+      const agentsPath = join(testDir, "AGENTS.md");
+      expect(existsSync(agentsPath)).toBe(true);
+
+      const content = readFileSync(agentsPath, "utf-8");
+      expect(content).toContain("enact search");
+      expect(content).toContain("enact install");
+      expect(content).toContain("Finding & Installing Tools");
+
+      // Should NOT create enact.md in default mode
+      const manifestPath = join(testDir, "enact.md");
+      expect(existsSync(manifestPath)).toBe(false);
+    });
+
+    test("default mode creates .enact/tools.json", async () => {
+      const program = new Command();
+      program.exitOverride();
+      configureInitCommand(program);
+
+      const originalCwd = process.cwd();
+      process.chdir(testDir);
+
+      try {
+        await program.parseAsync(["node", "test", "init"]);
+      } catch {
+        // Command may throw due to exitOverride
+      } finally {
+        process.chdir(originalCwd);
+      }
+
+      const toolsJsonPath = join(testDir, ".enact", "tools.json");
+      expect(existsSync(toolsJsonPath)).toBe(true);
+
+      const content = JSON.parse(readFileSync(toolsJsonPath, "utf-8"));
+      expect(content).toEqual({ tools: {} });
+    });
+
+    test("--tool mode creates enact.md", async () => {
       const program = new Command();
       program.exitOverride(); // Prevent process.exit
       configureInitCommand(program);
@@ -117,7 +169,7 @@ describe("init command", () => {
       process.chdir(testDir);
 
       try {
-        await program.parseAsync(["node", "test", "init", "--name", "test/my-tool"]);
+        await program.parseAsync(["node", "test", "init", "--tool", "--name", "test/my-tool"]);
       } catch {
         // Command may throw due to exitOverride
       } finally {
@@ -133,7 +185,7 @@ describe("init command", () => {
       expect(content).toContain("command:");
     });
 
-    test("default mode creates AGENTS.md for tool development", async () => {
+    test("--tool mode creates AGENTS.md for tool development", async () => {
       const program = new Command();
       program.exitOverride();
       configureInitCommand(program);
@@ -142,7 +194,7 @@ describe("init command", () => {
       process.chdir(testDir);
 
       try {
-        await program.parseAsync(["node", "test", "init", "--name", "test/my-tool"]);
+        await program.parseAsync(["node", "test", "init", "--tool", "--name", "test/my-tool"]);
       } catch {
         // Command may throw due to exitOverride
       } finally {
@@ -215,6 +267,134 @@ describe("init command", () => {
       expect(existsSync(join(testDir, "AGENTS.md"))).toBe(false);
     });
 
+    test("--agent mode creates .enact/tools.json", async () => {
+      const program = new Command();
+      program.exitOverride();
+      configureInitCommand(program);
+
+      const originalCwd = process.cwd();
+      process.chdir(testDir);
+
+      try {
+        await program.parseAsync(["node", "test", "init", "--agent"]);
+      } catch {
+        // Command may throw due to exitOverride
+      } finally {
+        process.chdir(originalCwd);
+      }
+
+      const toolsJsonPath = join(testDir, ".enact", "tools.json");
+      expect(existsSync(toolsJsonPath)).toBe(true);
+
+      const content = JSON.parse(readFileSync(toolsJsonPath, "utf-8"));
+      expect(content).toEqual({ tools: {} });
+    });
+
+    test("--claude mode creates .enact/tools.json", async () => {
+      const program = new Command();
+      program.exitOverride();
+      configureInitCommand(program);
+
+      const originalCwd = process.cwd();
+      process.chdir(testDir);
+
+      try {
+        await program.parseAsync(["node", "test", "init", "--claude"]);
+      } catch {
+        // Command may throw due to exitOverride
+      } finally {
+        process.chdir(originalCwd);
+      }
+
+      const toolsJsonPath = join(testDir, ".enact", "tools.json");
+      expect(existsSync(toolsJsonPath)).toBe(true);
+
+      const content = JSON.parse(readFileSync(toolsJsonPath, "utf-8"));
+      expect(content).toEqual({ tools: {} });
+    });
+
+    test("--agent mode with --force overwrites existing .enact/tools.json", async () => {
+      // Create existing .enact/tools.json with some content
+      const enactDir = join(testDir, ".enact");
+      mkdirSync(enactDir, { recursive: true });
+      const toolsJsonPath = join(enactDir, "tools.json");
+      const existingContent = { tools: { "some/tool": "1.0.0" } };
+      writeFileSync(toolsJsonPath, JSON.stringify(existingContent));
+
+      const program = new Command();
+      program.exitOverride();
+      configureInitCommand(program);
+
+      const originalCwd = process.cwd();
+      process.chdir(testDir);
+
+      try {
+        await program.parseAsync(["node", "test", "init", "--agent", "--force"]);
+      } catch {
+        // Command may throw due to exitOverride
+      } finally {
+        process.chdir(originalCwd);
+      }
+
+      const content = JSON.parse(readFileSync(toolsJsonPath, "utf-8"));
+      expect(content).toEqual({ tools: {} });
+    });
+
+    test("--agent mode preserves existing .enact/tools.json without --force", async () => {
+      // Create existing .enact/tools.json with some content
+      const enactDir = join(testDir, ".enact");
+      mkdirSync(enactDir, { recursive: true });
+      const toolsJsonPath = join(enactDir, "tools.json");
+      const existingContent = { tools: { "some/tool": "1.0.0" } };
+      writeFileSync(toolsJsonPath, JSON.stringify(existingContent));
+
+      // Also create AGENTS.md so the command doesn't fail early
+      writeFileSync(join(testDir, "AGENTS.md"), "existing");
+
+      const program = new Command();
+      program.exitOverride();
+      configureInitCommand(program);
+
+      const originalCwd = process.cwd();
+      process.chdir(testDir);
+
+      try {
+        // Without --force, AGENTS.md check will fail and return early
+        // So we need to test with --force on AGENTS.md but not tools.json
+        // Actually the --force flag applies to both, so let's just verify
+        // tools.json is preserved when it exists and no --force
+        await program.parseAsync(["node", "test", "init", "--agent"]);
+      } catch {
+        // Command may throw due to exitOverride or warning about existing file
+      } finally {
+        process.chdir(originalCwd);
+      }
+
+      // tools.json should be preserved since AGENTS.md existed and no --force was used
+      const content = JSON.parse(readFileSync(toolsJsonPath, "utf-8"));
+      expect(content).toEqual(existingContent);
+    });
+
+    test("--tool mode does NOT create .enact/tools.json", async () => {
+      const program = new Command();
+      program.exitOverride();
+      configureInitCommand(program);
+
+      const originalCwd = process.cwd();
+      process.chdir(testDir);
+
+      try {
+        await program.parseAsync(["node", "test", "init", "--tool", "--name", "test/my-tool"]);
+      } catch {
+        // Command may throw due to exitOverride
+      } finally {
+        process.chdir(originalCwd);
+      }
+
+      const toolsJsonPath = join(testDir, ".enact", "tools.json");
+      expect(existsSync(toolsJsonPath)).toBe(false);
+    });
+
     test("enact.md contains valid YAML frontmatter", async () => {
       const program = new Command();
       program.exitOverride();
@@ -224,7 +404,14 @@ describe("init command", () => {
       process.chdir(testDir);
 
       try {
-        await program.parseAsync(["node", "test", "init", "--name", "myorg/utils/greeter"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "init",
+          "--tool",
+          "--name",
+          "myorg/utils/greeter",
+        ]);
       } catch {
         // Command may throw due to exitOverride
       } finally {
@@ -255,7 +442,7 @@ describe("init command", () => {
       process.chdir(testDir);
 
       try {
-        await program.parseAsync(["node", "test", "init", "--name", "test/tool"]);
+        await program.parseAsync(["node", "test", "init", "--tool", "--name", "test/tool"]);
       } catch {
         // Command may throw due to exitOverride
       } finally {
@@ -299,16 +486,16 @@ describe("init command", () => {
   });
 
   describe("option conflicts", () => {
-    test("--tool is the default when no mode specified", () => {
+    test("--agent is the default when no mode specified", () => {
       const program = new Command();
       configureInitCommand(program);
 
       const initCmd = program.commands.find((cmd) => cmd.name() === "init");
       const opts = initCmd?.options ?? [];
-      const toolOpt = opts.find((o) => o.long === "--tool");
+      const agentOpt = opts.find((o) => o.long === "--agent");
 
       // Description should indicate it's the default
-      expect(toolOpt?.description).toContain("default");
+      expect(agentOpt?.description).toContain("default");
     });
   });
 
@@ -328,7 +515,7 @@ describe("init command", () => {
       process.chdir(testDir);
 
       try {
-        await program.parseAsync(["node", "test", "init", "--name", "test/tool"]);
+        await program.parseAsync(["node", "test", "init", "--tool", "--name", "test/tool"]);
       } catch {
         // Command may throw due to exitOverride
       } finally {
@@ -367,7 +554,7 @@ describe("init command", () => {
       process.chdir(testDir);
 
       try {
-        await program.parseAsync(["node", "test", "init", "--name", "test/tool"]);
+        await program.parseAsync(["node", "test", "init", "--tool", "--name", "test/tool"]);
       } catch {
         // Command may throw due to exitOverride
       } finally {

@@ -48,7 +48,7 @@ async function main() {
   program
     .name("enact")
     .description("Enact - Verified, portable protocol for AI-executable tools")
-    .version(version);
+    .version(version, "-v, --version", "output the version number");
 
   // Configure all commands
   configureSetupCommand(program);

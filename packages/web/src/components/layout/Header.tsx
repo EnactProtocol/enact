@@ -19,13 +19,16 @@ export default function Header() {
             <Link to="/browse" className="text-gray-5 hover:text-brand-blue transition-colors">
               Browse Tools
             </Link>
+            <Link to="/docs" className="text-gray-5 hover:text-brand-blue transition-colors">
+              Docs
+            </Link>
             <a
-              href="https://enactprotocol.com"
+              href="https://enactprotocol.com/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-5 hover:text-brand-blue transition-colors"
             >
-              Docs
+              Protocol
             </a>
             <a
               href="https://github.com/EnactProtocol"
