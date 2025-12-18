@@ -7,12 +7,18 @@
  *
  * Supports both local paths and remote tool references:
  *   - Local: enact sign ./my-tool
- *   - Remote: enact sign author/tool@1.0.0
+ *   - Remote: enact sign author/tool         (prompts for version)
+ *   - Remote: enact sign author/tool@1.0.0   (specific version)
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { createApiClient, getToolVersion, submitAttestationToRegistry } from "@enactprotocol/api";
+import {
+  createApiClient,
+  getToolInfo,
+  getToolVersion,
+  submitAttestationToRegistry,
+} from "@enactprotocol/api";
 import { getSecret } from "@enactprotocol/secrets";
 import {
   addTrustedAuditor,
@@ -42,6 +48,7 @@ import {
   json,
   keyValue,
   newline,
+  select,
   success,
   symbols,
   warning,
@@ -63,26 +70,37 @@ interface SignOptions extends GlobalOptions {
 const DEFAULT_BUNDLE_FILENAME = ".sigstore-bundle.json";
 
 /**
- * Parse a remote tool reference like "author/tool@1.0.0"
- * Returns null if not a valid remote reference
+ * Parse a remote tool reference like "author/tool@1.0.0" or "author/tool"
+ * Version is optional - if not provided, will prompt user to select
+ * Returns null if not a valid remote reference (i.e., looks like a local path)
  */
-function parseRemoteToolRef(ref: string): { name: string; version: string } | null {
+function parseRemoteToolRef(ref: string): { name: string; version: string | undefined } | null {
   // Remote refs look like: author/tool@version or org/author/tool@version
-  // They don't start with . or / and contain @ for version
+  // They don't start with . or / and must contain at least one /
   if (ref.startsWith(".") || ref.startsWith("/") || ref.startsWith("~")) {
     return null;
   }
 
+  // Must have at least one / in the name (author/tool format)
+  if (!ref.includes("/")) {
+    return null;
+  }
+
   const atIndex = ref.lastIndexOf("@");
-  if (atIndex === -1 || atIndex === 0) {
+  if (atIndex === -1) {
+    // No version specified - that's OK, we'll prompt for it
+    return { name: ref, version: undefined };
+  }
+
+  if (atIndex === 0) {
     return null;
   }
 
   const name = ref.substring(0, atIndex);
   const version = ref.substring(atIndex + 1);
 
-  // Must have at least one / in the name (author/tool)
-  if (!name.includes("/") || !version) {
+  // Version after @ must not be empty
+  if (!version) {
     return null;
   }
 
@@ -276,9 +294,9 @@ function displayResult(
  * Sign a remote tool from the registry
  */
 async function signRemoteTool(
-  toolRef: { name: string; version: string },
+  toolRef: { name: string; version: string | undefined },
   options: SignOptions,
-  _ctx: CommandContext
+  ctx: CommandContext
 ): Promise<void> {
   const config = loadConfig();
   const registryUrl =
@@ -308,14 +326,71 @@ async function signRemoteTool(
     newline();
   }
 
+  // Resolve version - prompt if not provided
+  let targetVersion = toolRef.version;
+
+  if (!targetVersion) {
+    // Fetch tool info to get available versions
+    info(`Fetching versions for ${toolRef.name}...`);
+
+    let toolMetadata: Awaited<ReturnType<typeof getToolInfo>>;
+    try {
+      toolMetadata = await getToolInfo(client, toolRef.name);
+    } catch (err) {
+      error(`Tool not found: ${toolRef.name}`);
+      if (err instanceof Error) {
+        dim(`  ${err.message}`);
+      }
+      process.exit(1);
+    }
+
+    if (toolMetadata.versions.length === 0) {
+      error(`No published versions found for ${toolRef.name}`);
+      process.exit(1);
+    }
+
+    // Filter out yanked versions for selection (unless there are no non-yanked versions)
+    const availableVersions = toolMetadata.versions.filter((v) => !v.yanked);
+    const versionsToShow = availableVersions.length > 0 ? availableVersions : toolMetadata.versions;
+
+    if (ctx.isInteractive) {
+      // Prompt user to select a version
+      newline();
+      const selectedVersion = await select(
+        "Select a version to sign:",
+        versionsToShow.map((v) => {
+          const option: { value: string; label: string; hint?: string } = {
+            value: v.version,
+            label: v.version + (v.version === toolMetadata.latestVersion ? " (latest)" : ""),
+          };
+          if (v.yanked) {
+            option.hint = "yanked";
+          }
+          return option;
+        })
+      );
+
+      if (!selectedVersion) {
+        info("Signing cancelled");
+        return;
+      }
+
+      targetVersion = selectedVersion;
+    } else {
+      // Non-interactive: use latest version
+      targetVersion = toolMetadata.latestVersion;
+      info(`Using latest version: ${targetVersion}`);
+    }
+  }
+
   // Fetch tool info from registry
-  info(`Fetching ${toolRef.name}@${toolRef.version} from registry...`);
+  info(`Fetching ${toolRef.name}@${targetVersion} from registry...`);
 
   let toolInfo: Awaited<ReturnType<typeof getToolVersion>>;
   try {
-    toolInfo = await getToolVersion(client, toolRef.name, toolRef.version);
+    toolInfo = await getToolVersion(client, toolRef.name, targetVersion);
   } catch (err) {
-    error(`Tool not found: ${toolRef.name}@${toolRef.version}`);
+    error(`Tool not found: ${toolRef.name}@${targetVersion}`);
     if (err instanceof Error) {
       dim(`  ${err.message}`);
     }
@@ -357,7 +432,7 @@ async function signRemoteTool(
   }
 
   // Confirm signing
-  if (_ctx.isInteractive) {
+  if (ctx.isInteractive) {
     newline();
     const shouldSign = await confirm(
       `Sign ${toolInfo.name}@${toolInfo.version} with your identity?`,
@@ -466,10 +541,10 @@ async function signRemoteTool(
     }
 
     // Prompt to add to trust list - extract issuer from bundle for correct identity format
-    if (_ctx.isInteractive && !options.json) {
+    if (ctx.isInteractive && !options.json) {
       const certificate = extractCertificateFromBundle(result.bundle);
       const issuer = certificate?.identity?.issuer;
-      await promptAddToTrustList(attestationResult.auditor, _ctx.isInteractive, issuer);
+      await promptAddToTrustList(attestationResult.auditor, ctx.isInteractive, issuer);
     }
 
     if (options.json) {
@@ -719,7 +794,7 @@ export function configureSignCommand(program: Command): void {
     .description("Cryptographically sign a tool and submit attestation to registry")
     .argument(
       "<path>",
-      "Path to tool directory, manifest file, or remote tool (author/tool@version)"
+      "Path to tool directory, manifest file, or remote tool (author/tool or author/tool@version)"
     )
     .option("-i, --identity <email>", "Sign with specific identity (uses OAuth)")
     .option("-o, --output <path>", "Output path for signature bundle (local only)")
