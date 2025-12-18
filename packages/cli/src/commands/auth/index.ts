@@ -439,7 +439,7 @@ async function webLoginHandler(options: AuthOptions, _ctx: CommandContext): Prom
     const { accessToken, refreshToken, user } = await callbackPromise;
 
     // 4. Store tokens securely in keyring (default 1 hour expiry for Supabase tokens)
-    await storeTokens(accessToken, refreshToken, 3600, "supabase");
+    await storeTokens(accessToken, refreshToken, 604800, "supabase");
 
     // Get username from profile (set by CliCallback) or fall back to OAuth metadata
     const username =
