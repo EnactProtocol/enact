@@ -1,64 +1,64 @@
 /**
- * Tests for the get command
+ * Tests for the info command
  */
 
 import { describe, expect, test } from "bun:test";
 import type { ToolVersionInfo } from "@enactprotocol/api";
 import { Command } from "commander";
-import { configureGetCommand } from "../../src/commands/get";
+import { configureInfoCommand } from "../../src/commands/info";
 
-describe("get command", () => {
+describe("info command", () => {
   describe("command configuration", () => {
-    test("configures get command on program", () => {
+    test("configures info command on program", () => {
       const program = new Command();
-      configureGetCommand(program);
+      configureInfoCommand(program);
 
-      const getCmd = program.commands.find((cmd) => cmd.name() === "get");
-      expect(getCmd).toBeDefined();
+      const infoCmd = program.commands.find((cmd) => cmd.name() === "info");
+      expect(infoCmd).toBeDefined();
     });
 
     test("has correct description", () => {
       const program = new Command();
-      configureGetCommand(program);
+      configureInfoCommand(program);
 
-      const getCmd = program.commands.find((cmd) => cmd.name() === "get");
-      expect(getCmd?.description()).toBe("Show detailed information about a tool");
+      const infoCmd = program.commands.find((cmd) => cmd.name() === "info");
+      expect(infoCmd?.description()).toBe("Show detailed information about a tool");
     });
 
-    test("has info as alias", () => {
+    test("has get as alias", () => {
       const program = new Command();
-      configureGetCommand(program);
+      configureInfoCommand(program);
 
-      const getCmd = program.commands.find((cmd) => cmd.name() === "get");
-      expect(getCmd?.aliases()).toContain("info");
+      const infoCmd = program.commands.find((cmd) => cmd.name() === "info");
+      expect(infoCmd?.aliases()).toContain("get");
     });
 
     test("accepts tool argument", () => {
       const program = new Command();
-      configureGetCommand(program);
+      configureInfoCommand(program);
 
-      const getCmd = program.commands.find((cmd) => cmd.name() === "get");
-      const args = getCmd?.registeredArguments ?? [];
+      const infoCmd = program.commands.find((cmd) => cmd.name() === "info");
+      const args = infoCmd?.registeredArguments ?? [];
       expect(args.length).toBeGreaterThan(0);
       expect(args[0]?.name()).toBe("tool");
     });
 
     test("has --ver option for specifying version", () => {
       const program = new Command();
-      configureGetCommand(program);
+      configureInfoCommand(program);
 
-      const getCmd = program.commands.find((cmd) => cmd.name() === "get");
-      const opts = getCmd?.options ?? [];
+      const infoCmd = program.commands.find((cmd) => cmd.name() === "info");
+      const opts = infoCmd?.options ?? [];
       const verOpt = opts.find((o) => o.long === "--ver");
       expect(verOpt).toBeDefined();
     });
 
     test("has -v short option for verbose (not version)", () => {
       const program = new Command();
-      configureGetCommand(program);
+      configureInfoCommand(program);
 
-      const getCmd = program.commands.find((cmd) => cmd.name() === "get");
-      const opts = getCmd?.options ?? [];
+      const infoCmd = program.commands.find((cmd) => cmd.name() === "info");
+      const opts = infoCmd?.options ?? [];
       // -v is for verbose, not version (--ver is for version)
       const verboseOpt = opts.find((o) => o.short === "-v");
       expect(verboseOpt).toBeDefined();
@@ -67,20 +67,20 @@ describe("get command", () => {
 
     test("has --json option", () => {
       const program = new Command();
-      configureGetCommand(program);
+      configureInfoCommand(program);
 
-      const getCmd = program.commands.find((cmd) => cmd.name() === "get");
-      const opts = getCmd?.options ?? [];
+      const infoCmd = program.commands.find((cmd) => cmd.name() === "info");
+      const opts = infoCmd?.options ?? [];
       const jsonOpt = opts.find((o) => o.long === "--json");
       expect(jsonOpt).toBeDefined();
     });
 
     test("has --verbose option", () => {
       const program = new Command();
-      configureGetCommand(program);
+      configureInfoCommand(program);
 
-      const getCmd = program.commands.find((cmd) => cmd.name() === "get");
-      const opts = getCmd?.options ?? [];
+      const infoCmd = program.commands.find((cmd) => cmd.name() === "info");
+      const opts = infoCmd?.options ?? [];
       const verboseOpt = opts.find((o) => o.long === "--verbose");
       expect(verboseOpt).toBeDefined();
     });
@@ -249,12 +249,12 @@ Documentation here.`;
       expect(enactMdContent).toContain("Documentation here.");
     });
 
-    test("verbose option is available on get command", () => {
+    test("verbose option is available on info command", () => {
       const program = new Command();
-      configureGetCommand(program);
+      configureInfoCommand(program);
 
-      const getCmd = program.commands.find((cmd) => cmd.name() === "get");
-      const opts = getCmd?.options ?? [];
+      const infoCmd = program.commands.find((cmd) => cmd.name() === "info");
+      const opts = infoCmd?.options ?? [];
 
       // Check both short and long form exist
       const verboseOpt = opts.find((o) => o.long === "--verbose");

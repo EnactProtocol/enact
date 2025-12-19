@@ -16,7 +16,7 @@ export { configureConfigCommand } from "./config";
 
 // Registry commands (Phase 8)
 export { configureSearchCommand } from "./search";
-export { configureGetCommand } from "./get";
+export { configureInfoCommand } from "./info";
 export { configureLearnCommand } from "./learn";
 export { configurePublishCommand } from "./publish";
 export { configureAuthCommand } from "./auth";

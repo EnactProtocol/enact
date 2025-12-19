@@ -15,7 +15,7 @@ import {
   configureConfigCommand,
   configureEnvCommand,
   configureExecCommand,
-  configureGetCommand,
+  configureInfoCommand,
   configureInitCommand,
   configureInspectCommand,
   configureInstallCommand,
@@ -63,7 +63,7 @@ async function main() {
 
   // Registry commands (Phase 8)
   configureSearchCommand(program);
-  configureGetCommand(program);
+  configureInfoCommand(program);
   configureLearnCommand(program);
   configurePublishCommand(program);
   configureAuthCommand(program);

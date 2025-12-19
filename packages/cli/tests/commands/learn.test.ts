@@ -55,14 +55,14 @@ describe("learn command", () => {
       expect(jsonOpt).toBeDefined();
     });
 
-    test("does not have --verbose option (always shows full docs)", () => {
+    test("has --verbose option for showing attestation details", () => {
       const program = new Command();
       configureLearnCommand(program);
 
       const learnCmd = program.commands.find((cmd) => cmd.name() === "learn");
       const opts = learnCmd?.options ?? [];
       const verboseOpt = opts.find((o) => o.long === "--verbose");
-      expect(verboseOpt).toBeUndefined();
+      expect(verboseOpt).toBeDefined();
     });
   });
 

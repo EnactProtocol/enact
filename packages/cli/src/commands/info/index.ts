@@ -1,5 +1,5 @@
 /**
- * enact get command
+ * enact info command
  *
  * Show detailed information about a tool from the registry.
  */
@@ -26,7 +26,7 @@ import {
   success,
 } from "../../utils";
 
-interface GetOptions extends GlobalOptions {
+interface InfoOptions extends GlobalOptions {
   ver?: string;
 }
 
@@ -46,7 +46,7 @@ function formatDate(date: Date): string {
  */
 function displayToolInfo(
   tool: ToolInfo,
-  options: GetOptions,
+  options: InfoOptions,
   rawManifest?: string | undefined
 ): void {
   header(tool.name);
@@ -83,7 +83,7 @@ function displayToolInfo(
 /**
  * Display version-specific info
  */
-function displayVersionInfo(version: ToolVersionInfo, options: GetOptions): void {
+function displayVersionInfo(version: ToolVersionInfo, options: InfoOptions): void {
   header(`${version.name}@${version.version}`);
   newline();
 
@@ -119,11 +119,11 @@ function displayVersionInfo(version: ToolVersionInfo, options: GetOptions): void
 }
 
 /**
- * Get command handler
+ * Info command handler
  */
-async function getHandler(
+async function infoHandler(
   toolName: string,
-  options: GetOptions,
+  options: InfoOptions,
   ctx: CommandContext
 ): Promise<void> {
   const config = loadConfig();
@@ -190,17 +190,17 @@ async function getHandler(
 }
 
 /**
- * Configure the get command
+ * Configure the info command
  */
-export function configureGetCommand(program: Command): void {
+export function configureInfoCommand(program: Command): void {
   program
-    .command("get <tool>")
-    .alias("info")
+    .command("info <tool>")
+    .alias("get")
     .description("Show detailed information about a tool")
     .option("--ver <version>", "Show info for a specific version")
     .option("-v, --verbose", "Show detailed output")
     .option("--json", "Output as JSON")
-    .action(async (toolName: string, options: GetOptions) => {
+    .action(async (toolName: string, options: InfoOptions) => {
       const ctx: CommandContext = {
         cwd: process.cwd(),
         options,
@@ -209,7 +209,7 @@ export function configureGetCommand(program: Command): void {
       };
 
       try {
-        await getHandler(toolName, options, ctx);
+        await infoHandler(toolName, options, ctx);
       } catch (err) {
         error(formatError(err));
         process.exit(1);
