@@ -130,9 +130,16 @@ async function createBundleFromDir(toolDir: string): Promise<Uint8Array> {
 }
 
 /**
- * Load the raw enact.md file content (full documentation with frontmatter)
+ * Load the raw markdown manifest file content (full documentation with frontmatter)
+ * Checks for SKILL.md first (preferred), then falls back to enact.md
  */
-function loadEnactMd(toolDir: string): string | undefined {
+function loadRawManifest(toolDir: string): string | undefined {
+  // Check SKILL.md first (preferred format)
+  const skillMdPath = join(toolDir, "SKILL.md");
+  if (existsSync(skillMdPath)) {
+    return readFileSync(skillMdPath, "utf-8");
+  }
+  // Fall back to enact.md
   const enactMdPath = join(toolDir, "enact.md");
   if (existsSync(enactMdPath)) {
     return readFileSync(enactMdPath, "utf-8");
@@ -299,10 +306,10 @@ async function publishHandler(
     return;
   }
 
-  // Load the full enact.md content (frontmatter + documentation)
-  const enactMdContent = loadEnactMd(toolDir);
-  if (enactMdContent) {
-    info("Found enact.md documentation");
+  // Load the full markdown manifest content (SKILL.md or enact.md)
+  const rawManifestContent = loadRawManifest(toolDir);
+  if (rawManifestContent) {
+    info("Found markdown documentation (SKILL.md or enact.md)");
   }
 
   // Create bundle
@@ -318,7 +325,7 @@ async function publishHandler(
       name: toolName,
       manifest: manifest as unknown as Record<string, unknown>,
       bundle,
-      rawManifest: enactMdContent,
+      rawManifest: rawManifestContent,
     });
   });
 

@@ -1,10 +1,12 @@
 # Enact
 
-Enact is A verified, portable protocol for defining, discovering, and safely executing AI-ready tools inspired by npm.
+Everything you need to run your own AI tool registry. See it live: **[enact.tools](https://enact.tools)**
+
+Enact is a verified, portable protocol for defining, discovering, and safely executing AI-ready tools — inspired by npm.
 
 ## Overview
 
-Enact provides an end-to-end infrastructure for creating, publishing, and running containerized tools designed for AI agents and automation workflows. It combines a tool registry, trust and attestation system, and secure execution engine into a unified platform.
+Enact provides end-to-end infrastructure for creating, publishing, and running containerized tools designed for AI agents and automation workflows. It combines a tool registry, trust and attestation system, and secure execution engine into a unified platform.
 
 **Key Features**
 
