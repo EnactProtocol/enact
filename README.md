@@ -87,6 +87,44 @@ Generated at: 2025-12-19T15:33:38
 Python version: 3.12.12
 ```
 
+### Example Tool Structure
+
+An Enact tool is a directory with a `SKILL.md` manifest and your code:
+
+```
+my-tool/
+├── SKILL.md          # Tool manifest (required) - defines inputs, outputs, and execution
+├── main.py           # Your code (any language)
+└── requirements.txt  # Dependencies (optional)
+```
+
+**SKILL.md** is a Markdown file with YAML frontmatter that defines your tool:
+
+```yaml
+---
+name: acme/hello-python
+version: 1.0.0
+description: A friendly greeting tool
+from: python:3.12-slim
+build: pip install -r requirements.txt
+command: python /work/main.py ${name}
+
+inputSchema:
+  type: object
+  properties:
+    name:
+      type: string
+      description: Name to greet
+      default: World
+---
+
+# Hello Python
+
+This tool greets you by name. Pass a `name` parameter to customize the greeting.
+```
+
+Create a new tool with `enact init --tool`, test with `enact run ./`, and publish with `enact publish`.
+
 ---
 
 ## Enact Registry
@@ -142,17 +180,6 @@ packages/
 
 See [DEV-SETUP.md](./DEV-SETUP.md) for full instructions.
 
-**Build individual packages:**
-
-```bash
-bun run build:api
-bun run build:cli
-bun run build:execution
-bun run build:mcp-server
-bun run build:secrets
-bun run build:shared
-bun run build:trust
-```
 
 **Run CLI in development mode:**
 
@@ -230,23 +257,7 @@ Sigstore integration for signing and verifying tool attestations.
 React-based web UI for managing environments, secrets, and configuration.
 **Status:** Complete with Supabase authentication and environment management.
 
----
 
-## Project Status
-
-* ✅ **Phase 1:** Monorepo Foundation
-* ✅ **Phase 2:** Core CLI Commands
-* ✅ **Phase 3:** Registry Backend (Supabase Edge Functions)
-* ✅ **Phase 4:** Local Development Environment
-* ✅ **Phase 5:** Trust & Attestation System (Sigstore integration)
-* ✅ **Phase 6:** Execution Engine (Dagger-based containerization)
-* ✅ **Phase 7:** Secrets Management (System keyring integration)
-* ✅ **Phase 8:** Web UI (React app with Supabase auth)
-* ⏳ **Phase 9:** MCP Server (Model Context Protocol) - **In Progress**
-
-Full roadmap in [ROADMAP.md](./ROADMAP.md).
-
----
 
 ## Development
 
