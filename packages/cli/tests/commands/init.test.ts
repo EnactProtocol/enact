@@ -159,7 +159,7 @@ describe("init command", () => {
       expect(content).toEqual({ tools: {} });
     });
 
-    test("--tool mode creates enact.md", async () => {
+    test("--tool mode creates SKILL.md", async () => {
       const program = new Command();
       program.exitOverride(); // Prevent process.exit
       configureInitCommand(program);
@@ -176,7 +176,7 @@ describe("init command", () => {
         process.chdir(originalCwd);
       }
 
-      const manifestPath = join(testDir, "enact.md");
+      const manifestPath = join(testDir, "SKILL.md");
       expect(existsSync(manifestPath)).toBe(true);
 
       const content = readFileSync(manifestPath, "utf-8");
@@ -206,7 +206,7 @@ describe("init command", () => {
 
       const content = readFileSync(agentsPath, "utf-8");
       expect(content).toContain("enact run");
-      expect(content).toContain("enact.md");
+      expect(content).toContain("SKILL.md");
       expect(content).toContain("Parameter Substitution");
     });
 
@@ -395,7 +395,7 @@ describe("init command", () => {
       expect(existsSync(toolsJsonPath)).toBe(false);
     });
 
-    test("enact.md contains valid YAML frontmatter", async () => {
+    test("SKILL.md contains valid YAML frontmatter", async () => {
       const program = new Command();
       program.exitOverride();
       configureInitCommand(program);
@@ -418,7 +418,7 @@ describe("init command", () => {
         process.chdir(originalCwd);
       }
 
-      const content = readFileSync(join(testDir, "enact.md"), "utf-8");
+      const content = readFileSync(join(testDir, "SKILL.md"), "utf-8");
 
       // Check frontmatter structure
       expect(content.startsWith("---")).toBe(true);
@@ -522,7 +522,7 @@ describe("init command", () => {
         process.chdir(originalCwd);
       }
 
-      const content = readFileSync(join(testDir, "enact.md"), "utf-8");
+      const content = readFileSync(join(testDir, "SKILL.md"), "utf-8");
 
       // Required fields per spec
       expect(content).toContain("name:");

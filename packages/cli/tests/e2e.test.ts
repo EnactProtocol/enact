@@ -139,7 +139,7 @@ describe("E2E: Tool Installation Flow", () => {
     const { manifest, destPath } = installTool(ECHO_TOOL, destBase);
 
     expect(manifest.name).toBe("test/echo-tool");
-    expect(existsSync(join(destPath, "enact.md"))).toBe(true);
+    expect(existsSync(join(destPath, "SKILL.md"))).toBe(true);
   });
 
   test("installs multiple tools without conflict", () => {

@@ -345,10 +345,11 @@ describe("manifest types", () => {
 
   describe("constants", () => {
     test("MANIFEST_FILES contains expected files", () => {
+      expect(MANIFEST_FILES).toContain("SKILL.md");
       expect(MANIFEST_FILES).toContain("enact.md");
       expect(MANIFEST_FILES).toContain("enact.yaml");
       expect(MANIFEST_FILES).toContain("enact.yml");
-      expect(MANIFEST_FILES.length).toBe(3);
+      expect(MANIFEST_FILES.length).toBe(4);
     });
 
     test("PACKAGE_MANIFEST_FILE is correct", () => {

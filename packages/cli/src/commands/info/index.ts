@@ -1,7 +1,7 @@
 /**
  * enact info command
  *
- * Show detailed information about a tool from the registry.
+ * Show detailed information about a tool from the registry or local path.
  */
 
 import {
@@ -11,7 +11,7 @@ import {
   getToolInfo,
   getToolVersion,
 } from "@enactprotocol/api";
-import { loadConfig } from "@enactprotocol/shared";
+import { loadConfig, tryResolveTool } from "@enactprotocol/shared";
 import type { Command } from "commander";
 import type { CommandContext, GlobalOptions } from "../../types";
 import {
@@ -28,6 +28,7 @@ import {
 
 interface InfoOptions extends GlobalOptions {
   ver?: string;
+  local?: boolean;
 }
 
 /**
@@ -119,6 +120,56 @@ function displayVersionInfo(version: ToolVersionInfo, options: InfoOptions): voi
 }
 
 /**
+ * Display local tool info
+ */
+function displayLocalToolInfo(
+  name: string,
+  manifest: Record<string, unknown>,
+  manifestPath: string,
+  options: InfoOptions
+): void {
+  header(name);
+  dim("(local)");
+  newline();
+
+  if (manifest.description) {
+    info(String(manifest.description));
+    newline();
+  }
+
+  keyValue("Version", String(manifest.version ?? "unknown"));
+  if (manifest.license) {
+    keyValue("License", String(manifest.license));
+  }
+  if (manifest.command) {
+    keyValue("Command", String(manifest.command));
+  }
+
+  if (Array.isArray(manifest.tags) && manifest.tags.length > 0) {
+    keyValue("Tags", manifest.tags.join(", "));
+  }
+
+  if (Array.isArray(manifest.authors) && manifest.authors.length > 0) {
+    const authorNames = manifest.authors
+      .map((a: { name?: string }) => a.name ?? "unknown")
+      .join(", ");
+    keyValue("Authors", authorNames);
+  }
+
+  keyValue("Manifest", manifestPath);
+
+  // Show raw manifest when --verbose is used
+  if (options.verbose && manifestPath.endsWith(".md")) {
+    const { readFileSync } = require("node:fs");
+    const content = readFileSync(manifestPath, "utf-8");
+    newline();
+    header("Documentation");
+    newline();
+    console.log(content);
+  }
+}
+
+/**
  * Info command handler
  */
 async function infoHandler(
@@ -126,6 +177,41 @@ async function infoHandler(
   options: InfoOptions,
   ctx: CommandContext
 ): Promise<void> {
+  // First, try to resolve locally if it looks like a path
+  const resolution = tryResolveTool(toolName, { startDir: ctx.cwd });
+
+  if (resolution) {
+    // Tool found locally
+    if (options.json) {
+      json({
+        name: resolution.manifest.name ?? toolName,
+        version: resolution.manifest.version,
+        description: resolution.manifest.description,
+        command: resolution.manifest.command,
+        tags: resolution.manifest.tags,
+        authors: resolution.manifest.authors,
+        source: "local",
+        manifestPath: resolution.manifestPath,
+      });
+      return;
+    }
+
+    displayLocalToolInfo(
+      resolution.manifest.name ?? toolName,
+      resolution.manifest as unknown as Record<string, unknown>,
+      resolution.manifestPath,
+      options
+    );
+    return;
+  }
+
+  // If --local flag is set, don't fetch from registry
+  if (options.local) {
+    error(`Tool not found locally: ${toolName}`);
+    dim("The tool is not installed. Remove --local to fetch from registry.");
+    process.exit(1);
+  }
+
   const config = loadConfig();
   const registryUrl =
     process.env.ENACT_REGISTRY_URL ??
@@ -196,9 +282,10 @@ export function configureInfoCommand(program: Command): void {
   program
     .command("info <tool>")
     .alias("get")
-    .description("Show detailed information about a tool")
+    .description("Show detailed information about a tool (local path or registry)")
     .option("--ver <version>", "Show info for a specific version")
     .option("-v, --verbose", "Show detailed output")
+    .option("--local", "Only check locally installed tools")
     .option("--json", "Output as JSON")
     .action(async (toolName: string, options: InfoOptions) => {
       const ctx: CommandContext = {

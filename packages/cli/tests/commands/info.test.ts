@@ -22,7 +22,9 @@ describe("info command", () => {
       configureInfoCommand(program);
 
       const infoCmd = program.commands.find((cmd) => cmd.name() === "info");
-      expect(infoCmd?.description()).toBe("Show detailed information about a tool");
+      expect(infoCmd?.description()).toBe(
+        "Show detailed information about a tool (local path or registry)"
+      );
     });
 
     test("has get as alias", () => {
