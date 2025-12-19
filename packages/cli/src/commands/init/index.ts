@@ -26,7 +26,7 @@ const SUPABASE_ANON_KEY =
  * Embedded templates (for single-binary compatibility)
  */
 const TEMPLATES: Record<string, string> = {
-  "tool-enact.md": `---
+  "tool-skill.md": `---
 name: {{TOOL_NAME}}
 description: A simple tool that echoes a greeting
 version: 0.1.0
@@ -74,7 +74,7 @@ Edit this file to create your own tool:
 
   "tool-agents.md": `# Enact Tool Development Guide
 
-Enact tools are containerized, cryptographically-signed executables. Each tool is defined by an \`enact.md\` file (YAML frontmatter + Markdown docs).
+Enact tools are containerized, cryptographically-signed executables. Each tool is defined by a \`SKILL.md\` file (YAML frontmatter + Markdown docs).
 
 ## Quick Reference
 
@@ -85,7 +85,7 @@ Enact tools are containerized, cryptographically-signed executables. Each tool i
 | Dry run | \`enact run ./ --args '{}' --dry-run\` |
 | Sign & publish | \`enact sign ./ && enact publish ./\` |
 
-## enact.md Structure
+## SKILL.md Structure
 
 \`\`\`yaml
 ---
@@ -225,7 +225,7 @@ Tools run in a container with \`/work\` as the working directory. All source fil
 
 ## Secrets
 
-Declare in \`enact.md\`:
+Declare in \`SKILL.md\`:
 \`\`\`yaml
 env:
   API_KEY:
@@ -315,7 +315,7 @@ enact run tool --args '{}' | jq '.result'
 \`\`\`
 
 ## Creating Local Tools
-Create \`tools/<name>/enact.md\` with:
+Create \`tools/<name>/SKILL.md\` with:
 \`\`\`yaml
 ---
 name: my-tool
@@ -362,7 +362,7 @@ enact run tool --args '{}' | jq '.data'
 \`\`\`
 
 ## Creating Tools
-Create \`enact.md\` in a directory:
+Create \`SKILL.md\` in a directory:
 \`\`\`yaml
 ---
 name: namespace/category/tool
@@ -396,7 +396,7 @@ enact sign ./ && enact publish ./             # Publish
 \`\`\`
 
 ## Secrets
-Declare in enact.md, set via CLI:
+Declare in SKILL.md, set via CLI:
 \`\`\`yaml
 env:
   API_KEY:    # Declared but not set
@@ -545,9 +545,9 @@ async function initHandler(options: InitOptions, ctx: CommandContext): Promise<v
   const isClaudeMode = options.claude;
   // Default to agent mode if no flag specified
 
-  // Handle --tool mode: create enact.md + AGENTS.md for tool development
+  // Handle --tool mode: create SKILL.md + AGENTS.md for tool development
   if (isToolMode) {
-    const manifestPath = join(targetDir, "enact.md");
+    const manifestPath = join(targetDir, "SKILL.md");
     const agentsPath = join(targetDir, "AGENTS.md");
 
     if (existsSync(manifestPath) && !options.force) {
@@ -573,7 +573,7 @@ async function initHandler(options: InitOptions, ctx: CommandContext): Promise<v
 
     // Load templates with placeholder replacement
     const replacements = { TOOL_NAME: toolName };
-    const manifestContent = loadTemplate("tool-enact.md", replacements);
+    const manifestContent = loadTemplate("tool-skill.md", replacements);
     const agentsContent = loadTemplate("tool-agents.md", replacements);
 
     // Ensure directory exists
@@ -581,7 +581,7 @@ async function initHandler(options: InitOptions, ctx: CommandContext): Promise<v
       mkdirSync(targetDir, { recursive: true });
     }
 
-    // Write enact.md
+    // Write SKILL.md
     writeFileSync(manifestPath, manifestContent, "utf-8");
     success(`Created tool manifest: ${manifestPath}`);
 
@@ -595,7 +595,7 @@ async function initHandler(options: InitOptions, ctx: CommandContext): Promise<v
 
     info("");
     info("Next steps:");
-    info("  1. Edit enact.md to customize your tool");
+    info("  1. Edit SKILL.md to customize your tool");
     info("  2. Run 'enact run ./' to test your tool");
     info("  3. Run 'enact publish' to share your tool");
     return;
@@ -652,7 +652,7 @@ export function configureInitCommand(program: Command): void {
     .description("Initialize Enact in the current directory")
     .option("-n, --name <name>", "Tool name (default: username/my-tool)")
     .option("-f, --force", "Overwrite existing files")
-    .option("--tool", "Create a new Enact tool (enact.md + AGENTS.md)")
+    .option("--tool", "Create a new Enact tool (SKILL.md + AGENTS.md)")
     .option("--agent", "Create AGENTS.md + .enact/tools.json (default)")
     .option("--claude", "Create CLAUDE.md + .enact/tools.json")
     .option("-v, --verbose", "Show detailed output")

@@ -4,7 +4,9 @@ A verified, portable way to define, discover, and safely run **AI-executable too
 
 Think **npm for AI tools**—publish once, run anywhere, with cryptographic verification and deterministic execution.
 
-Each tool includes a self-contained `enact.md` manifest describing its inputs, outputs, environment, and execution command.
+Each tool includes a self-contained `SKILL.md` manifest describing its inputs, outputs, environment, and execution command. This format aligns with Anthropic's Agent Skills specification.
+
+> **Backwards Compatibility:** Enact also recognizes `enact.md`, `enact.yaml`, and `enact.yml` for existing tools.
 
 **What Enact provides:**
 * 🔍 **Semantic discovery** — AI models and developers can find tools by task or capability
@@ -40,7 +42,7 @@ Your username becomes your namespace (e.g., username `alice` can publish to `ali
 
 ### 3. Create a tool
 
-Create an `enact.md` manifest:
+Create a `SKILL.md` manifest:
 
 ```markdown
 ---

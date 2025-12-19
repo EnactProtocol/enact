@@ -7,12 +7,14 @@ This document provides a comprehensive reference for all Enact protocol fields u
 
 ## Overview
 
-All Enact tools are defined in a single **`enact.md`** file that combines:
+All Enact tools are defined in a single **`SKILL.md`** file that combines:
 
 1. **YAML frontmatter** — Machine-readable metadata (fields documented below)
 2. **Markdown body** — Human-readable documentation and instructions
 
 This unified format serves as the single source of truth for both AI models and human developers.
+
+> **Note:** The filename `SKILL.md` aligns with Anthropic's Agent Skills format. For backwards compatibility, Enact also recognizes `enact.md`, `enact.yaml`, and `enact.yml`.
 
 ## Package Definition (Optional)
 

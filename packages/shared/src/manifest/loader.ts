@@ -44,7 +44,7 @@ export interface LoadedManifest {
 /**
  * Load a manifest from a file path
  *
- * @param filePath - Path to the manifest file (enact.yaml, enact.yml, or enact.md)
+ * @param filePath - Path to the manifest file (SKILL.md, enact.md, enact.yaml, or enact.yml)
  * @returns LoadedManifest with validated manifest and metadata
  * @throws ManifestLoadError if file doesn't exist, parse fails, or validation fails
  */
@@ -111,7 +111,7 @@ export function loadManifest(filePath: string): LoadedManifest {
 /**
  * Find and load a manifest from a directory
  *
- * Searches for enact.md, enact.yaml, or enact.yml in the given directory
+ * Searches for SKILL.md, enact.md, enact.yaml, or enact.yml in the given directory
  *
  * @param dir - Directory to search for manifest
  * @returns LoadedManifest if found

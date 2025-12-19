@@ -2,8 +2,9 @@
  * YAML and Markdown parser for Enact tool manifests
  *
  * Handles parsing of:
- * - enact.yaml files (pure YAML)
- * - enact.md files (YAML frontmatter + Markdown body)
+ * - SKILL.md files (YAML frontmatter + Markdown body) - primary format
+ * - enact.yaml/yml files (pure YAML) - legacy format
+ * - enact.md files (YAML frontmatter + Markdown body) - legacy format
  */
 
 import yaml from "js-yaml";

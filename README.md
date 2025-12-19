@@ -31,17 +31,58 @@ bun install -g enact-cli
 ### Basic Usage
 
 ```bash
-# Configure Enact
-enact setup
-
 # Search for tools
 enact search greeting
 
-# Install a tool
-enact install examples/hello-simple
+# Learn about a tool (view its SKILL.md documentation)
+enact learn enact/hello-python
 
-# Execute it
-enact run examples/hello-simple --input name=World
+# Run a tool
+enact run enact/hello-python --args '{"name": "World"}'
+```
+
+### Example: What `enact learn` Shows
+
+```bash
+$ enact learn enact/hello-python
+
+enact/hello-python@1.0.3
+───────────────────────────
+
+---
+name: "enact/hello-python"
+version: "1.0.3"
+description: "A simple Python greeting tool"
+from: "python:3.12-slim"
+
+inputSchema:
+  type: object
+  properties:
+    name:
+      type: string
+      description: "Name to greet"
+      default: "World"
+
+command: "python /work/hello.py ${name}"
+---
+
+# Hello Python
+
+A simple Python tool that greets you by name.
+```
+
+### Example: Running a Tool
+
+```bash
+$ enact run enact/hello-python --args '{"name": "Anthropic"}'
+
+◇  ✓ Resolved: enact/hello-python
+◐  Running enact/hello-python (python:3.12-slim)...
+◇  ✓ Execution complete
+
+Hello, Anthropic! 🐍
+Generated at: 2025-12-19T15:33:38
+Python version: 3.12.12
 ```
 
 ---
