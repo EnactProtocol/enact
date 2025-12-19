@@ -22,6 +22,7 @@ import {
   verifyAllAttestations,
 } from "@enactprotocol/api";
 import {
+  addMcpTool,
   addToolToRegistry,
   getCacheDir,
   getInstalledVersion,
@@ -438,6 +439,11 @@ async function installFromRegistry(
   // Update tools.json for the appropriate scope
   addToolToRegistry(toolName, targetVersion!, scope, isGlobal ? undefined : ctx.cwd);
 
+  // Also add to MCP registry for global installs
+  if (isGlobal) {
+    addMcpTool(toolName, targetVersion!);
+  }
+
   // Output result
   if (options.json) {
     json({
@@ -532,6 +538,11 @@ async function installFromPath(
 
   // Update tools.json for the appropriate scope
   addToolToRegistry(manifest.name, version, scope, isGlobal ? undefined : ctx.cwd);
+
+  // Also add to MCP registry for global installs
+  if (isGlobal) {
+    addMcpTool(manifest.name, version);
+  }
 
   if (options.json) {
     json({

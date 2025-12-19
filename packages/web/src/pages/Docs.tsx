@@ -1493,6 +1493,7 @@ export default function Docs() {
     setActiveCommand(commandId);
     setMobileMenuOpen(false);
     window.history.pushState(null, "", commandId ? `#${commandId}` : `#${sectionId}`);
+    window.scrollTo(0, 0);
   };
 
   const renderContent = () => {

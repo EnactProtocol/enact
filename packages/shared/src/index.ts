@@ -145,6 +145,30 @@ export {
   type InstalledToolInfo,
 } from "./registry";
 
+// MCP tool registry (mcp.json management)
+export {
+  loadMcpRegistry,
+  saveMcpRegistry,
+  addMcpTool,
+  removeMcpTool,
+  isMcpToolInstalled,
+  getMcpToolVersion,
+  listMcpTools,
+  getMcpToolInfo,
+  getMcpJsonPath,
+  syncMcpWithGlobalTools,
+  // Toolset management
+  createToolset,
+  deleteToolset,
+  addToolToToolset,
+  removeToolFromToolset,
+  setActiveToolset,
+  getActiveToolset,
+  listToolsets,
+  type McpRegistry,
+  type McpToolInfo,
+} from "./mcp-registry";
+
 // Logger utility
 export {
   Logger,

@@ -19,17 +19,19 @@
     "clean": "rm -rf dist",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "dev": "bun run src/index.ts"
+    "dev": "bun run src/index.ts",
+    "dev:http": "bun run src/index.ts --http"
   },
   "dependencies": {
+    "@enactprotocol/execution": "workspace:*",
     "@enactprotocol/shared": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.0.4"
+    "@modelcontextprotocol/sdk": "^1.10.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.1",
     "typescript": "^5.7.2"
   },
-  "keywords": ["mcp", "model-context-protocol", "ai", "tools"],
+  "keywords": ["mcp", "model-context-protocol", "ai", "tools", "streamable-http"],
   "author": "Enact Protocol",
   "license": "Apache-2.0"
 }

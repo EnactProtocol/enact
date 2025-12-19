@@ -15,7 +15,7 @@
     },
     "packages/api": {
       "name": "@enactprotocol/api",
-      "version": "2.1.2",
+      "version": "2.1.7",
       "devDependencies": {
         "@types/bun": "latest",
         "@types/node": "^22.10.1",
@@ -27,7 +27,7 @@
     },
     "packages/cli": {
       "name": "@enactprotocol/cli",
-      "version": "2.1.2",
+      "version": "2.1.7",
       "bin": {
         "enact": "./dist/index.js",
       },
@@ -47,7 +47,7 @@
     },
     "packages/enact": {
       "name": "@enactprotocol/enact",
-      "version": "2.1.2",
+      "version": "2.1.7",
       "bin": {
         "enact": "./bin/enact.js",
       },
@@ -61,27 +61,27 @@
     },
     "packages/enact-darwin-arm64": {
       "name": "@enactprotocol/enact-darwin-arm64",
-      "version": "2.1.2",
+      "version": "2.1.7",
     },
     "packages/enact-darwin-x64": {
       "name": "@enactprotocol/enact-darwin-x64",
-      "version": "2.1.2",
+      "version": "2.1.7",
     },
     "packages/enact-linux-arm64": {
       "name": "@enactprotocol/enact-linux-arm64",
-      "version": "2.1.2",
+      "version": "2.1.7",
     },
     "packages/enact-linux-x64": {
       "name": "@enactprotocol/enact-linux-x64",
-      "version": "2.1.2",
+      "version": "2.1.7",
     },
     "packages/enact-win32-x64": {
       "name": "@enactprotocol/enact-win32-x64",
-      "version": "2.1.2",
+      "version": "2.1.7",
     },
     "packages/execution": {
       "name": "@enactprotocol/execution",
-      "version": "2.1.2",
+      "version": "2.1.7",
       "dependencies": {
         "@dagger.io/dagger": "^0.11.1",
         "@enactprotocol/shared": "workspace:*",
@@ -107,8 +107,9 @@
         "enact-mcp": "./dist/index.js",
       },
       "dependencies": {
+        "@enactprotocol/execution": "workspace:*",
         "@enactprotocol/shared": "workspace:*",
-        "@modelcontextprotocol/sdk": "^1.0.4",
+        "@modelcontextprotocol/sdk": "^1.10.0",
       },
       "devDependencies": {
         "@types/node": "^22.10.1",
@@ -117,7 +118,7 @@
     },
     "packages/secrets": {
       "name": "@enactprotocol/secrets",
-      "version": "2.1.2",
+      "version": "2.1.7",
       "dependencies": {
         "@enactprotocol/keyring": "workspace:*",
       },
@@ -147,7 +148,7 @@
     },
     "packages/shared": {
       "name": "@enactprotocol/shared",
-      "version": "2.1.2",
+      "version": "2.1.7",
       "dependencies": {
         "@enactprotocol/trust": "workspace:*",
         "js-yaml": "^4.1.1",
@@ -162,7 +163,7 @@
     },
     "packages/trust": {
       "name": "@enactprotocol/trust",
-      "version": "2.1.2",
+      "version": "2.1.7",
       "dependencies": {
         "@enactprotocol/sigstore": "4.0.1",
         "@enactprotocol/sigstore-bundle": "4.0.1",

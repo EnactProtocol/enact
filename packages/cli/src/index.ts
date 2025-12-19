@@ -21,6 +21,7 @@ import {
   configureInstallCommand,
   configureLearnCommand,
   configureListCommand,
+  configureMcpCommand,
   configurePublishCommand,
   configureReportCommand,
   configureRunCommand,
@@ -81,6 +82,8 @@ async function main() {
 
   // Private tools - visibility management
   configureVisibilityCommand(program);
+  // MCP integration commands
+  configureMcpCommand(program);
 
   // Global error handler - handle Commander's help/version exits gracefully
   program.exitOverride((err) => {

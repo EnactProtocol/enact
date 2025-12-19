@@ -33,3 +33,5 @@ export { configureUnyankCommand } from "./unyank";
 
 // Private tools (Phase - visibility management)
 export { configureVisibilityCommand } from "./visibility";
+// MCP integration commands
+export { configureMcpCommand } from "./mcp";
