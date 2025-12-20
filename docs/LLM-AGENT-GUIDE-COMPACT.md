@@ -23,7 +23,7 @@ Enact is a protocol for creating **containerized tools** that run in Docker via 
 | Sign for publishing | `enact sign ./my-tool` |
 | Publish to registry | `enact publish ./my-tool` |
 | Search tools | `enact search "query"` |
-| Get tool info | `enact get author/category/tool` |
+| Learn about a tool | `enact learn author/category/tool` |
 
 ---
 
@@ -33,10 +33,10 @@ Enact is a protocol for creating **containerized tools** that run in Docker via 
 
 ```
 my-tool/
-└── enact.md
+└── SKILL.md
 ```
 
-### The `enact.md` File
+### The `SKILL.md` File
 
 A Markdown file with YAML frontmatter (metadata) and body (documentation).
 
@@ -211,11 +211,11 @@ Tools with a `command` field run in Docker containers.
 
 ```
 text-analyzer/
-├── enact.md
+├── SKILL.md
 └── analyze.py
 ```
 
-**enact.md:**
+**SKILL.md:**
 ```markdown
 ---
 enact: "2.0.0"
@@ -325,11 +325,11 @@ Return JSON:
 
 ```
 my-tool/
-├── enact.md
+├── SKILL.md
 └── main.py
 ```
 
-**enact.md:**
+**SKILL.md:**
 ```markdown
 ---
 name: "myorg/python/my-tool"
@@ -360,11 +360,11 @@ print(json.dumps({"result": input_value.upper()}))
 
 ```
 my-tool/
-├── enact.md
+├── SKILL.md
 └── index.js
 ```
 
-**enact.md:**
+**SKILL.md:**
 ```markdown
 ---
 name: "myorg/node/my-tool"
@@ -392,11 +392,11 @@ console.log(JSON.stringify({ result: input.toUpperCase() }));
 
 ```
 my-tool/
-├── enact.md
+├── SKILL.md
 └── main.rs
 ```
 
-**enact.md:**
+**SKILL.md:**
 ```markdown
 ---
 name: "myorg/rust/my-tool"
@@ -428,11 +428,11 @@ fn main() {
 
 ```
 my-tool/
-├── enact.md
+├── SKILL.md
 └── main.go
 ```
 
-**enact.md:**
+**SKILL.md:**
 ```markdown
 ---
 name: "myorg/go/url-checker"
@@ -565,7 +565,7 @@ Lookup: myorg/api/slack → myorg/api → myorg
 
 ```bash
 mkdir my-tool && cd my-tool
-# Create enact.md and source files
+# Create SKILL.md and source files
 ```
 
 ### 2. Test Locally
@@ -763,13 +763,13 @@ tags:
 
 ```
 ts-formatter/
-├── enact.md
+├── SKILL.md
 ├── package.json
 ├── tsconfig.json
 └── src/index.ts
 ```
 
-**enact.md:**
+**SKILL.md:**
 ```markdown
 ---
 enact: "2.0.0"
@@ -872,7 +872,7 @@ Return JSON:
 
 | Action | Command |
 |--------|---------|
-| Create | Write `enact.md` with YAML frontmatter |
+| Create | Write `SKILL.md` with YAML frontmatter |
 | Test | `enact run ./my-tool --input "key=value"` |
 | Install | `enact install .` or `enact install . --global` |
 | Sign | `enact sign .` |

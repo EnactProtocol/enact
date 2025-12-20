@@ -187,7 +187,7 @@ enact run alice/utils/greeter --args '{"name":"Alice"}'
 **Exploratory execution** (run arbitrary commands in the tool's environment):
 
 ```bash
-enact exec alice/utils/greeter "cat enact.md"
+enact exec alice/utils/greeter "cat SKILL.md"
 ```
 
 ---
@@ -221,8 +221,8 @@ Your attestation is cryptographically signed via Sigstore and logged to the publ
 # Search the registry
 enact search "pdf extraction"
 
-# View detailed tool information
-enact get alice/utils/greeter
+# Learn about a tool
+enact learn alice/utils/greeter
 
 # Check tool's trust status and attestations
 enact trust check alice/utils/greeter@v1.0.0
@@ -373,7 +373,7 @@ enact exec tool "command"      # Exploratory execution
 ### Discovery
 ```bash
 enact search "query"           # Search registry
-enact get tool                 # View tool details
+enact learn tool               # Learn about a tool
 enact list                     # List installed tools
 ```
 

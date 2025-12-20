@@ -60,7 +60,7 @@ enact search "api" --limit 50
 View detailed information about a tool:
 
 ```bash
-enact get username/toolname
+enact learn username/toolname
 ```
 
 This shows:

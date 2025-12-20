@@ -18,11 +18,11 @@ enact sign ./tool && enact publish ./tool # Publish
 
 ```
 my-tool/
-├── enact.md    # Required: YAML frontmatter + docs
+├── SKILL.md    # Required: YAML frontmatter + docs
 └── main.py     # Your code (any language)
 ```
 
-## enact.md Template
+## SKILL.md Template
 
 ```markdown
 ---
@@ -184,7 +184,7 @@ Access in code via environment variable: `os.environ['API_KEY']`
 ```bash
 # 1. Create
 mkdir my-tool && cd my-tool
-# Create enact.md + source files
+# Create SKILL.md + source files
 
 # 2. Test
 enact run . --input "test=value"

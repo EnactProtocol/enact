@@ -139,7 +139,6 @@ When you run `enact run ./hello-rust --args '{"name": "Alice"}'`:
 | Run from registry | `enact run author/tool --args '{"key": "value"}'` |
 | Learn about a tool | `enact learn author/tool` |
 | Search tools | `enact search "query"` |
-| Get tool info | `enact info author/tool` |
 | Install from registry | `enact install author/tool` |
 | Install globally | `enact install author/tool --global` |
 | Sign for publishing | `enact sign ./` |

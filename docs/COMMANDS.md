@@ -15,7 +15,7 @@ This document provides a comprehensive overview of all available commands in the
 6. [search](#6-search---discover-tools) - Discover tools
 7. [sign](#7-sign---sign-tool) - Sign tool
 8. [publish](#8-publish---publish-tool) - Publish tool
-9. [get](#9-get---get-tool-info) - Get tool info
+9. [learn](#9-learn---learn-about-a-tool) - Learn about a tool
 10. [inspect](#10-inspect---inspect-tool-for-auditing) - Inspect tool for auditing
 
 ### Trust & Security Commands
@@ -94,8 +94,8 @@ enact setup --global --force
 
 **Tool Mode (default)**:
 Creates a new Enact tool with:
-- `enact.yaml` - Tool manifest
-- `README.md` - Tool documentation
+- `SKILL.md` - Tool manifest (YAML frontmatter + documentation)
+- `AGENTS.md` - Development guide for AI agents
 - Basic project structure
 
 **Agent Mode**:
@@ -377,37 +377,40 @@ enact publish ./my-tool/
 
 ---
 
-### 7. get - Get Tool Info
+### 7. learn - Learn About a Tool
 
-**Purpose**: Retrieve tool metadata and instructions (works for all tools).
+**Purpose**: Retrieve tool metadata, instructions, and usage information.
 
-**Usage**: `enact get <tool-name> [options]`
+**Usage**: `enact learn <tool-name> [options]`
 
 **Arguments**:
-- `tool-name` - Tool identifier
+- `tool-name` - Tool identifier (local path or registry name)
 
 **Options**:
 - `--format <format>` - Output format: yaml, json, md (default: yaml)
 
 **Returns**:
 - Tool metadata (name, description, tags)
-- Full instructions from enact.md
+- Full instructions from SKILL.md
 - Input/output schemas
 - Whether tool is executable (has `command` field)
 
 **Examples**:
 ```bash
-# Get executable tool info
-enact get kgroves88/ai/pdf-extract
+# Learn about a registry tool
+enact learn kgroves88/ai/pdf-extract
 
-# Get instruction-only tool
-enact get acme-corp/workflows/data-pipeline
+# Learn about an instruction-only tool
+enact learn acme-corp/workflows/data-pipeline
+
+# Learn about a local tool
+enact learn ./my-tool
 
 # Output as JSON
-enact get acme-corp/data/processor --format json
+enact learn acme-corp/data/processor --format json
 
 # Output as markdown (shows full instructions)
-enact get acme-corp/workflows/data-pipeline --format md
+enact learn acme-corp/workflows/data-pipeline --format md
 ```
 
 ---
@@ -793,8 +796,8 @@ enact auth logout
 # 1. Create tool in project directory
 cd my-tool-project
 
-# 2. Create enact.md
-cat > enact.md <<'EOF'
+# 2. Create SKILL.md
+cat > SKILL.md <<'EOF'
 ---
 enact: "2.0.0"
 name: "myorg/utils/my-tool"
@@ -859,8 +862,8 @@ enact run acme-corp/data/csv-processor --args '{"file":"data.csv"}'
 # 1. Search
 enact search "pdf extraction"
 
-# 2. Get info
-enact get kgroves88/ai/pdf-extract
+# 2. Learn about the tool
+enact learn kgroves88/ai/pdf-extract
 
 # 3. Inspect before trusting (opens in browser)
 enact inspect kgroves88/ai/pdf-extract
@@ -904,7 +907,7 @@ my-project/                   # Project directory
 │       └── {path}/
 │           └── {tool}/
 │               └── v1.0.0/
-│                   ├── enact.md
+│                   ├── SKILL.md
 │                   ├── src/
 │                   └── ...
 ├── .env                     # Global environment variables
