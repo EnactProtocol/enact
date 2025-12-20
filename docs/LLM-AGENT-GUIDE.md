@@ -10,14 +10,14 @@ Enact is a protocol for creating **full, production-ready containerized tools** 
 - **Support any programming language** (Python, Rust, Node.js, Go, Ruby, etc.)
 - **Include build steps** that compile code, install dependencies, and prepare environments
 - **Are cryptographically signed** for trust and verification
-- **Can be discovered and shared** via a central registry
+- **Can be discovered and shared** via a central registry at [enact.tools](https://enact.tools)
 - **Have structured schemas** for inputs and outputs, enabling AI agents to use them reliably
 
 **Enact tools are real software** - they can process files, call APIs, run ML models, compile code, and perform any task a containerized application can do.
 
 As an LLM agent, you can:
 
-1. **Create** tools by writing `enact.md` files with YAML frontmatter + source code
+1. **Create** tools by writing `SKILL.md` files with YAML frontmatter + source code
 2. **Build and Run** tools in isolated containers with dependencies
 3. **Sign** tools cryptographically for trust
 4. **Publish** tools to the registry for discovery
@@ -84,15 +84,31 @@ Here's a Rust tool that gets compiled and executed:
 
 ```
 hello-rust/
-├── enact.md      # Tool definition
+├── SKILL.md      # Tool manifest
 └── hello.rs      # Rust source code
 ```
 
-**enact.md:**
+**SKILL.md:**
 ```yaml
+---
+name: myorg/hello-rust
+version: 1.0.0
+description: A compiled Rust greeting tool
 from: "rust:1.83-slim"
 build: "rustc /work/hello.rs -o /work/hello"
 command: "/work/hello ${name}"
+
+inputSchema:
+  type: object
+  properties:
+    name:
+      type: string
+      default: World
+---
+
+# Hello Rust
+
+A simple Rust tool that greets you by name.
 ```
 
 **hello.rs:**
@@ -104,7 +120,7 @@ fn main() {
 }
 ```
 
-When you run `enact run ./hello-rust --input "name=Alice"`:
+When you run `enact run ./hello-rust --args '{"name": "Alice"}'`:
 1. Dagger pulls the `rust:1.83-slim` container
 2. The `build` step compiles `hello.rs` → `hello` (cached for future runs)
 3. The `command` executes the compiled binary with the input
@@ -114,32 +130,52 @@ When you run `enact run ./hello-rust --input "name=Alice"`:
 
 ---
 
+## Quick Reference
+
 | Task | Command |
 |------|---------|
-| Run local tool | `enact run ./my-tool --input "key=value"` |
-| Run with JSON | `enact run ./my-tool --args '{"key": "value"}'` |
-| Install from registry | `enact install author/category/tool` |
-| Install globally | `enact install author/category/tool --global` |
-| Sign for publishing | `enact sign ./my-tool` |
-| Publish to registry | `enact publish ./my-tool` |
+| Create new tool | `enact init --tool` |
+| Run local tool | `enact run ./ --args '{"key": "value"}'` |
+| Run from registry | `enact run author/tool --args '{"key": "value"}'` |
+| Learn about a tool | `enact learn author/tool` |
 | Search tools | `enact search "query"` |
-| Get tool info | `enact get author/category/tool` |
+| Get tool info | `enact info author/tool` |
+| Install from registry | `enact install author/tool` |
+| Install globally | `enact install author/tool --global` |
+| Sign for publishing | `enact sign ./` |
+| Publish to registry | `enact publish ./` |
 
 ---
 
 ## Part 1: Creating an Enact Tool
+
+### Quick Start
+
+The fastest way to create a new tool:
+
+```bash
+# Create a new tool in the current directory
+enact init --tool
+
+# This creates:
+# - SKILL.md (tool manifest)
+# - AGENTS.md (development guide for AI agents)
+```
 
 ### Minimal Tool Structure
 
 Every Enact tool needs at minimum:
 ```
 my-tool/
-└── enact.md
+├── SKILL.md          # Tool manifest (required)
+└── main.py           # Your code (any language)
 ```
 
-### The `enact.md` File
+### The `SKILL.md` File
 
 This is a Markdown file with YAML frontmatter. The frontmatter contains machine-readable metadata, and the body contains human-readable documentation.
+
+> **Note:** `SKILL.md` is the primary format, aligned with Anthropic's Agent Skills. Legacy formats (`enact.md`, `enact.yaml`) are still supported.
 
 #### Minimal Example
 
@@ -474,11 +510,11 @@ A complete Python tool that uses external libraries:
 
 ```
 text-analyzer/
-├── enact.md
+├── SKILL.md
 └── analyze.py
 ```
 
-**enact.md:**
+**SKILL.md:**
 ```markdown
 ---
 enact: "2.0.0"
@@ -575,14 +611,14 @@ A TypeScript tool that compiles before running:
 
 ```
 ts-formatter/
-├── enact.md
+├── SKILL.md
 ├── package.json
 ├── tsconfig.json
 └── src/
     └── index.ts
 ```
 
-**enact.md:**
+**SKILL.md:**
 ```markdown
 ---
 enact: "2.0.0"
@@ -640,11 +676,11 @@ A Go tool that compiles to a native binary:
 
 ```
 url-checker/
-├── enact.md
+├── SKILL.md
 └── main.go
 ```
 
-**enact.md:**
+**SKILL.md:**
 ```markdown
 ---
 enact: "2.0.0"
@@ -737,11 +773,11 @@ func main() {
 
 ```
 markdown-to-html/
-├── enact.md
+├── SKILL.md
 └── convert.rb
 ```
 
-**enact.md:**
+**SKILL.md:**
 ```markdown
 ---
 enact: "2.0.0"
@@ -797,11 +833,11 @@ These are minimal templates. See Part 4 for complete examples with build steps.
 
 ```
 my-python-tool/
-├── enact.md
+├── SKILL.md
 └── main.py
 ```
 
-**enact.md:**
+**SKILL.md:**
 ```markdown
 ---
 enact: "2.0.0"
@@ -839,11 +875,11 @@ print(json.dumps(result))
 
 ```
 my-node-tool/
-├── enact.md
+├── SKILL.md
 └── index.js
 ```
 
-**enact.md:**
+**SKILL.md:**
 ```markdown
 ---
 enact: "2.0.0"
@@ -875,11 +911,11 @@ console.log(JSON.stringify({ result: input.toUpperCase() }));
 
 ```
 my-rust-tool/
-├── enact.md
+├── SKILL.md
 └── main.rs
 ```
 
-**enact.md:**
+**SKILL.md:**
 ```markdown
 ---
 enact: "2.0.0"
@@ -916,10 +952,10 @@ fn main() {
 
 ```
 my-shell-tool/
-└── enact.md
+└── SKILL.md
 ```
 
-**enact.md:**
+**SKILL.md:**
 ```markdown
 ---
 enact: "2.0.0"
@@ -945,7 +981,7 @@ inputSchema:
 
 ### Declaring Secrets
 
-In `enact.md`:
+In `SKILL.md`:
 ```yaml
 env:
   API_KEY:
@@ -993,33 +1029,35 @@ Lookup order:
 
 ```bash
 mkdir my-tool && cd my-tool
-# Create enact.md and any source files
+
+# Option A: Use the init command (recommended)
+enact init --tool
+
+# Option B: Create SKILL.md manually
+# Create SKILL.md and any source files
 ```
 
 ### Step 2: Test Locally
 
 ```bash
 # Run from the tool directory
-enact run . --input "name=Test"
-
-# Or run with JSON args
-enact run . --args '{"name": "Test"}'
+enact run ./ --args '{"name": "Test"}'
 
 # Dry run to see what would execute
-enact run . --input "name=Test" --dry-run
+enact run ./ --args '{"name": "Test"}' --dry-run
 ```
 
 ### Step 3: Install Locally for Testing
 
 ```bash
 # Install to project
-enact install .
+enact install ./
 
 # Or install globally
-enact install . --global
+enact install ./ --global
 
 # Now run by name
-enact run myorg/tools/my-tool --input "name=Test"
+enact run myorg/tools/my-tool --args '{"name": "Test"}'
 ```
 
 ### Step 4: Sign and Publish
@@ -1028,11 +1066,14 @@ enact run myorg/tools/my-tool --input "name=Test"
 # Login first
 enact auth login
 
-# Sign the tool
-enact sign .
+# Sign the tool (uses Sigstore for keyless signing)
+enact sign ./
 
 # Publish to registry
-enact publish .
+enact publish ./
+
+# View your published tool
+enact learn myorg/tools/my-tool
 ```
 
 ---
@@ -1397,12 +1438,19 @@ You are a summarization expert. Given text, create a concise summary.
 
 As an LLM agent working with Enact:
 
-1. **Create** tools with `enact.md` files containing YAML frontmatter
-2. **Test** locally with `enact run ./my-tool --input "key=value"`
-3. **Install** with `enact install .` (project) or `enact install . --global`
-4. **Sign** with `enact sign .` before publishing
-5. **Publish** with `enact publish .`
-6. **Discover** tools with `enact search "query"`
-7. **Run** published tools with `enact run author/tool --args '{...}'`
+1. **Create** tools with `enact init --tool` or write `SKILL.md` files manually
+2. **Test** locally with `enact run ./ --args '{"key": "value"}'`
+3. **Learn** about tools with `enact learn author/tool`
+4. **Install** with `enact install ./` (project) or `enact install ./ --global`
+5. **Sign** with `enact sign ./` before publishing
+6. **Publish** with `enact publish ./`
+7. **Discover** tools with `enact search "query"`
+8. **Run** published tools with `enact run author/tool --args '{...}'`
 
-The key insight: **Container tools** have a `command` field and execute deterministically. **Instruction tools** omit `command` and are interpreted by LLMs using the markdown body.
+The key insight: **Container tools** have a `command` field and execute deterministically in Docker. **Instruction tools** omit `command` and are interpreted by LLMs using the markdown body.
+
+## Resources
+
+- **Registry**: [enact.tools](https://enact.tools)
+- **CLI Help**: `enact --help` or `enact <command> --help`
+- **GitHub**: [github.com/EnactProtocol/enact-cli](https://github.com/EnactProtocol/enact-cli)

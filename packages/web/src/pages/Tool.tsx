@@ -80,9 +80,13 @@ export default function Tool() {
     enabled: !!tool?.latestVersion,
   });
 
-  // Find the enact.yaml or enact.md file
+  // Find the manifest file (SKILL.md preferred, with fallback to legacy formats)
   const enactFile = filesData?.files.find(
-    (f) => f.path === "enact.yaml" || f.path === "enact.yml" || f.path === "enact.md"
+    (f) =>
+      f.path === "SKILL.md" ||
+      f.path === "enact.md" ||
+      f.path === "enact.yaml" ||
+      f.path === "enact.yml"
   );
 
   // Fetch enact file content
