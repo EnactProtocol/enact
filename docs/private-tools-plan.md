@@ -8,8 +8,8 @@ Add a `--private` flag to `enact publish` that sets tool visibility. Private too
 
 ### Phases
 
-1. **Phase 1**: Basic private/public visibility
-2. **Phase 2**: Unlisted visibility + management command
+1. **Phase 1**: Basic private/public visibility ✅ **COMPLETE**
+2. **Phase 2**: Unlisted visibility + management command ✅ **COMPLETE** (merged with Phase 1)
 3. **Phase 3**: Individual collaborator access grants
 4. **Phase 4**: Organization-level tools and membership
 
@@ -24,9 +24,28 @@ Add a `--private` flag to `enact publish` that sets tool visibility. Private too
 
 ---
 
-## Phase 1: Basic Private Tools
+## Phase 1: Basic Private Tools ✅ IMPLEMENTED
 
-### 1.1 Database Schema Changes
+### Implementation Summary
+
+**Database Migration**: `packages/server/supabase/migrations/20251221000000_add_tool_visibility.sql`
+- Added `visibility` column with CHECK constraint
+- Updated RLS policies for tools and tool_versions
+
+**Search Migration**: `packages/server/supabase/migrations/20251221000001_update_search_for_visibility.sql`
+- Updated `search_tools_hybrid` function to only return public tools
+
+**CLI Changes**:
+- `enact publish --private` - Publish as private
+- `enact publish --unlisted` - Publish as unlisted
+- `enact visibility <tool> <visibility>` - Change tool visibility
+
+**API Changes**:
+- Added `visibility` field to publish form data
+- Added `PATCH /tools/{name}/visibility` endpoint
+- Added `visibility` field to tool metadata responses
+
+### Original 1.1 Database Schema Changes
 
 Add visibility column to the `tools` table:
 

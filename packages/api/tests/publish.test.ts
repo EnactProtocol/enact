@@ -96,6 +96,73 @@ describe("publish module", () => {
       expect(result.name).toBeTruthy();
     });
 
+    test("supports visibility option", async () => {
+      const client = createApiClient({ authToken: "valid-token" });
+      const bundle = new TextEncoder().encode("mock bundle content");
+
+      // Test private visibility (default)
+      const privateResult = await publishTool(client, {
+        name: "alice/utils/private-tool",
+        manifest: {
+          enact: "2.0.0",
+          name: "alice/utils/private-tool",
+          version: "1.0.0",
+          description: "A private tool",
+        },
+        bundle,
+        visibility: "private",
+      });
+      expect(privateResult.name).toBeTruthy();
+
+      // Test public visibility
+      const publicResult = await publishTool(client, {
+        name: "alice/utils/public-tool",
+        manifest: {
+          enact: "2.0.0",
+          name: "alice/utils/public-tool",
+          version: "1.0.0",
+          description: "A public tool",
+        },
+        bundle,
+        visibility: "public",
+      });
+      expect(publicResult.name).toBeTruthy();
+
+      // Test unlisted visibility
+      const unlistedResult = await publishTool(client, {
+        name: "alice/utils/unlisted-tool",
+        manifest: {
+          enact: "2.0.0",
+          name: "alice/utils/unlisted-tool",
+          version: "1.0.0",
+          description: "An unlisted tool",
+        },
+        bundle,
+        visibility: "unlisted",
+      });
+      expect(unlistedResult.name).toBeTruthy();
+    });
+
+    test("defaults to private visibility when not specified", async () => {
+      const client = createApiClient({ authToken: "valid-token" });
+      const bundle = new TextEncoder().encode("mock bundle content");
+
+      // When visibility is not specified, it should default to private
+      const result = await publishTool(client, {
+        name: "alice/utils/default-visibility",
+        manifest: {
+          enact: "2.0.0",
+          name: "alice/utils/default-visibility",
+          version: "1.0.0",
+          description: "Default visibility test",
+        },
+        bundle,
+        // No visibility specified - should default to "private"
+      });
+
+      expect(result.name).toBeTruthy();
+    });
+
     test("requires authentication", async () => {
       const client = createApiClient({ baseUrl: "http://localhost" });
       const bundle = new TextEncoder().encode("mock bundle content");

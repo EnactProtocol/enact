@@ -155,6 +155,12 @@ Deno.serve(async (req) => {
       return addCorsHeaders(await handleGetVersion(supabase, toolName, version));
     }
 
+    // PATCH /tools/{name}/visibility -> change tool visibility
+    if (pathParts[pathParts.length - 1] === "visibility" && req.method === "PATCH") {
+      const toolName = pathParts.slice(1, pathParts.length - 1).join("/");
+      return addCorsHeaders(await handleChangeVisibility(supabase, req, toolName));
+    }
+
     // POST /tools/{name} -> publish tool
     if (pathParts[0] === "tools" && pathParts.length >= 2 && req.method === "POST") {
       const toolName = pathParts.slice(1).join("/");
@@ -280,9 +286,11 @@ async function handleSearch(supabase: any, url: URL): Promise<Response> {
   }
 
   // Fallback to text-based search (ILIKE)
+  // Only search public tools - private and unlisted tools are not searchable
   const { data: tools, error, count } = await supabase
     .from("tools")
     .select("*, tool_versions!inner(*)", { count: "exact" })
+    .eq("visibility", "public")
     .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
     .order("total_downloads", { ascending: false })
     .range(offset, offset + limit - 1);
@@ -344,10 +352,15 @@ async function handlePublish(
   const manifestStr = formData.get("manifest") as string;
   const bundleFile = formData.get("bundle") as File;
   const rawManifest = formData.get("raw_manifest") as string | null;
+  const visibility = formData.get("visibility") as string | null;
 
   if (!manifestStr || !bundleFile) {
     return Errors.validation("Missing manifest or bundle");
   }
+
+  // Validate visibility value
+  const validVisibilities = ["public", "private", "unlisted"];
+  const toolVisibility = visibility && validVisibilities.includes(visibility) ? visibility : "public";
 
   const manifest = JSON.parse(manifestStr);
   const version = manifest.version;
@@ -452,6 +465,7 @@ async function handlePublish(
       description: manifest.description,
       license: manifest.license,
       tags: manifest.tags ?? [],
+      visibility: toolVisibility,
     };
 
     // Add embedding if generated
@@ -489,6 +503,7 @@ async function handlePublish(
       description: manifest.description,
       license: manifest.license,
       tags: manifest.tags ?? [],
+      visibility: toolVisibility,
     };
 
     if (embedding) {
@@ -552,6 +567,63 @@ async function handlePublish(
 }
 
 /**
+ * Handle change visibility
+ */
+async function handleChangeVisibility(
+  supabase: any,
+  req: Request,
+  toolName: string
+): Promise<Response> {
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return Errors.unauthorized();
+  }
+
+  // Parse request body
+  const body = await req.json();
+  const visibility = body.visibility;
+
+  // Validate visibility value
+  const validVisibilities = ["public", "private", "unlisted"];
+  if (!visibility || !validVisibilities.includes(visibility)) {
+    return Errors.validation(`Invalid visibility. Must be one of: ${validVisibilities.join(", ")}`);
+  }
+
+  // Get the tool and verify ownership
+  const { data: tool, error: toolError } = await supabase
+    .from("tools")
+    .select("id, owner_id")
+    .eq("name", toolName)
+    .single();
+
+  if (toolError || !tool) {
+    return Errors.notFound(`Tool not found: ${toolName}`);
+  }
+
+  // Verify ownership
+  if (tool.owner_id !== user.id) {
+    return Errors.unauthorized("You do not own this tool");
+  }
+
+  // Update visibility
+  const { error: updateError } = await supabase
+    .from("tools")
+    .update({ visibility })
+    .eq("id", tool.id);
+
+  if (updateError) {
+    return Errors.internal(updateError.message);
+  }
+
+  return successResponse({
+    name: toolName,
+    visibility,
+    updated: true,
+  });
+}
+
+/**
  * Handle get tool
  */
 async function handleGetTool(
@@ -603,6 +675,7 @@ async function handleGetTool(
       avatar_url: null,
     },
     repository: tool.repository_url,
+    visibility: tool.visibility ?? "public",
     created_at: tool.created_at,
     updated_at: tool.updated_at,
     latest_version: latestVersion,

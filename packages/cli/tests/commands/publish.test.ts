@@ -54,6 +54,56 @@ describe("publish command", () => {
       const jsonOpt = opts.find((o) => o.long === "--json");
       expect(jsonOpt).toBeDefined();
     });
+
+    test("has --public option", () => {
+      const program = new Command();
+      configurePublishCommand(program);
+
+      const publishCmd = program.commands.find((cmd) => cmd.name() === "publish");
+      const opts = publishCmd?.options ?? [];
+      const publicOpt = opts.find((o) => o.long === "--public");
+      expect(publicOpt).toBeDefined();
+    });
+
+    test("has --unlisted option", () => {
+      const program = new Command();
+      configurePublishCommand(program);
+
+      const publishCmd = program.commands.find((cmd) => cmd.name() === "publish");
+      const opts = publishCmd?.options ?? [];
+      const unlistedOpt = opts.find((o) => o.long === "--unlisted");
+      expect(unlistedOpt).toBeDefined();
+    });
+  });
+
+  describe("visibility determination", () => {
+    type ToolVisibility = "public" | "private" | "unlisted";
+
+    // Mirrors the logic in publish command
+    const determineVisibility = (options: {
+      public?: boolean;
+      unlisted?: boolean;
+    }): ToolVisibility => {
+      if (options.public) return "public";
+      if (options.unlisted) return "unlisted";
+      return "private"; // Default is private
+    };
+
+    test("defaults to private visibility", () => {
+      expect(determineVisibility({})).toBe("private");
+    });
+
+    test("--public flag sets public visibility", () => {
+      expect(determineVisibility({ public: true })).toBe("public");
+    });
+
+    test("--unlisted flag sets unlisted visibility", () => {
+      expect(determineVisibility({ unlisted: true })).toBe("unlisted");
+    });
+
+    test("--public takes precedence over --unlisted", () => {
+      expect(determineVisibility({ public: true, unlisted: true })).toBe("public");
+    });
   });
 
   describe("manifest file detection", () => {

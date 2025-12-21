@@ -39,10 +39,15 @@ import { loadGitignore, shouldIgnore } from "../../utils/ignore";
 const AUTH_NAMESPACE = "enact:auth";
 const ACCESS_TOKEN_KEY = "access_token";
 
+/** Tool visibility levels */
+export type ToolVisibility = "public" | "private" | "unlisted";
+
 interface PublishOptions extends GlobalOptions {
   dryRun?: boolean;
   tag?: string;
   skipAuth?: boolean;
+  public?: boolean;
+  unlisted?: boolean;
 }
 
 /**
@@ -203,10 +208,18 @@ async function publishHandler(
   header(`Publishing ${toolName}@${version}`);
   newline();
 
+  // Determine visibility (private by default for security)
+  const visibility: ToolVisibility = options.public
+    ? "public"
+    : options.unlisted
+      ? "unlisted"
+      : "private";
+
   // Show what we're publishing
   keyValue("Name", toolName);
   keyValue("Version", version);
   keyValue("Description", manifest.description);
+  keyValue("Visibility", visibility);
   if (manifest.tags && manifest.tags.length > 0) {
     keyValue("Tags", manifest.tags.join(", "));
   }
@@ -290,6 +303,7 @@ async function publishHandler(
     info("Would publish to registry:");
     keyValue("Tool", toolName);
     keyValue("Version", version);
+    keyValue("Visibility", visibility);
     keyValue("Source", toolDir);
 
     // Show files that would be bundled
@@ -326,6 +340,7 @@ async function publishHandler(
       manifest: manifest as unknown as Record<string, unknown>,
       bundle,
       rawManifest: rawManifestContent,
+      visibility,
     });
   });
 
@@ -337,10 +352,15 @@ async function publishHandler(
 
   // Success output
   newline();
-  success(`Published ${result.name}@${result.version}`);
+  success(`Published ${result.name}@${result.version} (${visibility})`);
   keyValue("Bundle Hash", result.bundleHash);
   keyValue("Published At", result.publishedAt.toISOString());
   newline();
+  if (visibility === "private") {
+    dim("This tool is private - only you can access it.");
+  } else if (visibility === "unlisted") {
+    dim("This tool is unlisted - accessible via direct link, not searchable.");
+  }
   dim(`Install with: enact install ${toolName}`);
 }
 
@@ -356,6 +376,8 @@ export function configurePublishCommand(program: Command): void {
     .option("-v, --verbose", "Show detailed output")
     .option("--skip-auth", "Skip authentication (for local development)")
     .option("--json", "Output as JSON")
+    .option("--public", "Publish as public (searchable by everyone)")
+    .option("--unlisted", "Publish as unlisted (accessible via direct link, not searchable)")
     .action(async (pathArg: string | undefined, options: PublishOptions) => {
       const resolvedPath = pathArg ?? ".";
       const ctx: CommandContext = {

@@ -52,6 +52,11 @@ export interface VersionMetadata {
 }
 
 /**
+ * Tool visibility levels
+ */
+export type ToolVisibility = "public" | "private" | "unlisted";
+
+/**
  * Tool search result item
  */
 export interface ToolSearchResult {
@@ -67,6 +72,8 @@ export interface ToolSearchResult {
   author: ApiAuthor;
   /** Total downloads */
   downloads: number;
+  /** Tool visibility (only included for owner's own tools) */
+  visibility?: ToolVisibility | undefined;
   /** Trust status */
   trust_status?:
     | {
@@ -93,6 +100,8 @@ export interface ToolMetadata {
   repository?: string | undefined;
   /** Homepage URL */
   homepage?: string | undefined;
+  /** Tool visibility: public, private, or unlisted */
+  visibility?: ToolVisibility | undefined;
   /** Creation timestamp */
   created_at: string;
   /** Last update timestamp */

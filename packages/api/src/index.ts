@@ -60,6 +60,7 @@ export type {
   BundleInfo,
   SubmitAttestationOptions,
   AttestationResult,
+  ToolVisibility,
 } from "./publish";
 
 // =============================================================================

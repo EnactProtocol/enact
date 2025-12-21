@@ -30,3 +30,6 @@ export { configureInspectCommand } from "./inspect";
 // API v2 migration commands
 export { configureYankCommand } from "./yank";
 export { configureUnyankCommand } from "./unyank";
+
+// Private tools (Phase - visibility management)
+export { configureVisibilityCommand } from "./visibility";

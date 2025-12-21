@@ -29,6 +29,7 @@ import {
   configureSignCommand,
   configureTrustCommand,
   configureUnyankCommand,
+  configureVisibilityCommand,
   configureYankCommand,
 } from "./commands";
 import { error, formatError } from "./utils";
@@ -77,6 +78,9 @@ async function main() {
   // API v2 migration commands
   configureYankCommand(program);
   configureUnyankCommand(program);
+
+  // Private tools - visibility management
+  configureVisibilityCommand(program);
 
   // Global error handler - handle Commander's help/version exits gracefully
   program.exitOverride((err) => {

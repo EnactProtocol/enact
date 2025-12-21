@@ -103,6 +103,11 @@ export async function createBundle(toolDir: string): Promise<BundleInfo> {
 }
 
 /**
+ * Tool visibility levels
+ */
+export type ToolVisibility = "public" | "private" | "unlisted";
+
+/**
  * Publish a tool to the registry (v2 - multipart upload)
  *
  * @param client - API client instance (must be authenticated)
@@ -116,7 +121,8 @@ export async function createBundle(toolDir: string): Promise<BundleInfo> {
  *   name: "alice/utils/greeter",
  *   manifest: { enact: "2.0.0", name: "alice/utils/greeter", version: "1.2.0", ... },
  *   bundle: bundle.data,
- *   rawManifest: "---\nenact: 2.0.0\n...\n---\n# My Tool\n\nDescription..."
+ *   rawManifest: "---\nenact: 2.0.0\n...\n---\n# My Tool\n\nDescription...",
+ *   visibility: "private"
  * });
  * console.log(`Published: ${result.bundleHash}`);
  * ```
@@ -129,9 +135,11 @@ export async function publishTool(
     bundle: ArrayBuffer | Uint8Array;
     /** The raw enact.md file content (frontmatter + markdown documentation) */
     rawManifest?: string | undefined;
+    /** Tool visibility: public, private, or unlisted */
+    visibility?: ToolVisibility | undefined;
   }
 ): Promise<PublishResult> {
-  const { name, manifest, bundle, rawManifest } = options;
+  const { name, manifest, bundle, rawManifest, visibility = "private" } = options;
 
   // Create FormData for multipart upload
   const formData = new FormData();
@@ -150,6 +158,9 @@ export async function publishTool(
   if (rawManifest) {
     formData.append("raw_manifest", rawManifest);
   }
+
+  // Add visibility
+  formData.append("visibility", visibility);
 
   // Make multipart request (v2 endpoint is POST /tools/{name})
   const response = await fetch(`${client.getBaseUrl()}/tools/${name}`, {
