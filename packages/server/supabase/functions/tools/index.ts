@@ -179,6 +179,18 @@ Deno.serve(async (req) => {
       return addCorsHeaders(await handleDeleteTool(supabase, toolName));
     }
 
+    // GET /users/{username} -> get user profile
+    if (pathParts[0] === "users" && pathParts.length === 2 && req.method === "GET") {
+      const username = pathParts[1];
+      return addCorsHeaders(await handleGetUserProfile(supabase, username));
+    }
+
+    // GET /users/{username}/tools -> get user's tools
+    if (pathParts[0] === "users" && pathParts.length === 3 && pathParts[2] === "tools" && req.method === "GET") {
+      const username = pathParts[1];
+      return addCorsHeaders(await handleGetUserTools(supabase, username, url));
+    }
+
     return addCorsHeaders(Errors.notFound("Endpoint not found"));
   } catch (error) {
     console.error("[Tools] Error:", error);
@@ -1158,4 +1170,150 @@ async function handleDeleteTool(
   }
 
   return noContentResponse();
+}
+
+/**
+ * Handle get user profile
+ */
+async function handleGetUserProfile(
+  supabase: any,
+  username: string
+): Promise<Response> {
+  // Fetch profile by username
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("id, username, display_name, avatar_url, created_at")
+    .eq("username", username.toLowerCase())
+    .single();
+
+  if (error || !profile) {
+    return Errors.notFound(`User "${username}" not found`);
+  }
+
+  // Count public tools for this user
+  const { count: toolCount } = await supabase
+    .from("tools")
+    .select("*", { count: "exact", head: true })
+    .eq("owner_id", profile.id)
+    .eq("visibility", "public");
+
+  return jsonResponse({
+    username: profile.username,
+    display_name: profile.display_name,
+    avatar_url: profile.avatar_url,
+    created_at: profile.created_at,
+    public_tool_count: toolCount || 0,
+  });
+}
+
+/**
+ * Handle get user's tools
+ */
+async function handleGetUserTools(
+  supabase: any,
+  username: string,
+  url: URL
+): Promise<Response> {
+  const { limit, offset } = parsePaginationParams(url);
+  const includePrivate = url.searchParams.get("include_private") === "true";
+
+  // Get current user to check if they're viewing their own profile
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Fetch profile by username
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, username")
+    .eq("username", username.toLowerCase())
+    .single();
+
+  if (profileError || !profile) {
+    return Errors.notFound(`User "${username}" not found`);
+  }
+
+  // Check if current user is viewing their own profile
+  const isOwnProfile = user?.id === profile.id;
+
+  // Build query for tools
+  let query = supabase
+    .from("tools")
+    .select(`
+      id,
+      name,
+      description,
+      tags,
+      license,
+      visibility,
+      created_at,
+      updated_at
+    `)
+    .eq("owner_id", profile.id)
+    .order("updated_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  // Only show private tools if viewing own profile and requested
+  if (isOwnProfile && includePrivate) {
+    // Show all tools (public, private, unlisted)
+  } else {
+    // Only show public tools
+    query = query.eq("visibility", "public");
+  }
+
+  const { data: tools, error: toolsError, count } = await query;
+
+  if (toolsError) {
+    return Errors.internal(toolsError.message);
+  }
+
+  // Fetch latest version for each tool
+  const toolIds = tools?.map((t: any) => t.id) || [];
+  const { data: versions } = await supabase
+    .from("tool_versions")
+    .select("tool_id, version, downloads, published_at, yanked")
+    .in("tool_id", toolIds);
+
+  // Build version map - find latest non-yanked version per tool
+  const versionMap = new Map<string, { version: string; downloads: number; published_at: string }>();
+  const downloadMap = new Map<string, number>();
+  
+  for (const v of versions || []) {
+    // Track total downloads
+    downloadMap.set(v.tool_id, (downloadMap.get(v.tool_id) || 0) + v.downloads);
+    
+    // Find latest non-yanked version
+    if (!v.yanked) {
+      const existing = versionMap.get(v.tool_id);
+      if (!existing || v.published_at > existing.published_at) {
+        versionMap.set(v.tool_id, {
+          version: v.version,
+          downloads: v.downloads,
+          published_at: v.published_at,
+        });
+      }
+    }
+  }
+
+  // Format response
+  const formattedTools = tools?.map((tool: any) => {
+    const latestVersion = versionMap.get(tool.id);
+    return {
+      name: tool.name,
+      description: tool.description,
+      tags: tool.tags || [],
+      license: tool.license,
+      visibility: tool.visibility,
+      version: latestVersion?.version || "0.0.0",
+      downloads: downloadMap.get(tool.id) || 0,
+      created_at: tool.created_at,
+      updated_at: tool.updated_at,
+    };
+  }) || [];
+
+  return jsonResponse({
+    tools: formattedTools,
+    total: count || formattedTools.length,
+    limit,
+    offset,
+    is_own_profile: isOwnProfile,
+  });
 }

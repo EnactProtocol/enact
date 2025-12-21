@@ -429,6 +429,34 @@ export interface FileContentResponse {
   encoding: "utf-8" | "base64";
 }
 
+export interface UserProfile {
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  public_tool_count: number;
+}
+
+export interface UserTool {
+  name: string;
+  description: string;
+  tags: string[];
+  license: string;
+  visibility: "public" | "private" | "unlisted";
+  version: string;
+  downloads: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserToolsResponse {
+  tools: UserTool[];
+  total: number;
+  limit: number;
+  offset: number;
+  is_own_profile: boolean;
+}
+
 /**
  * Get list of files in a tool bundle
  */
@@ -454,5 +482,35 @@ export async function getFileContent(
   const response = await client.get<FileContentResponse>(
     `/tools/${name}/versions/${version}/files/${encodedPath}`
   );
+  return response.data;
+}
+
+/**
+ * Get user profile by username
+ */
+export async function getUserProfile(
+  client: EnactApiClient,
+  username: string
+): Promise<UserProfile> {
+  const response = await client.get<UserProfile>(`/users/${username}`);
+  return response.data;
+}
+
+/**
+ * Get user's tools
+ */
+export async function getUserTools(
+  client: EnactApiClient,
+  username: string,
+  options: { includePrivate?: boolean; limit?: number; offset?: number } = {}
+): Promise<UserToolsResponse> {
+  const params = new URLSearchParams();
+  if (options.includePrivate) params.set("include_private", "true");
+  if (options.limit) params.set("limit", options.limit.toString());
+  if (options.offset) params.set("offset", options.offset.toString());
+
+  const queryString = params.toString();
+  const url = `/users/${username}/tools${queryString ? `?${queryString}` : ""}`;
+  const response = await client.get<UserToolsResponse>(url);
   return response.data;
 }

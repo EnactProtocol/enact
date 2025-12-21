@@ -3,7 +3,8 @@ import AttestButton from "@/components/trust/AttestButton";
 import Badge from "@/components/ui/Badge";
 import CopyButton from "@/components/ui/CopyButton";
 import Spinner from "@/components/ui/Spinner";
-import { apiClient, getFileContent, getToolFiles, getToolInfo } from "@/lib/api";
+import { useApiClient } from "@/hooks/useApiClient";
+import { getFileContent, getToolFiles, getToolInfo } from "@/lib/api";
 import type { FileContentResponse, ToolFilesResponse, ToolInfo } from "@/lib/api-client";
 import { formatNumber, getInstallCommand, getRunCommand } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -58,6 +59,7 @@ export default function Tool() {
   const { "*": fullPath } = useParams<{ "*": string }>();
   const { toolName, isCodeView, filePath } = parseToolPath(fullPath);
   const { owner, displayName } = parseToolName(toolName);
+  const apiClient = useApiClient();
 
   // If it's a code view, delegate to ToolCode component
   if (isCodeView && toolName) {
@@ -69,7 +71,7 @@ export default function Tool() {
     isLoading,
     error,
   } = useQuery<ToolInfo>({
-    queryKey: ["tool", toolName],
+    queryKey: ["tool", toolName, apiClient],
     queryFn: () => getToolInfo(apiClient, toolName),
   });
 

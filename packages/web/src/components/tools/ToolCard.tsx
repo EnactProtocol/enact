@@ -17,7 +17,7 @@ interface ToolCardProps {
 export default function ToolCard({ tool }: ToolCardProps) {
   // Parse tool name into owner and name
   const parts = tool.name.split("/");
-  const owner = parts.length > 1 ? parts.slice(0, -1).join("/") : "";
+  const owner = parts.length > 1 ? parts[0] : "";
   const name = parts[parts.length - 1];
 
   return (
@@ -25,7 +25,15 @@ export default function ToolCard({ tool }: ToolCardProps) {
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
           <h3 className="text-lg font-semibold text-gray-900 truncate">{name}</h3>
-          {owner && <p className="text-sm text-gray-400 truncate">{owner}</p>}
+          {owner && (
+            <Link
+              to={`/u/${owner}`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-sm text-gray-400 hover:text-brand-blue truncate inline-block"
+            >
+              {owner}
+            </Link>
+          )}
         </div>
         {tool.verified && (
           <Shield className="w-5 h-5 text-status-good flex-shrink-0 ml-2" aria-label="Verified" />

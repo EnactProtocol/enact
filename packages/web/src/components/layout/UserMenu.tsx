@@ -64,14 +64,16 @@ export default function UserMenu() {
 
           {/* Menu items */}
           <div className="py-1">
-            <Link
-              to="/profile"
-              onClick={() => setIsOpen(false)}
-              className="flex items-center gap-3 px-4 py-2 text-sm text-gray-6 hover:bg-gray-1 transition-colors"
-            >
-              <User className="w-4 h-4" />
-              Your Profile
-            </Link>
+            {profile?.username && (
+              <Link
+                to={`/u/${profile.username}`}
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-3 px-4 py-2 text-sm text-gray-6 hover:bg-gray-1 transition-colors"
+              >
+                <User className="w-4 h-4" />
+                Your Profile
+              </Link>
+            )}
             <Link
               to="/settings"
               onClick={() => setIsOpen(false)}

@@ -5,6 +5,7 @@ import Browse from "./pages/Browse";
 import Docs from "./pages/Docs";
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
+import Profile from "./pages/Profile";
 import Tool from "./pages/Tool";
 import AuthCallback from "./pages/auth/AuthCallback";
 import ChooseUsername from "./pages/auth/ChooseUsername";
@@ -24,6 +25,8 @@ export default function App() {
         <Route path="docs" element={<Docs />} />
         {/* Tool names can have any number of segments: owner/name, owner/cat/name, etc. */}
         <Route path="tools/*" element={<Tool />} />
+        {/* User profile page */}
+        <Route path="u/:username" element={<Profile />} />
         <Route path="login" element={<Login />} />
         <Route path="*" element={<NotFound />} />
       </Route>
