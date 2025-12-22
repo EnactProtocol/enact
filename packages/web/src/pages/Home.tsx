@@ -3,6 +3,7 @@ import {
   ArrowRight,
   Bot,
   ChevronRight,
+  Copy,
   Download,
   File,
   Folder,
@@ -16,6 +17,7 @@ import {
   Terminal,
   Zap,
 } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
 export default function Home() {
@@ -442,26 +444,12 @@ export default function Home() {
             <h2 className="text-3xl font-bold text-center mb-8 text-gray-6">Quick Start</h2>
             <div className="card">
               <div className="space-y-4">
-                <div>
-                  <h3 className="font-semibold mb-2 text-gray-6">1. Install the CLI</h3>
-                  <pre className="bg-gray-6 text-gray-1 p-4 rounded-lg overflow-x-auto">
-                    <code>npm install -g enact-cli</code>
-                  </pre>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2 text-gray-6">2. Search for tools</h3>
-                  <pre className="bg-gray-6 text-gray-1 p-4 rounded-lg overflow-x-auto">
-                    <code>enact search image-processing</code>
-                  </pre>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2 text-gray-6">3. Run a tool</h3>
-                  <pre className="bg-gray-6 text-gray-1 p-4 rounded-lg overflow-x-auto">
-                    <code>
-                      enact run alice/image-resizer --args '{"{"}width{":"} 800{"}"}'
-                    </code>
-                  </pre>
-                </div>
+                <CodeBlock title="1. Install the CLI" code="npm install -g enact-cli" />
+                <CodeBlock title="2. Initialize your project" code="git init" />
+                <CodeBlock
+                  title="3. Ask Claude how to use Enact"
+                  code='claude "explain how I can use enact"'
+                />
               </div>
             </div>
           </div>
@@ -508,6 +496,39 @@ function FileTreeCard({
             <span>{file.name}</span>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function CodeBlock({ title, code }: { title: string; code: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div>
+      <h3 className="font-semibold mb-2 text-gray-6">{title}</h3>
+      <div className="relative group">
+        <pre className="bg-gray-6 text-gray-1 p-4 rounded-lg overflow-x-auto">
+          <code>{code}</code>
+        </pre>
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="absolute top-2 right-2 p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors opacity-0 group-hover:opacity-100"
+          aria-label="Copy code"
+        >
+          {copied ? (
+            <span className="text-green-400 text-sm">Copied!</span>
+          ) : (
+            <Copy className="w-4 h-4 text-gray-300" />
+          )}
+        </button>
       </div>
     </div>
   );
