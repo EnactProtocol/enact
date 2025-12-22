@@ -15,7 +15,7 @@ export default function Header() {
             <span className="text-xl font-bold text-gray-6">Enact</span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-6">
+          <nav className="hidden md:flex items-center gap-10">
             <Link to="/browse" className="text-gray-5 hover:text-brand-blue transition-colors">
               Browse Tools
             </Link>
@@ -38,6 +38,9 @@ export default function Header() {
             >
               GitHub
             </a>
+            <Link to="/blog" className="text-gray-5 hover:text-brand-blue transition-colors">
+              Blog
+            </Link>
           </nav>
 
           <div className="flex items-center gap-3">

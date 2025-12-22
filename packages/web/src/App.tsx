@@ -1,6 +1,8 @@
 import { Route, Routes } from "react-router-dom";
 import Layout from "./components/layout/Layout";
 import { usePageTracking } from "./hooks/usePageTracking";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 import Browse from "./pages/Browse";
 import Docs from "./pages/Docs";
 import Home from "./pages/Home";
@@ -22,6 +24,8 @@ export default function App() {
       <Route path="/" element={<Layout />}>
         <Route index element={<Home />} />
         <Route path="browse" element={<Browse />} />
+        <Route path="blog" element={<Blog />} />
+        <Route path="blog/:slug" element={<BlogPost />} />
         <Route path="docs" element={<Docs />} />
         {/* Tool names can have any number of segments: owner/name, owner/cat/name, etc. */}
         <Route path="tools/*" element={<Tool />} />

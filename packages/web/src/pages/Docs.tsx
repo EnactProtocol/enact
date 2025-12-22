@@ -99,7 +99,7 @@ const commands: CommandDoc[] = [
     examples: [
       {
         command: "enact init",
-        description: "Create a new tool template with enact.md and AGENTS.md",
+        description: "Create a new tool template with SKILL.md and AGENTS.md",
       },
       {
         command: "enact init --name myorg/utils/helper",
@@ -210,36 +210,49 @@ const commands: CommandDoc[] = [
     ],
   },
   {
-    id: "get",
-    name: "get",
-    description: "Show detailed information about a tool from the registry.",
+    id: "info",
+    name: "info",
+    description:
+      "Show detailed information about a tool including metadata, versions, signatures, and visibility.",
     icon: <Package className="w-5 h-5" />,
     colorClass: "bg-brand-teal text-gray-900",
     dotColor: "bg-brand-teal",
-    usage: "enact get <tool> [options]",
+    usage: "enact info <tool> [options]",
     category: "registry",
     options: [
       { flag: "--ver <version>", description: "Show info for a specific version" },
-      { flag: "-v, --verbose", description: "Show detailed output including manifest" },
+      { flag: "-v, --verbose", description: "Show detailed output including full manifest" },
       { flag: "--json", description: "Output as JSON" },
     ],
     examples: [
-      { command: "enact get alice/resizer", description: "Get tool info" },
-      { command: "enact get alice/resizer --ver 1.2.0", description: "Get specific version info" },
-      { command: "enact get alice/resizer --verbose", description: "Show full manifest" },
+      { command: "enact info alice/resizer", description: "Show tool info and metadata" },
+      {
+        command: "enact info alice/resizer --ver 1.2.0",
+        description: "Show specific version info",
+      },
+      {
+        command: "enact info alice/resizer --verbose",
+        description: "Show full manifest and signatures",
+      },
+      {
+        command: "enact info alice/resizer --json | jq '.visibility'",
+        description: "Check tool visibility",
+      },
     ],
   },
   {
     id: "publish",
     name: "publish",
     description:
-      "Publish a tool to the Enact registry. Creates a bundle and uploads with verification.",
+      "Publish a tool to the Enact registry. Creates a bundle and uploads with verification. Tools are private by default.",
     icon: <Upload className="w-5 h-5" />,
     colorClass: "bg-brand-green text-gray-900",
     dotColor: "bg-brand-green",
     usage: "enact publish [path] [options]",
     category: "registry",
     options: [
+      { flag: "--public", description: "Publish as public (visible to everyone, searchable)" },
+      { flag: "--unlisted", description: "Publish as unlisted (accessible via direct link only)" },
       { flag: "-n, --dry-run", description: "Show what would be published without publishing" },
       { flag: "-t, --tag <tag>", description: "Add a release tag (e.g., latest, beta)" },
       { flag: "-v, --verbose", description: "Show detailed output" },
@@ -247,7 +260,12 @@ const commands: CommandDoc[] = [
       { flag: "--json", description: "Output as JSON" },
     ],
     examples: [
-      { command: "enact publish", description: "Publish from current directory" },
+      { command: "enact publish", description: "Publish as private (default)" },
+      { command: "enact publish --public", description: "Publish as public (searchable)" },
+      {
+        command: "enact publish --unlisted",
+        description: "Publish as unlisted (direct link only)",
+      },
       { command: "enact publish ./my-tool", description: "Publish from specific path" },
       { command: "enact publish --dry-run", description: "Preview what would be published" },
     ],
@@ -255,7 +273,7 @@ const commands: CommandDoc[] = [
   {
     id: "learn",
     name: "learn",
-    description: "Display tool documentation (enact.md file) from the registry.",
+    description: "Display tool documentation (SKILL.md file) from the registry.",
     icon: <Book className="w-5 h-5" />,
     colorClass: "bg-blueLight-1 text-brand-blue",
     dotColor: "bg-blueLight-4",
@@ -287,6 +305,32 @@ const commands: CommandDoc[] = [
       { command: "enact cache list", description: "List all cached tools" },
       { command: "enact cache clear", description: "Clear the entire cache" },
       { command: "enact cache clear alice/resizer", description: "Clear specific tool from cache" },
+    ],
+  },
+  {
+    id: "visibility",
+    name: "visibility",
+    description:
+      "Change the visibility of a published tool. Tools can be private (default), unlisted, or public.",
+    icon: <Eye className="w-5 h-5" />,
+    colorClass: "bg-brand-pink text-gray-900",
+    dotColor: "bg-brand-pink",
+    usage: "enact visibility <tool> <level> [options]",
+    category: "registry",
+    options: [{ flag: "--json", description: "Output as JSON" }],
+    examples: [
+      {
+        command: "enact visibility alice/resizer public",
+        description: "Make tool public (searchable)",
+      },
+      {
+        command: "enact visibility alice/resizer private",
+        description: "Make tool private (only you)",
+      },
+      {
+        command: "enact visibility alice/resizer unlisted",
+        description: "Make tool unlisted (direct link only)",
+      },
     ],
   },
   {
@@ -742,7 +786,7 @@ function Overview({ onNavigate }: { onNavigate: (section: string) => void }) {
             </div>
             <div>
               <h3 className="font-semibold text-gray-600">Tool Manifest</h3>
-              <p className="text-sm text-gray-500 mt-1">Learn how to write enact.md files</p>
+              <p className="text-sm text-gray-500 mt-1">Learn how to write SKILL.md files</p>
             </div>
             <ChevronRight className="w-5 h-5 text-gray-400 ml-auto self-center" />
           </button>
@@ -775,7 +819,7 @@ function Overview({ onNavigate }: { onNavigate: (section: string) => void }) {
               <FileText className="w-6 h-6 text-gray-900" />
             </div>
             <div className="text-sm font-semibold mb-1">1. Define</div>
-            <p className="text-xs text-gray-400">Write an enact.md manifest with YAML + Markdown</p>
+            <p className="text-xs text-gray-400">Write a SKILL.md manifest with YAML + Markdown</p>
           </div>
           <div className="text-center">
             <div className="w-12 h-12 bg-brand-green rounded-xl flex items-center justify-center mx-auto mb-3">
@@ -973,7 +1017,7 @@ function GettingStarted() {
             </div>
             <h3 className="font-semibold text-gray-600 mb-1">Structured Manifests</h3>
             <p className="text-sm text-gray-500">
-              Tools are defined by enact.md files with YAML frontmatter. JSON Schema for inputs and
+              Tools are defined by SKILL.md files with YAML frontmatter. JSON Schema for inputs and
               outputs.
             </p>
           </div>
@@ -1000,7 +1044,7 @@ function ManifestReference() {
         <h1 className="text-3xl font-bold text-gray-600 mb-2">Tool Manifest Reference</h1>
         <p className="text-lg text-gray-500">
           Enact tools are defined by an{" "}
-          <code className="bg-pink-100 text-pink-600 px-2 py-0.5 rounded">enact.md</code> file with
+          <code className="bg-pink-100 text-pink-600 px-2 py-0.5 rounded">SKILL.md</code> file with
           YAML frontmatter and Markdown documentation.
         </p>
       </div>
@@ -1011,7 +1055,7 @@ function ManifestReference() {
           <div className="w-3 h-3 rounded-full bg-brand-red" />
           <div className="w-3 h-3 rounded-full bg-brand-yellow" />
           <div className="w-3 h-3 rounded-full bg-brand-green" />
-          <span className="text-gray-400 text-sm ml-2 font-mono">enact.md</span>
+          <span className="text-gray-400 text-sm ml-2 font-mono">SKILL.md</span>
         </div>
         <pre className="p-6 text-sm overflow-x-auto">
           <code className="text-gray-100">
@@ -1204,6 +1248,77 @@ enact run owner/category/tool --args '{"input": "hello"}'
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Tool Visibility */}
+      <div>
+        <h2 className="text-xl font-semibold text-gray-600 mb-4 flex items-center gap-2">
+          <span className="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center">
+            <Eye className="w-4 h-4 text-pink-600" />
+          </span>
+          Tool Visibility
+        </h2>
+        <p className="text-gray-500 mb-4">
+          Control who can access your tools. <strong>Tools are private by default</strong> for
+          security.
+        </p>
+        <div className="grid md:grid-cols-3 gap-4">
+          <div className="bg-gray-100 border-2 border-gray-300 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Lock className="w-5 h-5 text-gray-600" />
+              <code className="text-gray-700 font-semibold">private</code>
+              <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-full text-gray-600">
+                default
+              </span>
+            </div>
+            <p className="text-sm text-gray-500">
+              Only you can see and install. Not visible in search or browse.
+            </p>
+            <div className="mt-3 bg-gray-800 rounded-lg p-2">
+              <code className="text-brand-green font-mono text-xs">$ enact publish</code>
+            </div>
+          </div>
+          <div className="bg-yellow-100 border border-yellow-200 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Eye className="w-5 h-5 text-yellow-600" />
+              <code className="text-yellow-700 font-semibold">unlisted</code>
+            </div>
+            <p className="text-sm text-gray-500">
+              Anyone with the link can access. Not visible in search or browse.
+            </p>
+            <div className="mt-3 bg-gray-800 rounded-lg p-2">
+              <code className="text-brand-green font-mono text-xs">$ enact publish --unlisted</code>
+            </div>
+          </div>
+          <div className="bg-green-100 border border-green-200 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Search className="w-5 h-5 text-green-600" />
+              <code className="text-green-700 font-semibold">public</code>
+            </div>
+            <p className="text-sm text-gray-500">
+              Visible to everyone. Appears in search and browse results.
+            </p>
+            <div className="mt-3 bg-gray-800 rounded-lg p-2">
+              <code className="text-brand-green font-mono text-xs">$ enact publish --public</code>
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 p-4 bg-primary-50 border border-primary-200 rounded-xl">
+          <h4 className="font-semibold text-gray-600 mb-2">Changing Visibility</h4>
+          <p className="text-sm text-gray-500 mb-3">
+            You can change a tool's visibility after publishing:
+          </p>
+          <div className="bg-gray-800 rounded-lg p-3 space-y-2">
+            <div>
+              <code className="text-gray-400 font-mono text-sm"># Make a private tool public</code>
+            </div>
+            <div>
+              <code className="text-brand-green font-mono text-sm">
+                $ enact visibility alice/resizer public
+              </code>
+            </div>
           </div>
         </div>
       </div>

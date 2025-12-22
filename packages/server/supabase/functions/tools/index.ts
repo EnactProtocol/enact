@@ -161,6 +161,18 @@ Deno.serve(async (req) => {
       return addCorsHeaders(await handleChangeVisibility(supabase, req, toolName));
     }
 
+    // GET /tools/users/{username} -> get user profile (BEFORE generic GET /tools/{name})
+    if (pathParts[0] === "tools" && pathParts[1] === "users" && pathParts.length === 3 && req.method === "GET") {
+      const username = pathParts[2];
+      return addCorsHeaders(await handleGetUserProfile(supabase, username));
+    }
+
+    // GET /tools/users/{username}/tools -> get user's tools (BEFORE generic GET /tools/{name})
+    if (pathParts[0] === "tools" && pathParts[1] === "users" && pathParts.length === 4 && pathParts[3] === "tools" && req.method === "GET") {
+      const username = pathParts[2];
+      return addCorsHeaders(await handleGetUserTools(supabase, username, url));
+    }
+
     // POST /tools/{name} -> publish tool
     if (pathParts[0] === "tools" && pathParts.length >= 2 && req.method === "POST") {
       const toolName = pathParts.slice(1).join("/");
@@ -177,18 +189,6 @@ Deno.serve(async (req) => {
     if (pathParts[0] === "tools" && pathParts.length >= 2 && req.method === "DELETE") {
       const toolName = pathParts.slice(1).join("/");
       return addCorsHeaders(await handleDeleteTool(supabase, toolName));
-    }
-
-    // GET /tools/users/{username} -> get user profile
-    if (pathParts[0] === "tools" && pathParts[1] === "users" && pathParts.length === 3 && req.method === "GET") {
-      const username = pathParts[2];
-      return addCorsHeaders(await handleGetUserProfile(supabase, username));
-    }
-
-    // GET /tools/users/{username}/tools -> get user's tools
-    if (pathParts[0] === "tools" && pathParts[1] === "users" && pathParts.length === 4 && pathParts[3] === "tools" && req.method === "GET") {
-      const username = pathParts[2];
-      return addCorsHeaders(await handleGetUserTools(supabase, username, url));
     }
 
     return addCorsHeaders(Errors.notFound("Endpoint not found"));
