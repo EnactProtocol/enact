@@ -492,7 +492,7 @@ export async function getUserProfile(
   client: EnactApiClient,
   username: string
 ): Promise<UserProfile> {
-  const response = await client.get<UserProfile>(`/users/${username}`);
+  const response = await client.get<UserProfile>(`/tools/users/${username}`);
   return response.data;
 }
 
@@ -510,7 +510,7 @@ export async function getUserTools(
   if (options.offset) params.set("offset", options.offset.toString());
 
   const queryString = params.toString();
-  const url = `/users/${username}/tools${queryString ? `?${queryString}` : ""}`;
+  const url = `/tools/users/${username}/tools${queryString ? `?${queryString}` : ""}`;
   const response = await client.get<UserToolsResponse>(url);
   return response.data;
 }
