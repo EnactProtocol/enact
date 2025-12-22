@@ -1,4 +1,4 @@
-import { Github, Terminal } from "lucide-react";
+import { Github, MessageCircle, Terminal } from "lucide-react";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -23,7 +23,7 @@ export default function Footer() {
             <ul className="space-y-2 text-gray-5">
               <li>
                 <a
-                  href="https://github.com/anthropics/enact"
+                  href="https://github.com/EnactProtocol/enact#readme"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-brand-blue"
@@ -33,7 +33,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="https://github.com/anthropics/enact"
+                  href="https://github.com/EnactProtocol/enact/blob/main/packages/cli/README.md"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-brand-blue"
@@ -43,7 +43,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="https://github.com/anthropics/enact"
+                  href="https://github.com/EnactProtocol/enact/blob/main/docs/publishing.md"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-brand-blue"
@@ -59,7 +59,18 @@ export default function Footer() {
             <ul className="space-y-2 text-gray-5">
               <li>
                 <a
-                  href="https://github.com/anthropics/enact"
+                  href="https://discord.gg/mMfxvMtHyS"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-brand-blue flex items-center gap-2"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Discord
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://github.com/EnactProtocol/enact"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-brand-blue flex items-center gap-2"
@@ -70,7 +81,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="https://github.com/anthropics/enact/issues"
+                  href="https://github.com/EnactProtocol/enact/issues"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-brand-blue"
