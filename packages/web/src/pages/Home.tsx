@@ -2,7 +2,10 @@ import SearchBar from "@/components/ui/SearchBar";
 import {
   ArrowRight,
   Bot,
+  ChevronRight,
   Download,
+  File,
+  Folder,
   FolderOpen,
   Globe,
   List,
@@ -317,7 +320,76 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Example Project Structure Section */}
       <section className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-12">
+              <div className="w-16 h-16 bg-teal-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <FolderOpen className="w-8 h-8 text-teal-600" />
+              </div>
+              <h2 className="text-3xl font-bold mb-4 text-gray-6">Simple Project Structure</h2>
+              <p className="text-gray-5 max-w-2xl mx-auto">
+                Enact tools are simple to create. Just a SKILL.md manifest and your code—that's it.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6">
+              {/* Simple Tool */}
+              <FileTreeCard
+                title="Simple Tool"
+                description="Minimal Python greeting tool"
+                files={[
+                  { name: "hello-python", type: "folder", depth: 0 },
+                  { name: "SKILL.md", type: "file", depth: 1, highlight: true },
+                  { name: "hello.py", type: "file", depth: 1 },
+                ]}
+              />
+
+              {/* JavaScript Tool */}
+              <FileTreeCard
+                title="JavaScript Tool"
+                description="Node.js JSON formatter"
+                files={[
+                  { name: "json-formatter", type: "folder", depth: 0 },
+                  { name: "SKILL.md", type: "file", depth: 1, highlight: true },
+                  { name: "format.js", type: "file", depth: 1 },
+                ]}
+              />
+
+              {/* Multi-file Tool */}
+              <FileTreeCard
+                title="Multi-file Tool"
+                description="Data pipeline with modules"
+                files={[
+                  { name: "data-pipeline", type: "folder", depth: 0 },
+                  { name: "SKILL.md", type: "file", depth: 1, highlight: true },
+                  { name: "src", type: "folder", depth: 1 },
+                  { name: "extractors", type: "folder", depth: 2 },
+                  { name: "utils", type: "folder", depth: 2 },
+                  { name: "tests", type: "folder", depth: 1 },
+                ]}
+              />
+            </div>
+
+            <div className="mt-8 text-center">
+              <p className="text-sm text-gray-5 mb-4">
+                The{" "}
+                <code className="bg-gray-100 px-2 py-1 rounded font-mono text-sm">SKILL.md</code>{" "}
+                file defines your tool's metadata, inputs, outputs, and runtime.
+              </p>
+              <Link
+                to="/browse"
+                className="text-brand-blue hover:underline inline-flex items-center gap-1"
+              >
+                Browse example tools <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20 bg-gray-1">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12 text-gray-6">Why Enact?</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -395,6 +467,48 @@ export default function Home() {
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+interface FileTreeItem {
+  name: string;
+  type: "file" | "folder";
+  depth: number;
+  highlight?: boolean;
+}
+
+function FileTreeCard({
+  title,
+  description,
+  files,
+}: {
+  title: string;
+  description: string;
+  files: FileTreeItem[];
+}) {
+  return (
+    <div className="card hover:shadow-lg transition-shadow">
+      <div className="mb-4">
+        <h4 className="font-semibold text-gray-6">{title}</h4>
+        <p className="text-sm text-gray-5">{description}</p>
+      </div>
+      <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm">
+        {files.map((file) => (
+          <div
+            key={`${file.depth}-${file.name}`}
+            className={`flex items-center gap-2 py-1 ${file.highlight ? "text-brand-blue font-medium" : "text-gray-6"}`}
+            style={{ paddingLeft: `${file.depth * 16}px` }}
+          >
+            {file.type === "folder" ? (
+              <Folder className="w-4 h-4 text-amber-500" />
+            ) : (
+              <File className={`w-4 h-4 ${file.highlight ? "text-brand-blue" : "text-gray-400"}`} />
+            )}
+            <span>{file.name}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

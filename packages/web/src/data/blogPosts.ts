@@ -175,7 +175,7 @@ Private and unlisted tools require authentication:
 
 \`\`\`bash
 # Login to Enact
-enact login
+enact auth login
 
 # Now you can install your private tools
 enact install owner/private-tool
@@ -328,7 +328,7 @@ docker run greeter --name "Bob" --formal
 First, login:
 
 \`\`\`bash
-enact login
+enact auth login
 \`\`\`
 
 Then publish your tool:
