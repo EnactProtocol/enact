@@ -23,14 +23,6 @@ export default function Header() {
               Docs
             </Link>
             <a
-              href="https://enactprotocol.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-5 hover:text-brand-blue transition-colors"
-            >
-              Protocol
-            </a>
-            <a
               href="https://github.com/EnactProtocol"
               target="_blank"
               rel="noopener noreferrer"
@@ -41,6 +33,14 @@ export default function Header() {
             <Link to="/blog" className="text-gray-5 hover:text-brand-blue transition-colors">
               Blog
             </Link>
+            <a
+              href="https://discord.gg/mMfxvMtHyS"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-5 hover:text-brand-blue transition-colors"
+            >
+              Discord
+            </a>
           </nav>
 
           <div className="flex items-center gap-3">
