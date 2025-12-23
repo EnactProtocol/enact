@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/execution",
-  "version": "2.1.16",
+  "version": "2.1.17",
   "description": "Dagger-based execution engine for Enact tools",
   "type": "module",
   "main": "./dist/index.js",
