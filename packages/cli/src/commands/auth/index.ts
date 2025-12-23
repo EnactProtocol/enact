@@ -151,45 +151,63 @@ export async function getValidToken(): Promise<string | null> {
     return null;
   }
 
-  // Check if token is expired
+  // Check if token is expired using stored expiry or JWT exp claim
   const expiryStr = await getSecret(AUTH_NAMESPACE, TOKEN_EXPIRY_KEY);
+  let isExpiredOrExpiring = false;
+
   if (expiryStr) {
     const expiry = new Date(expiryStr);
-    if (expiry.getTime() - Date.now() < 60000) {
-      // Less than 1 minute left, try to refresh
-      const refreshToken = await getStoredRefreshToken();
-      if (refreshToken) {
-        const authMethod = await getSecret(AUTH_NAMESPACE, AUTH_METHOD_KEY);
-
-        if (authMethod === "supabase") {
-          // Use Supabase refresh
-          const result = await refreshSupabaseToken(refreshToken);
-          if (result) {
-            await storeTokens(
-              result.access_token,
-              result.refresh_token,
-              result.expires_in,
-              "supabase"
-            );
-            return result.access_token;
-          }
-        } else {
-          // Use legacy API refresh
-          try {
-            const client = createApiClient();
-            const result = await refreshAccessToken(client, refreshToken);
-            await storeTokens(result.access_token, refreshToken, result.expires_in, "legacy");
-            return result.access_token;
-          } catch {
-            // Refresh failed
-          }
+    isExpiredOrExpiring = expiry.getTime() - Date.now() < 60000; // Less than 1 minute left
+  } else {
+    // No stored expiry - check JWT exp claim directly
+    try {
+      const [, payloadBase64] = accessToken.split(".");
+      if (payloadBase64) {
+        const payload = JSON.parse(Buffer.from(payloadBase64, "base64").toString());
+        if (payload.exp) {
+          isExpiredOrExpiring = payload.exp * 1000 - Date.now() < 60000;
         }
+      }
+    } catch {
+      // Can't parse JWT, assume it might be expired
+      isExpiredOrExpiring = true;
+    }
+  }
 
-        // Refresh failed, need to re-authenticate
-        await clearStoredTokens();
-        return null;
+  if (isExpiredOrExpiring) {
+    // Try to refresh
+    const refreshToken = await getStoredRefreshToken();
+    if (refreshToken) {
+      const authMethod = await getSecret(AUTH_NAMESPACE, AUTH_METHOD_KEY);
+
+      if (authMethod === "supabase") {
+        // Use Supabase refresh
+        const result = await refreshSupabaseToken(refreshToken);
+        if (result) {
+          await storeTokens(
+            result.access_token,
+            result.refresh_token,
+            result.expires_in,
+            "supabase"
+          );
+          return result.access_token;
+        }
+      } else {
+        // Use legacy API refresh
+        try {
+          const client = createApiClient();
+          const result = await refreshAccessToken(client, refreshToken);
+          await storeTokens(result.access_token, refreshToken, result.expires_in, "legacy");
+          return result.access_token;
+        } catch {
+          // Refresh failed
+        }
       }
     }
+
+    // Refresh failed or no refresh token, need to re-authenticate
+    await clearStoredTokens();
+    return null;
   }
 
   return accessToken;
