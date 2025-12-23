@@ -284,7 +284,7 @@ async function publishHandler(
       } else {
         hasPreSignedAttestation = true;
         keyValue("Attestation", "Pre-signed (valid)");
-        keyValue("Manifest hash", checksumManifest.manifestHash.digest.slice(0, 16) + "...");
+        keyValue("Manifest hash", `${checksumManifest.manifestHash.digest.slice(0, 16)}...`);
         keyValue("Files in attestation", String(checksumManifest.files.length));
       }
     } catch (err) {

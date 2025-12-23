@@ -150,7 +150,7 @@ function shouldIgnore(
 
     // Directory pattern (pattern without extension matches directories)
     if (!pattern.includes(".") && !pattern.includes("*")) {
-      if (relativePath.startsWith(pattern + "/") || relativePath === pattern) {
+      if (relativePath.startsWith(`${pattern}/`) || relativePath === pattern) {
         return true;
       }
     }
@@ -210,7 +210,7 @@ function canonicalJSON(obj: unknown): string {
   }
 
   if (Array.isArray(obj)) {
-    return "[" + obj.map(canonicalJSON).join(",") + "]";
+    return `[${obj.map(canonicalJSON).join(",")}]`;
   }
 
   // Sort keys and recursively process
@@ -219,7 +219,7 @@ function canonicalJSON(obj: unknown): string {
     (key) => `${JSON.stringify(key)}:${canonicalJSON((obj as Record<string, unknown>)[key])}`
   );
 
-  return "{" + pairs.join(",") + "}";
+  return `{${pairs.join(",")}}`;
 }
 
 // ============================================================================

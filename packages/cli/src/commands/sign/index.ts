@@ -292,7 +292,7 @@ function displayResult(
 
   keyValue("Checksum manifest", manifestPath);
   keyValue("Sigstore bundle", bundlePath);
-  keyValue("Manifest hash", checksumManifest.manifestHash.digest.slice(0, 16) + "...");
+  keyValue("Manifest hash", `${checksumManifest.manifestHash.digest.slice(0, 16)}...`);
   keyValue("Files signed", String(checksumManifest.files.length));
 
   // Show some bundle details
@@ -690,7 +690,7 @@ async function signLocalTool(
   }
 
   keyValue("Files to sign", String(checksumManifest.files.length));
-  keyValue("Manifest hash", checksumManifest.manifestHash.digest.slice(0, 16) + "...");
+  keyValue("Manifest hash", `${checksumManifest.manifestHash.digest.slice(0, 16)}...`);
   newline();
 
   // Prepare attestation options

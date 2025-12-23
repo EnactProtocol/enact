@@ -2,8 +2,8 @@
  * Type definitions for Enact server
  */
 
-// Use esm.sh for Deno compatibility in Edge Functions
-import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+// Use npm package for type-checking, Edge Functions will use esm.sh at runtime
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Database types (generated from schema)
