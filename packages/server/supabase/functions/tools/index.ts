@@ -753,6 +753,10 @@ async function handleGetTool(
   toolName: string,
   url: URL
 ): Promise<Response> {
+  // Debug: Check if user is authenticated
+  const { data: { user } } = await supabase.auth.getUser();
+  console.log(`[Tools] handleGetTool - User: ${user?.id ?? 'anonymous'}, Tool: ${toolName}`);
+
   const { data: tool, error } = await supabase
     .from("tools")
     .select(`
@@ -762,9 +766,16 @@ async function handleGetTool(
     .eq("name", toolName)
     .single();
 
-  if (error || !tool) {
+  if (error) {
+    console.error(`[Tools] Error fetching tool ${toolName}:`, error);
     return Errors.notFound(`Tool not found: ${toolName}`);
   }
+
+  if (!tool) {
+    return Errors.notFound(`Tool not found: ${toolName}`);
+  }
+
+  console.log(`[Tools] Found tool ${toolName}, visibility: ${tool.visibility}, versions count: ${tool.tool_versions?.length ?? 0}`);
 
   const versions = (tool.tool_versions ?? []).map((v: any) => ({
     version: v.version,
