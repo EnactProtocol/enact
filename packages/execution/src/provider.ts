@@ -183,8 +183,15 @@ export class DaggerExecutionProvider implements ExecutionProvider {
       );
     }
 
-    // Interpolate command with parameters
-    const interpolated = interpolateCommand(command, params);
+    // Interpolate command with parameters - only substitute known inputSchema params
+    const knownParameters = manifest.inputSchema?.properties
+      ? new Set(Object.keys(manifest.inputSchema.properties))
+      : undefined;
+    const interpolated = interpolateCommand(
+      command,
+      params,
+      knownParameters ? { knownParameters } : {}
+    );
 
     // Parse timeout
     const timeoutMs = this.parseTimeout(options.timeout ?? manifest.timeout);

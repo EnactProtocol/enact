@@ -49,4 +49,17 @@ Run with: \`enact run ./tools/<name> --args '{"name": "World"}'\`
 enact env set API_KEY --secret --namespace author/tool  # Set secret
 enact env list                                          # List env vars
 \`\`\`
+
+## Creating Your Own Tools
+To scaffold a new publishable tool with SKILL.md and AGENTS.md templates:
+\`\`\`bash
+enact init --tool                                       # Create tool in current directory
+enact init --tool --name username/my-tool              # Create with specific name
+\`\`\`
+
+## Getting Help
+\`\`\`bash
+enact help                                              # Show all commands
+enact <command> --help                                  # Help for specific command
+\`\`\`
 `;

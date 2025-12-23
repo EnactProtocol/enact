@@ -61,6 +61,7 @@ export {
   parseCommandArgs,
   prepareCommand,
   getMissingParams,
+  type ParseCommandOptions,
 } from "./command.js";
 
 // Input validation

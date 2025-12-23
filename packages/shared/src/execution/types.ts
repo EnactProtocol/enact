@@ -324,6 +324,12 @@ export interface InterpolationOptions {
   onMissing?: "error" | "empty" | "keep";
   /** Callback for warnings (e.g., potential double-quoting) */
   onWarning?: (warning: CommandWarning) => void;
+  /**
+   * Set of known parameter names from the inputSchema.
+   * Only ${...} patterns matching these names will be substituted.
+   * If not provided, ALL ${...} patterns are treated as parameters (legacy behavior).
+   */
+  knownParameters?: Set<string>;
 }
 
 /**

@@ -597,8 +597,15 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
     return;
   }
 
-  // Prepare command
-  const command = prepareCommand(manifest.command, finalInputs);
+  // Prepare command - only substitute ${...} patterns that match inputSchema properties
+  const knownParameters = manifest.inputSchema?.properties
+    ? new Set(Object.keys(manifest.inputSchema.properties))
+    : undefined;
+  const command = prepareCommand(
+    manifest.command,
+    finalInputs,
+    knownParameters ? { knownParameters } : {}
+  );
 
   // Resolve environment variables (non-secrets)
   const { resolved: envResolved } = resolveToolEnv(manifest.env ?? {}, ctx.cwd);

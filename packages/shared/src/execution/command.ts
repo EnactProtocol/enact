@@ -3,6 +3,17 @@
  *
  * Handles ${parameter} substitution in command templates with proper escaping.
  *
+ * ## Parameter Recognition
+ *
+ * Only `${...}` patterns that match parameters defined in the tool's inputSchema
+ * are substituted. Other `${...}` patterns (like bash variables, arrays, etc.)
+ * are passed through unchanged to the shell.
+ *
+ * This allows natural use of shell syntax:
+ * - `${name}` - Substituted if "name" is in inputSchema
+ * - `${MY_VAR}` - Passed through to bash (not in inputSchema)
+ * - `${array[$i]}` - Passed through to bash (not in inputSchema)
+ *
  * ## Quoting Behavior
  *
  * Enact automatically applies shell-escaping (quoting) to parameter values
@@ -35,16 +46,34 @@ import type { CommandToken, InterpolationOptions, ParsedCommand } from "./types"
 const PARAM_PATTERN = /\$\{([^}:]+)(?::([^}]+))?\}/g;
 
 /**
+ * Options for parsing a command template
+ */
+export interface ParseCommandOptions {
+  /**
+   * Set of known parameter names from the inputSchema.
+   * Only ${...} patterns matching these names will be treated as parameters.
+   * If not provided, ALL ${...} patterns are treated as parameters (legacy behavior).
+   */
+  knownParameters?: Set<string>;
+}
+
+/**
  * Parse a command template into tokens
  *
  * Detects:
  * - Parameters with modifiers: ${param:raw}
  * - Parameters surrounded by quotes: '${param}' or "${param}"
  *
+ * When knownParameters is provided, only ${...} patterns matching known parameter
+ * names are treated as parameters. Other patterns are kept as literals, allowing
+ * natural shell syntax like ${MY_VAR} or ${array[$i]} to pass through.
+ *
  * @param command - Command template with ${parameter} placeholders
+ * @param options - Parse options including knownParameters
  * @returns Parsed command with tokens and parameter list
  */
-export function parseCommand(command: string): ParsedCommand {
+export function parseCommand(command: string, options: ParseCommandOptions = {}): ParsedCommand {
+  const { knownParameters } = options;
   const tokens: CommandToken[] = [];
   const parameters: string[] = [];
 
@@ -59,6 +88,16 @@ export function parseCommand(command: string): ParsedCommand {
     const paramName = match[1];
     const modifier = match[2]; // e.g., "raw"
     const isRaw = modifier === "raw";
+
+    // Check if this is a known parameter (or if we're in legacy mode with no filter)
+    const isKnownParameter = !knownParameters || (paramName && knownParameters.has(paramName));
+
+    if (!isKnownParameter) {
+      // Not a known parameter - skip and continue
+      // The text will be included in the next literal segment
+      match = PARAM_PATTERN.exec(command);
+      continue;
+    }
 
     // Check if preceded by a quote
     let startIndex = match.index;
@@ -198,6 +237,9 @@ export function valueToString(value: unknown, jsonifyObjects = true): string {
  * - Raw parameters: `${param:raw}` - no quoting applied
  * - Quoted parameters: `'${param}'` - quotes stripped, warning emitted
  *
+ * When knownParameters is provided in options, only matching ${...} patterns
+ * are substituted. Other patterns pass through unchanged for shell processing.
+ *
  * @param command - Command template or parsed command
  * @param params - Parameter values
  * @param options - Interpolation options
@@ -214,9 +256,13 @@ export function interpolateCommand(
     jsonifyObjects = true,
     onMissing = "error",
     onWarning,
+    knownParameters,
   } = options;
 
-  const parsed = typeof command === "string" ? parseCommand(command) : command;
+  const parsed =
+    typeof command === "string"
+      ? parseCommand(command, knownParameters ? { knownParameters } : {})
+      : command;
 
   const parts: string[] = [];
 
@@ -354,10 +400,12 @@ export function needsShellWrap(command: string): boolean {
  * Prepare a command for execution
  *
  * Parses the command and determines if it needs shell wrapping.
+ * When knownParameters is provided, only matching ${...} patterns are
+ * substituted, allowing shell syntax to pass through unchanged.
  *
  * @param command - Command template
  * @param params - Parameter values for interpolation
- * @param options - Interpolation options
+ * @param options - Interpolation options (including knownParameters)
  * @returns Command ready for execution [program, ...args]
  */
 export function prepareCommand(
@@ -390,13 +438,15 @@ export function prepareCommand(
  *
  * @param command - Parsed command
  * @param params - Provided parameters
+ * @param options - Parse options including knownParameters
  * @returns Array of missing parameter names
  */
 export function getMissingParams(
   command: string | ParsedCommand,
-  params: Record<string, unknown>
+  params: Record<string, unknown>,
+  options: ParseCommandOptions = {}
 ): string[] {
-  const parsed = typeof command === "string" ? parseCommand(command) : command;
+  const parsed = typeof command === "string" ? parseCommand(command, options) : command;
 
   return parsed.parameters.filter((param) => params[param] === undefined);
 }
@@ -405,8 +455,9 @@ export function getMissingParams(
  * Get all parameters in a command template
  *
  * @param command - Command template
+ * @param options - Parse options including knownParameters
  * @returns Array of parameter names
  */
-export function getCommandParams(command: string): string[] {
-  return parseCommand(command).parameters;
+export function getCommandParams(command: string, options: ParseCommandOptions = {}): string[] {
+  return parseCommand(command, options).parameters;
 }

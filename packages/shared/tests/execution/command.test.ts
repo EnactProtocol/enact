@@ -431,6 +431,237 @@ describe("Command Interpolation", () => {
     });
   });
 
+  describe("knownParameters filtering", () => {
+    describe("parseCommand with knownParameters", () => {
+      test("only treats known parameters as parameters", () => {
+        const result = parseCommand("echo ${name} and ${unknown}", {
+          knownParameters: new Set(["name"]),
+        });
+
+        expect(result.parameters).toEqual(["name"]);
+        expect(result.tokens).toHaveLength(3);
+        expect(result.tokens[0]).toEqual({ type: "literal", value: "echo " });
+        expect(result.tokens[1]).toEqual({ type: "parameter", name: "name" });
+        expect(result.tokens[2]).toEqual({ type: "literal", value: " and ${unknown}" });
+      });
+
+      test("preserves bash array syntax ${#array[@]}", () => {
+        const result = parseCommand("echo ${#compliments[@]}", {
+          knownParameters: new Set(["name"]),
+        });
+
+        // The entire string should be a literal since #compliments[@] is not a known param
+        expect(result.parameters).toEqual([]);
+        expect(result.tokens).toHaveLength(1);
+        expect(result.tokens[0]).toEqual({
+          type: "literal",
+          value: "echo ${#compliments[@]}",
+        });
+      });
+
+      test("preserves bash array indexing ${array[$i]}", () => {
+        const result = parseCommand('echo "${compliments[$random_index]}"', {
+          knownParameters: new Set(["name"]),
+        });
+
+        expect(result.parameters).toEqual([]);
+        expect(result.tokens).toHaveLength(1);
+        expect(result.tokens[0]).toEqual({
+          type: "literal",
+          value: 'echo "${compliments[$random_index]}"',
+        });
+      });
+
+      test("handles mix of known params and bash syntax", () => {
+        const cmd = 'echo "${name}" and ${#arr[@]} and ${arr[$i]} and ${OTHER_VAR}';
+        const result = parseCommand(cmd, {
+          knownParameters: new Set(["name"]),
+        });
+
+        expect(result.parameters).toEqual(["name"]);
+        // Should have: literal, param, literal (containing all the bash stuff)
+        expect(result.tokens).toHaveLength(3);
+        expect(result.tokens[0]).toEqual({ type: "literal", value: "echo " });
+        expect(result.tokens[1]).toMatchObject({ type: "parameter", name: "name" });
+        expect(result.tokens[2]).toEqual({
+          type: "literal",
+          value: " and ${#arr[@]} and ${arr[$i]} and ${OTHER_VAR}",
+        });
+      });
+
+      test("legacy behavior when knownParameters not provided", () => {
+        const result = parseCommand("echo ${name} ${unknown}");
+
+        // Without knownParameters, all ${...} are treated as params
+        expect(result.parameters).toEqual(["name", "unknown"]);
+      });
+
+      test("empty knownParameters set treats nothing as parameter", () => {
+        const result = parseCommand("echo ${name} ${other}", {
+          knownParameters: new Set(),
+        });
+
+        expect(result.parameters).toEqual([]);
+        expect(result.tokens).toHaveLength(1);
+        expect(result.tokens[0]).toEqual({
+          type: "literal",
+          value: "echo ${name} ${other}",
+        });
+      });
+    });
+
+    describe("interpolateCommand with knownParameters", () => {
+      test("only substitutes known parameters", () => {
+        const result = interpolateCommand(
+          "echo ${name} and ${MY_VAR}",
+          { name: "Keith" },
+          { knownParameters: new Set(["name"]) }
+        );
+
+        expect(result).toBe("echo Keith and ${MY_VAR}");
+      });
+
+      test("preserves bash array operations", () => {
+        const cmd = 'arr=("a" "b"); echo ${#arr[@]} items: ${arr[0]}';
+        const result = interpolateCommand(
+          cmd,
+          {},
+          {
+            knownParameters: new Set(["name"]),
+          }
+        );
+
+        // Nothing should be substituted
+        expect(result).toBe(cmd);
+      });
+
+      test("substitutes only schema-defined params in complex command", () => {
+        const cmd = `
+          NAME="\${name}"
+          compliments=("Hello, $NAME!")
+          echo "\${compliments[0]}"
+        `;
+        const result = interpolateCommand(
+          cmd,
+          { name: "Alice" },
+          { knownParameters: new Set(["name"]) }
+        );
+
+        expect(result).toContain("Alice");
+        expect(result).toContain("${compliments[0]}");
+      });
+    });
+
+    describe("prepareCommand with knownParameters", () => {
+      test("passes through bash syntax while substituting known params", () => {
+        const result = prepareCommand(
+          "echo ${name} ${RANDOM}",
+          { name: "test" },
+          { knownParameters: new Set(["name"]) }
+        );
+
+        // Contains ${RANDOM} which has $, so needs shell wrap
+        expect(result).toEqual(["sh", "-c", "echo test ${RANDOM}"]);
+      });
+
+      test("handles full bash script with arrays", () => {
+        const cmd = `
+arr=("\${name}" "b" "c")
+echo \${#arr[@]}
+echo \${arr[0]}
+`;
+        const result = prepareCommand(
+          cmd,
+          { name: "Keith" },
+          {
+            knownParameters: new Set(["name"]),
+          }
+        );
+
+        // Should be shell wrapped due to special chars
+        expect(result[0]).toBe("sh");
+        expect(result[1]).toBe("-c");
+        // The name should be substituted but array syntax preserved
+        expect(result[2]).toContain("Keith");
+        expect(result[2]).toContain("${#arr[@]}");
+        expect(result[2]).toContain("${arr[0]}");
+      });
+    });
+
+    describe("getMissingParams with knownParameters", () => {
+      test("only checks known parameters", () => {
+        const result = getMissingParams(
+          "echo ${name} ${unknown}",
+          {},
+          { knownParameters: new Set(["name"]) }
+        );
+
+        // Only "name" is a known param, and it's missing
+        expect(result).toEqual(["name"]);
+      });
+
+      test("ignores unknown ${...} patterns", () => {
+        const result = getMissingParams(
+          "echo ${name} ${#arr[@]} ${arr[$i]}",
+          { name: "Keith" },
+          { knownParameters: new Set(["name"]) }
+        );
+
+        // name is provided, others are not params
+        expect(result).toEqual([]);
+      });
+    });
+
+    describe("real-world bash examples", () => {
+      test("compliment generator with bash arrays", () => {
+        const cmd = `
+compliments=(
+  "You're great, \${name}!"
+  "Keep it up, \${name}!"
+)
+random_index=$((RANDOM % \${#compliments[@]}))
+echo "\${compliments[$random_index]}"
+`;
+        const result = interpolateCommand(
+          cmd,
+          { name: "Keith" },
+          { knownParameters: new Set(["name"]) }
+        );
+
+        // ${name} should be substituted
+        expect(result).toContain("You're great, Keith!");
+        expect(result).toContain("Keep it up, Keith!");
+        // Bash syntax should be preserved
+        expect(result).toContain("${#compliments[@]}");
+        expect(result).toContain("${compliments[$random_index]}");
+      });
+
+      test("script with environment variables", () => {
+        const cmd = 'echo "Hello ${name}, your home is ${HOME}"';
+        const result = interpolateCommand(
+          cmd,
+          { name: "Alice" },
+          { knownParameters: new Set(["name"]) }
+        );
+
+        expect(result).toBe('echo "Hello Alice, your home is ${HOME}"');
+      });
+
+      test("for loop with index variable", () => {
+        const cmd = 'for i in 1 2 3; do echo "${prefix}$i"; done';
+        const result = interpolateCommand(
+          cmd,
+          { prefix: "item-" },
+          { knownParameters: new Set(["prefix"]) }
+        );
+
+        // prefix substituted, $i preserved (though not in ${} form)
+        expect(result).toContain("item-");
+        expect(result).toContain("$i");
+      });
+    });
+  });
+
   describe("getMissingParams", () => {
     test("returns empty array when all params present", () => {
       const result = getMissingParams("echo ${a} ${b}", { a: "1", b: "2" });
