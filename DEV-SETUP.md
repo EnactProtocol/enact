@@ -288,19 +288,82 @@ bun run build
 
 ## Working with the Registry
 
+### Switching Between Local and Production
+
+The project supports both local development and production environments. Here's how to switch:
+
+**Local Development (Active when `supabase start` is running):**
+- Registry URL: `http://127.0.0.1:54321/functions/v1`
+- Database: Local PostgreSQL on port 54322
+- Storage: MinIO on port 9000
+- Dev mode: Enabled (no auth required)
+- Studio: http://127.0.0.1:54323
+
+**Production (Linked project: `siikwkfgsmouioodghho`):**
+- Registry URL: `https://siikwkfgsmouioodghho.supabase.co/functions/v1` (default)
+- Database: Supabase hosted PostgreSQL
+- Storage: Supabase/Cloudflare
+- Auth: Required
+
+**Switching Commands:**
+
+```bash
+# Start local development
+cd packages/server
+supabase start
+docker-compose up -d  # Start MinIO
+
+# Stop local (returns to production for linked commands)
+supabase stop
+docker-compose down
+
+# CLI - Local dev
+ENACT_REGISTRY_URL=http://127.0.0.1:54321/functions/v1 \
+  enact publish ./examples/json-formatter --skip-auth
+
+# CLI - Production (default when local not running)
+enact publish ./examples/json-formatter
+
+# Migrations - Local
+supabase db push
+
+# Migrations - Production
+supabase db push --linked
+
+# Edge Functions - Local (automatic with supabase start)
+# Edge Functions - Production
+supabase functions deploy tools
+```
+
+**Environment Configuration:**
+
+The Edge Functions dev mode is enabled via `packages/server/supabase/config.toml`:
+```toml
+[edge_runtime.secrets]
+ENACT_DEV_MODE = "env(ENACT_DEV_MODE)"
+R2_ENDPOINT = "env(R2_ENDPOINT)"
+# ... other env vars
+```
+
+Values come from `packages/server/supabase/.env.local`.
+
 ### Local development mode
 
-The Edge Functions are configured with `ENACT_DEV_MODE=true` in `packages/server/supabase/.env.local`, which:
-- Allows publishing without authentication (use `--skip-auth` flag)
-- Uses service role key to bypass Row Level Security
-- Enables additional logging
+With `ENACT_DEV_MODE=true` configured, local Edge Functions:
+- Allow publishing without authentication (use `--skip-auth` flag)
+- Use service role key to bypass Row Level Security
+- Enable additional logging
+- Accept any namespace for tool publishing
 
 ### Publishing tools
 
 ```bash
-# Publish with development mode
+# Local development
 ENACT_REGISTRY_URL=http://127.0.0.1:54321/functions/v1 \
   bun run packages/cli/dist/index.js publish <path-to-tool> --skip-auth
+
+# Production (requires login)
+bun run packages/cli/dist/index.js publish <path-to-tool>
 ```
 
 ### Database access

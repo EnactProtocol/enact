@@ -174,8 +174,8 @@
   }
 }
 
-/* Blog code blocks styling */
-.prose pre {
+/* Blog code blocks styling - scoped to blog-content class */
+.blog-content pre {
   padding: 2rem;
   position: relative;
   background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
@@ -183,7 +183,7 @@
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
 }
 
-.prose pre::before {
+.blog-content pre::before {
   content: "";
   position: absolute;
   top: 12px;
@@ -197,7 +197,7 @@
   box-shadow: 18px 0 0 #ffbd2e, 36px 0 0 #27ca40;
 }
 
-.prose pre code {
+.blog-content pre code {
   display: block;
   padding-top: 24px;
   color: #e2e8f0;
@@ -206,8 +206,8 @@
   line-height: 1.7;
 }
 
-/* Inline code styling */
-.prose :not(pre) > code {
+/* Inline code styling for blog */
+.blog-content :not(pre) > code {
   background: linear-gradient(135deg, #f0edff 0%, #e8e4ff 100%);
   color: #2800ff;
   font-weight: 500;

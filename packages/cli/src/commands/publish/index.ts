@@ -2,6 +2,7 @@
  * enact publish command
  *
  * Publish a tool to the Enact registry using v2 multipart upload.
+ * Supports pre-signed attestations via manifest-based signing.
  */
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -16,9 +17,16 @@ import {
   loadManifestFromDir,
   validateManifest,
 } from "@enactprotocol/shared";
+import {
+  type ChecksumManifest,
+  type SigstoreBundle,
+  parseChecksumManifest,
+  verifyChecksumManifest,
+} from "@enactprotocol/trust";
 import type { Command } from "commander";
 import type { CommandContext, GlobalOptions } from "../../types";
 import {
+  confirm,
   dim,
   error,
   extractNamespace,
@@ -208,6 +216,88 @@ async function publishHandler(
   header(`Publishing ${toolName}@${version}`);
   newline();
 
+  // Check for pre-signed attestation (manifest-based signing)
+  const checksumManifestPath = join(toolDir, ".enact-manifest.json");
+  const sigstoreBundlePath = join(toolDir, ".sigstore-bundle.json");
+
+  let checksumManifest: ChecksumManifest | undefined;
+  let sigstoreBundle: SigstoreBundle | undefined;
+  let hasPreSignedAttestation = false;
+
+  if (existsSync(checksumManifestPath) && existsSync(sigstoreBundlePath)) {
+    info("Found pre-signed attestation files");
+
+    try {
+      // Load and parse the checksum manifest
+      const manifestContent = readFileSync(checksumManifestPath, "utf-8");
+      checksumManifest = parseChecksumManifest(manifestContent);
+
+      // Load the sigstore bundle
+      const bundleContent = readFileSync(sigstoreBundlePath, "utf-8");
+      sigstoreBundle = JSON.parse(bundleContent) as SigstoreBundle;
+
+      // Verify the checksum manifest matches current files
+      const ignorePatterns = loadGitignore(toolDir);
+      const verification = await verifyChecksumManifest(toolDir, checksumManifest, {
+        ignorePatterns,
+      });
+
+      if (!verification.valid) {
+        newline();
+        warning("Pre-signed attestation is outdated - files have changed since signing:");
+        if (verification.modifiedFiles?.length) {
+          for (const file of verification.modifiedFiles) {
+            dim(`  • Modified: ${file}`);
+          }
+        }
+        if (verification.missingFiles?.length) {
+          for (const file of verification.missingFiles) {
+            dim(`  • Missing: ${file}`);
+          }
+        }
+        if (verification.extraFiles?.length) {
+          for (const file of verification.extraFiles) {
+            dim(`  • New file: ${file}`);
+          }
+        }
+        newline();
+
+        if (ctx.isInteractive) {
+          const continueWithoutAttestation = await confirm(
+            "Continue publishing without the pre-signed attestation?",
+            false
+          );
+          if (!continueWithoutAttestation) {
+            info("Publishing cancelled. Please re-sign with 'enact sign .' after making changes.");
+            return;
+          }
+          // Clear the attestation since it's outdated
+          checksumManifest = undefined;
+          sigstoreBundle = undefined;
+        } else {
+          error("Pre-signed attestation does not match current files.");
+          dim(
+            "Please re-sign with 'enact sign .' or remove .enact-manifest.json and .sigstore-bundle.json"
+          );
+          process.exit(1);
+        }
+      } else {
+        hasPreSignedAttestation = true;
+        keyValue("Attestation", "Pre-signed (valid)");
+        keyValue("Manifest hash", checksumManifest.manifestHash.digest.slice(0, 16) + "...");
+        keyValue("Files in attestation", String(checksumManifest.files.length));
+      }
+    } catch (err) {
+      warning("Failed to load pre-signed attestation:");
+      if (err instanceof Error) {
+        dim(`  ${err.message}`);
+      }
+      dim("Continuing without attestation...");
+      checksumManifest = undefined;
+      sigstoreBundle = undefined;
+    }
+  }
+
   // Determine visibility (private by default for security)
   const visibility: ToolVisibility = options.public
     ? "public"
@@ -341,12 +431,22 @@ async function publishHandler(
       bundle,
       rawManifest: rawManifestContent,
       visibility,
+      // Include pre-signed attestation if available (cast to Record for API compatibility)
+      checksumManifest: hasPreSignedAttestation
+        ? (checksumManifest as unknown as Record<string, unknown>)
+        : undefined,
+      sigstoreBundle: hasPreSignedAttestation
+        ? (sigstoreBundle as unknown as Record<string, unknown>)
+        : undefined,
     });
   });
 
   // JSON output
   if (options.json) {
-    json(result);
+    json({
+      ...result,
+      hasAttestation: hasPreSignedAttestation,
+    });
     return;
   }
 
@@ -355,6 +455,9 @@ async function publishHandler(
   success(`Published ${result.name}@${result.version} (${visibility})`);
   keyValue("Bundle Hash", result.bundleHash);
   keyValue("Published At", result.publishedAt.toISOString());
+  if (hasPreSignedAttestation) {
+    keyValue("Attestation", "Included (pre-signed)");
+  }
   newline();
   if (visibility === "private") {
     dim("This tool is private - only you can access it.");
@@ -362,6 +465,13 @@ async function publishHandler(
     dim("This tool is unlisted - accessible via direct link, not searchable.");
   }
   dim(`Install with: enact install ${toolName}`);
+
+  if (!hasPreSignedAttestation) {
+    newline();
+    info("Tip: Sign your tool before publishing for verified attestations:");
+    dim(`  1. enact sign ${pathArg}    # Create pre-signed attestation`);
+    dim(`  2. enact publish ${pathArg}  # Publish with attestation`);
+  }
 }
 
 /**

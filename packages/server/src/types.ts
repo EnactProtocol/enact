@@ -3,7 +3,7 @@
  */
 
 // Use esm.sh for Deno compatibility in Edge Functions
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 /**
  * Database types (generated from schema)
@@ -129,6 +129,7 @@ export interface Attestation {
   auditor: string;
   auditor_provider: string | null;
   bundle: Record<string, unknown>;
+  checksum_manifest: Record<string, unknown> | null;
   rekor_log_id: string;
   rekor_log_index: number | null;
   signed_at: string;

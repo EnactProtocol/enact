@@ -46,7 +46,14 @@ import {
 } from "../_shared/tar.ts";
 import {
   handleSubmitAttestation,
+  extractAuditorFromBundle,
+  detectProviderFromIssuer,
 } from "../_shared/attestation.ts";
+import {
+  verifyManifestAgainstBundle,
+  validateManifest,
+  type ChecksumManifest,
+} from "../_shared/checksum-manifest.ts";
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -365,6 +372,10 @@ async function handlePublish(
   const bundleFile = formData.get("bundle") as File;
   const rawManifest = formData.get("raw_manifest") as string | null;
   const visibility = formData.get("visibility") as string | null;
+  
+  // Optional pre-signed attestation fields
+  const checksumManifestStr = formData.get("checksum_manifest") as string | null;
+  const sigstoreBundleStr = formData.get("sigstore_bundle") as string | null;
 
   if (!manifestStr || !bundleFile) {
     return Errors.validation("Missing manifest or bundle");
@@ -570,11 +581,104 @@ async function handlePublish(
     return Errors.internal(versionError.message);
   }
 
+  // Handle pre-signed attestation if provided
+  let attestationResult = null;
+  if (checksumManifestStr && sigstoreBundleStr) {
+    try {
+      const checksumManifest = JSON.parse(checksumManifestStr) as ChecksumManifest;
+      const sigstoreBundle = JSON.parse(sigstoreBundleStr);
+
+      console.log(`[Publish] Processing pre-signed attestation for ${toolName}@${version}`);
+
+      // Validate manifest structure and metadata
+      const structureValidation = validateManifest(checksumManifest, toolName, version);
+      if (!structureValidation.valid) {
+        console.error(`[Publish] Manifest validation failed:`, structureValidation.errors);
+        // Don't fail the publish, just skip attestation
+        console.warn(`[Publish] Skipping attestation due to manifest validation errors`);
+      } else {
+        // Verify manifest against bundle contents
+        const manifestVerification = await verifyManifestAgainstBundle(checksumManifest, bundleData);
+        
+        if (!manifestVerification.valid) {
+          console.error(`[Publish] Manifest verification failed:`, manifestVerification.errors);
+          console.warn(`[Publish] Skipping attestation due to manifest verification errors`);
+        } else {
+          console.log(`[Publish] Manifest verified against bundle contents`);
+
+          // Verify the Sigstore bundle against the manifest hash
+          const manifestHash = checksumManifest.manifestHash.digest;
+          const hashBytes = new Uint8Array(
+            manifestHash.match(/.{1,2}/g)!.map((byte: string) => parseInt(byte, 16))
+          );
+
+          const sigstoreResult = await verifyBundle(sigstoreBundle, hashBytes);
+          
+          if (!sigstoreResult.verified) {
+            console.error(`[Publish] Sigstore verification failed:`, sigstoreResult);
+            console.warn(`[Publish] Skipping attestation due to Sigstore verification failure`);
+          } else {
+            console.log(`[Publish] Sigstore bundle verified`);
+
+            // Extract auditor identity
+            const auditor = extractAuditorFromBundle(sigstoreBundle);
+            const auditorProvider = detectProviderFromIssuer(sigstoreBundle);
+
+            if (!auditor) {
+              console.warn(`[Publish] Could not extract auditor identity, skipping attestation`);
+            } else {
+              // Extract Rekor info
+              const rekorLogId = sigstoreBundle.verificationMaterial?.tlogEntries?.[0]?.logId?.keyId;
+              const rekorLogIndex = sigstoreBundle.verificationMaterial?.tlogEntries?.[0]?.logIndex;
+
+              // Store attestation
+              const { data: attestation, error: attestationError } = await supabase
+                .from("attestations")
+                .insert({
+                  tool_version_id: toolVersion.id,
+                  auditor,
+                  auditor_provider: auditorProvider,
+                  bundle: sigstoreBundle,
+                  rekor_log_id: rekorLogId,
+                  rekor_log_index: rekorLogIndex,
+                  signed_at: new Date().toISOString(),
+                  verified: true,
+                  rekor_verified: true,
+                  certificate_verified: true,
+                  signature_verified: true,
+                  verified_at: new Date().toISOString(),
+                  // Store manifest-specific data
+                  checksum_manifest: checksumManifest,
+                })
+                .select()
+                .single();
+
+              if (attestationError) {
+                console.error(`[Publish] Failed to store attestation:`, attestationError);
+              } else {
+                console.log(`[Publish] Attestation stored for auditor: ${auditor}`);
+                attestationResult = {
+                  auditor,
+                  auditor_provider: auditorProvider,
+                  verified: true,
+                };
+              }
+            }
+          }
+        }
+      }
+    } catch (attestationError) {
+      console.error(`[Publish] Error processing attestation:`, attestationError);
+      // Don't fail the publish, just log the error
+    }
+  }
+
   return createdResponse({
     name: toolName,
     version,
     published_at: toolVersion.published_at,
     bundle_hash: hash,
+    attestation: attestationResult,
   });
 }
 

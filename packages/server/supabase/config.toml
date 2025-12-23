@@ -359,8 +359,14 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
-# [edge_runtime.secrets]
+[edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
+ENACT_DEV_MODE = "env(ENACT_DEV_MODE)"
+R2_ENDPOINT = "env(R2_ENDPOINT)"
+R2_ACCESS_KEY_ID = "env(R2_ACCESS_KEY_ID)"
+R2_SECRET_ACCESS_KEY = "env(R2_SECRET_ACCESS_KEY)"
+R2_BUCKET = "env(R2_BUCKET)"
+R2_REGION = "env(R2_REGION)"
 
 [analytics]
 enabled = true

@@ -137,9 +137,21 @@ export async function publishTool(
     rawManifest?: string | undefined;
     /** Tool visibility: public, private, or unlisted */
     visibility?: ToolVisibility | undefined;
+    /** Pre-signed checksum manifest (for manifest-based signing) */
+    checksumManifest?: Record<string, unknown> | undefined;
+    /** Pre-signed Sigstore bundle */
+    sigstoreBundle?: Record<string, unknown> | undefined;
   }
 ): Promise<PublishResult> {
-  const { name, manifest, bundle, rawManifest, visibility = "private" } = options;
+  const {
+    name,
+    manifest,
+    bundle,
+    rawManifest,
+    visibility = "private",
+    checksumManifest,
+    sigstoreBundle,
+  } = options;
 
   // Create FormData for multipart upload
   const formData = new FormData();
@@ -161,6 +173,12 @@ export async function publishTool(
 
   // Add visibility
   formData.append("visibility", visibility);
+
+  // Add pre-signed attestation if provided
+  if (checksumManifest && sigstoreBundle) {
+    formData.append("checksum_manifest", JSON.stringify(checksumManifest));
+    formData.append("sigstore_bundle", JSON.stringify(sigstoreBundle));
+  }
 
   // Make multipart request (v2 endpoint is POST /tools/{name})
   const response = await fetch(`${client.getBaseUrl()}/tools/${name}`, {

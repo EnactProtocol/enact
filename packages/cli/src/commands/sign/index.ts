@@ -2,8 +2,13 @@
  * enact sign command
  *
  * Cryptographically sign a tool using Sigstore keyless signing.
- * Creates an in-toto attestation, logs to Rekor transparency log,
- * and submits the attestation to the Enact registry.
+ * Creates an in-toto attestation based on a checksum manifest,
+ * logs to Rekor transparency log, and optionally submits to the registry.
+ *
+ * Uses manifest-based signing (per Sigstore team recommendation):
+ * - Creates deterministic checksum manifest of all files
+ * - Signs the manifest hash (not tar.gz bundle hash)
+ * - Enables pre-publish signing workflow
  *
  * Supports both local paths and remote tool references:
  *   - Local: enact sign ./my-tool
@@ -11,7 +16,7 @@
  *   - Remote: enact sign author/tool@1.0.0   (specific version)
  */
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import {
   createApiClient,
@@ -30,10 +35,13 @@ import {
   validateManifest,
 } from "@enactprotocol/shared";
 import {
+  type ChecksumManifest,
   type EnactToolAttestationOptions,
   type SigstoreBundle,
+  createChecksumManifest,
   createEnactToolStatement,
   extractCertificateFromBundle,
+  serializeChecksumManifest,
   signAttestation,
 } from "@enactprotocol/trust";
 import type { Command } from "commander";
@@ -54,6 +62,7 @@ import {
   warning,
   withSpinner,
 } from "../../utils";
+import { loadGitignore } from "../../utils/ignore";
 
 /** Auth namespace for token storage */
 const AUTH_NAMESPACE = "enact:auth";
@@ -66,8 +75,9 @@ interface SignOptions extends GlobalOptions {
   local?: boolean;
 }
 
-/** Default output filename for the signature bundle */
+/** Default output filenames for signing artifacts */
 const DEFAULT_BUNDLE_FILENAME = ".sigstore-bundle.json";
+const DEFAULT_MANIFEST_FILENAME = ".enact-manifest.json";
 
 /**
  * Parse a remote tool reference like "author/tool@1.0.0" or "author/tool"
@@ -140,30 +150,42 @@ function findManifestPath(pathArg: string): { manifestPath: string; manifestDir:
 function displayDryRun(
   manifestPath: string,
   manifest: { name: string; version?: string; description?: string },
-  outputPath: string,
+  manifestDir: string,
   options: SignOptions
 ): void {
+  const bundlePath = join(manifestDir, DEFAULT_BUNDLE_FILENAME);
+  const checksumManifestPath = join(manifestDir, DEFAULT_MANIFEST_FILENAME);
+
   newline();
-  info(colors.bold("Dry Run Preview - Signing"));
+  info(colors.bold("Dry Run Preview - Manifest-Based Signing"));
   newline();
 
   keyValue("Tool", manifest.name);
   keyValue("Version", manifest.version ?? "unversioned");
   keyValue("Manifest", manifestPath);
-  keyValue("Output", outputPath);
+  keyValue("Checksum manifest output", checksumManifestPath);
+  keyValue("Sigstore bundle output", bundlePath);
   keyValue("Submit to registry", options.local ? "No (local only)" : "Yes");
   newline();
 
   info("Actions that would be performed:");
-  dim("  1. Authenticate via OIDC (browser-based OAuth flow)");
-  dim("  2. Create in-toto attestation for tool manifest");
-  dim("  3. Request signing certificate from Fulcio");
-  dim("  4. Sign attestation with ephemeral keypair");
-  dim("  5. Log signature to Rekor transparency log");
-  dim(`  6. Write bundle to ${outputPath}`);
+  dim("  1. Scan tool directory and compute file checksums");
+  dim("  2. Create checksum manifest (.enact-manifest.json)");
+  dim("  3. Authenticate via OIDC (browser-based OAuth flow)");
+  dim("  4. Create in-toto attestation for manifest hash");
+  dim("  5. Request signing certificate from Fulcio");
+  dim("  6. Sign attestation with ephemeral keypair");
+  dim("  7. Log signature to Rekor transparency log");
+  dim(`  8. Write Sigstore bundle to ${bundlePath}`);
   if (!options.local) {
-    dim("  7. Submit attestation to Enact registry");
+    dim("  9. Submit attestation to Enact registry");
   }
+  newline();
+
+  info("This enables pre-publish signing:");
+  dim("  • File checksums are deterministic (unlike tar.gz bundles)");
+  dim("  • Sign locally, then publish with pre-signed attestation");
+  dim("  • Server verifies manifest matches uploaded bundle");
   newline();
 
   warning("Note: Actual signing requires OIDC authentication.");
@@ -236,7 +258,9 @@ async function promptAddToTrustList(
  */
 function displayResult(
   bundle: SigstoreBundle,
-  outputPath: string,
+  bundlePath: string,
+  manifestPath: string,
+  checksumManifest: ChecksumManifest,
   manifest: { name: string; version?: string },
   options: SignOptions,
   registryResult?: { auditor: string; rekorLogIndex: number | undefined }
@@ -246,7 +270,10 @@ function displayResult(
       success: true,
       tool: manifest.name,
       version: manifest.version ?? "unversioned",
-      bundlePath: outputPath,
+      checksumManifestPath: manifestPath,
+      sigstoreBundlePath: bundlePath,
+      manifestHash: checksumManifest.manifestHash.digest,
+      fileCount: checksumManifest.files.length,
       bundle,
       registry: registryResult
         ? {
@@ -263,7 +290,10 @@ function displayResult(
   success(`Successfully signed ${manifest.name}@${manifest.version ?? "unversioned"}`);
   newline();
 
-  keyValue("Bundle saved to", outputPath);
+  keyValue("Checksum manifest", manifestPath);
+  keyValue("Sigstore bundle", bundlePath);
+  keyValue("Manifest hash", checksumManifest.manifestHash.digest.slice(0, 16) + "...");
+  keyValue("Files signed", String(checksumManifest.files.length));
 
   // Show some bundle details
   if (bundle.verificationMaterial?.tlogEntries?.[0]) {
@@ -286,7 +316,10 @@ function displayResult(
   newline();
   if (options.local) {
     info("Note: Attestation saved locally only (--local flag)");
-    dim("  • Run 'enact sign .' without --local to submit to registry");
+    dim("  • Run 'enact publish .' to publish with this pre-signed attestation");
+  } else {
+    info("Next step:");
+    dim("  • Run 'enact publish .' to publish with this pre-signed attestation");
   }
 }
 
@@ -571,7 +604,7 @@ async function signRemoteTool(
 }
 
 /**
- * Sign command handler (local files)
+ * Sign command handler (local files) - uses manifest-based signing
  */
 async function signLocalTool(
   pathArg: string,
@@ -580,7 +613,6 @@ async function signLocalTool(
 ): Promise<void> {
   // Find manifest
   const { manifestPath, manifestDir } = findManifestPath(pathArg);
-  const manifestContent = readFileSync(manifestPath, "utf-8");
 
   // Load and validate manifest
   const loaded = tryLoadManifest(manifestPath);
@@ -590,28 +622,6 @@ async function signLocalTool(
   }
 
   const manifest = loaded.manifest;
-
-  // Warn about local signing workflow - attestation hash won't match published bundle
-  if (_ctx.isInteractive && !options.dryRun) {
-    newline();
-    warning("Local signing creates an attestation for the manifest content hash.");
-    dim("If you plan to publish this tool, the published bundle will have a different hash.");
-    dim("The attestation won't match and verification will fail.");
-    newline();
-    info("Recommended workflow:");
-    dim(`  1. ${colors.command(`enact publish ${pathArg}`)}     # Publish first`);
-    dim(
-      `  2. ${colors.command(`enact sign ${manifest.name}@${manifest.version ?? "1.0.0"}`)}  # Then sign the published version`
-    );
-    newline();
-
-    const shouldContinue = await confirm("Continue with local signing anyway?", false);
-    if (!shouldContinue) {
-      info("Signing cancelled. Use the recommended workflow above.");
-      return;
-    }
-    newline();
-  }
 
   // Validate manifest
   const validation = validateManifest(manifest);
@@ -623,16 +633,65 @@ async function signLocalTool(
     process.exit(1);
   }
 
-  // Determine output path
-  const outputPath = options.output
+  // Output paths
+  const bundlePath = options.output
     ? resolve(options.output)
     : join(manifestDir, DEFAULT_BUNDLE_FILENAME);
+  const checksumManifestPath = join(manifestDir, DEFAULT_MANIFEST_FILENAME);
 
   // Dry run mode
   if (options.dryRun) {
-    displayDryRun(manifestPath, manifest, outputPath, options);
+    displayDryRun(manifestPath, manifest, manifestDir, options);
     return;
   }
+
+  // Check for existing pre-signed attestation
+  if (existsSync(checksumManifestPath) && existsSync(bundlePath)) {
+    newline();
+    warning("Existing signature files found:");
+    dim(`  • ${checksumManifestPath}`);
+    dim(`  • ${bundlePath}`);
+    newline();
+
+    if (_ctx.isInteractive) {
+      const shouldOverwrite = await confirm("Overwrite existing signature?", false);
+      if (!shouldOverwrite) {
+        info("Signing cancelled. Existing signature preserved.");
+        return;
+      }
+    } else {
+      info("Overwriting existing signature (non-interactive mode).");
+    }
+    newline();
+  }
+
+  // Load gitignore patterns for manifest creation
+  const ignorePatterns = loadGitignore(manifestDir);
+
+  // Create checksum manifest
+  info("Creating checksum manifest...");
+  const checksumManifest = await withSpinner(
+    "Scanning files and computing checksums...",
+    async () => {
+      return await createChecksumManifest(manifestDir, manifest.name, manifest.version ?? "1.0.0", {
+        ignorePatterns,
+        onProgress: options.verbose ? (file) => dim(`  Hashing: ${file}`) : undefined,
+      });
+    }
+  );
+
+  if (options.verbose) {
+    newline();
+    info(`Checksum manifest created with ${checksumManifest.files.length} files:`);
+    for (const file of checksumManifest.files) {
+      dim(`  ${file.path} (${file.sha256.slice(0, 12)}...)`);
+    }
+    newline();
+  }
+
+  keyValue("Files to sign", String(checksumManifest.files.length));
+  keyValue("Manifest hash", checksumManifest.manifestHash.digest.slice(0, 16) + "...");
+  newline();
 
   // Prepare attestation options
   const attestationOptions: EnactToolAttestationOptions = {
@@ -641,6 +700,8 @@ async function signLocalTool(
     publisher: options.identity ?? "unknown",
     description: manifest.description,
     buildTimestamp: new Date(),
+    // Use manifest hash as the bundle hash for attestation
+    bundleHash: checksumManifest.manifestHash.digest,
   };
 
   // Check for git repository for source info
@@ -664,8 +725,11 @@ async function signLocalTool(
     }
   }
 
-  // Create in-toto attestation statement
-  const statement = createEnactToolStatement(manifestContent, attestationOptions);
+  // Create in-toto attestation statement using manifest hash as the content identifier
+  const statement = createEnactToolStatement(
+    checksumManifest.manifestHash.digest,
+    attestationOptions
+  );
 
   if (options.verbose) {
     info("Created attestation statement:");
@@ -707,8 +771,11 @@ async function signLocalTool(
     }
   });
 
-  // Save the bundle locally
-  writeFileSync(outputPath, JSON.stringify(result.bundle, null, 2));
+  // Save the checksum manifest
+  writeFileSync(checksumManifestPath, serializeChecksumManifest(checksumManifest));
+
+  // Save the Sigstore bundle
+  writeFileSync(bundlePath, JSON.stringify(result.bundle, null, 2));
 
   // Submit attestation to registry (unless --local)
   let registryResult: { auditor: string; rekorLogIndex: number | undefined } | undefined;
@@ -719,7 +786,7 @@ async function signLocalTool(
 
     if (!authToken) {
       warning("Not authenticated with registry - attestation saved locally only");
-      dim("Run 'enact auth login' to authenticate, then sign again to submit");
+      dim("Run 'enact auth login' to authenticate, then publish with pre-signed attestation");
     } else {
       const client = createApiClient();
       client.setAuthToken(authToken);
@@ -756,13 +823,21 @@ async function signLocalTool(
           dim(`  ${err.message}`);
         }
         dim("The attestation was saved locally and logged to Rekor.");
-        dim("You can try submitting again later.");
+        dim("You can publish with the pre-signed attestation using 'enact publish .'");
       }
     }
   }
 
   // Display result
-  displayResult(result.bundle, outputPath, manifest, options, registryResult);
+  displayResult(
+    result.bundle,
+    bundlePath,
+    checksumManifestPath,
+    checksumManifest,
+    manifest,
+    options,
+    registryResult
+  );
 }
 
 /**

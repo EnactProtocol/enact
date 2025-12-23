@@ -1,7 +1,7 @@
 ---
 enact: "2.0.0"
 name: enact/json-formatter
-version: 1.0.0
+version: 1.0.1
 description: Formats and prettifies JSON with configurable indentation
 from: "node:20-alpine"
 command: "node /work/format.js ${json} ${indent}"
