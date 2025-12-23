@@ -61,11 +61,7 @@ export default function Tool() {
   const { owner, displayName } = parseToolName(toolName);
   const apiClient = useApiClient();
 
-  // If it's a code view, delegate to ToolCode component
-  if (isCodeView && toolName) {
-    return <ToolCode toolName={toolName} initialFilePath={filePath} />;
-  }
-
+  // All hooks must be called before any conditional returns to satisfy React's rules of hooks
   const {
     data: tool,
     isLoading,
@@ -73,13 +69,14 @@ export default function Tool() {
   } = useQuery<ToolInfo>({
     queryKey: ["tool", toolName, apiClient],
     queryFn: () => getToolInfo(apiClient, toolName),
+    enabled: !isCodeView, // Only fetch when not in code view
   });
 
   // Fetch files list
   const { data: filesData } = useQuery<ToolFilesResponse>({
     queryKey: ["toolFiles", toolName, tool?.latestVersion],
     queryFn: () => getToolFiles(apiClient, toolName, tool!.latestVersion),
-    enabled: !!tool?.latestVersion,
+    enabled: !isCodeView && !!tool?.latestVersion,
   });
 
   // Find the manifest file (SKILL.md preferred, with fallback to legacy formats)
@@ -95,8 +92,13 @@ export default function Tool() {
   const { data: enactContent } = useQuery<FileContentResponse>({
     queryKey: ["fileContent", toolName, tool?.latestVersion, enactFile?.path],
     queryFn: () => getFileContent(apiClient, toolName, tool!.latestVersion, enactFile!.path),
-    enabled: !!tool?.latestVersion && !!enactFile,
+    enabled: !isCodeView && !!tool?.latestVersion && !!enactFile,
   });
+
+  // If it's a code view, delegate to ToolCode component
+  if (isCodeView && toolName) {
+    return <ToolCode toolName={toolName} initialFilePath={filePath} />;
+  }
 
   // Build file tree from paths, then get top-level items (files and directories)
   const fileTree: FileNode[] = filesData ? buildFileTree(filesData.files.map((f) => f.path)) : [];
