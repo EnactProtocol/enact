@@ -3,6 +3,7 @@
     "testuser/hello-js": "1.0.0",
     "examples/hello-simple": "0.1.0",
     "enact/test/remote-sign-demo": "0.1.1",
-    "enact/context7/docs": "1.0.0"
+    "enact/context7/docs": "1.0.0",
+    "enact/text-summarizer": "1.0.1"
   }
 }

@@ -220,10 +220,14 @@ async function fetchAndCacheTool(
     config.registry?.url ??
     "https://siikwkfgsmouioodghho.supabase.co/functions/v1";
 
-  // Get auth token - use user token if available, otherwise use anon key for public access
-  let authToken = config.registry?.authToken ?? process.env.ENACT_AUTH_TOKEN;
+  // Get auth token - try stored JWT first (for private tools), then fall back to config/env/anon
+  const { getValidToken } = await import("../auth/index.js");
+  let authToken: string | undefined = (await getValidToken()) ?? undefined;
+  if (!authToken) {
+    authToken = config.registry?.authToken ?? process.env.ENACT_AUTH_TOKEN;
+  }
+  // Fall back to anon key for unauthenticated public access
   if (!authToken && registryUrl.includes("siikwkfgsmouioodghho.supabase.co")) {
-    // Use the official Supabase anon key for unauthenticated access
     authToken =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpaWt3a2Znc21vdWlvb2RnaGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2MTkzMzksImV4cCI6MjA4MDE5NTMzOX0.kxnx6-IPFhmGx6rzNx36vbyhFMFZKP_jFqaDbKnJ_E0";
   }

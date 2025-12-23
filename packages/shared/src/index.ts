@@ -42,6 +42,7 @@ export {
   configExists,
   ensureGlobalSetup,
   DEFAULT_CONFIG,
+  PLATFORM_TRUSTED_SIGNERS,
   // Local trust management (new unified API)
   getTrustedIdentities,
   addTrustedIdentity,

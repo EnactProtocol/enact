@@ -82,7 +82,10 @@ export interface EnactConfig {
 export const DEFAULT_CONFIG: EnactConfig = {
   version: "1.0.0",
   trust: {
-    auditors: [],
+    auditors: [
+      // Platform default trusted signers - can be removed by users
+      "github:keith.groves@jointheleague.org",
+    ],
     policy: "prompt",
     minimum_attestations: 1,
   },
@@ -98,6 +101,12 @@ export const DEFAULT_CONFIG: EnactConfig = {
     url: "https://siikwkfgsmouioodghho.supabase.co/functions/v1",
   },
 };
+
+/**
+ * Platform-level default trusted signers.
+ * These are included in DEFAULT_CONFIG but can be removed by users.
+ */
+export const PLATFORM_TRUSTED_SIGNERS: string[] = ["github:keith.groves@jointheleague.org"];
 
 /**
  * Deep merge two objects, with source values overwriting target values

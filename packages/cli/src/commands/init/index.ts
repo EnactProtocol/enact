@@ -4,7 +4,7 @@
  * Create a basic tool template in the current directory.
  */
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { getSecret } from "@enactprotocol/secrets";
 import type { Command } from "commander";
@@ -232,16 +232,32 @@ async function initHandler(options: InitOptions, ctx: CommandContext): Promise<v
     return;
   }
 
-  // Handle --claude mode: create CLAUDE.md
+  // Handle --claude mode: create or append to CLAUDE.md
   if (isClaudeMode) {
     const claudePath = join(targetDir, "CLAUDE.md");
-    if (existsSync(claudePath) && !options.force) {
-      warning(`CLAUDE.md already exists at: ${claudePath}`);
-      info("Use --force to overwrite");
-      return;
+    const templateContent = loadTemplate("claude.md");
+
+    if (existsSync(claudePath)) {
+      const existingContent = readFileSync(claudePath, "utf-8");
+      // Check if Enact content is already present
+      if (existingContent.includes("This project uses Enact tools")) {
+        if (options.force) {
+          writeFileSync(claudePath, templateContent, "utf-8");
+          success(`Overwrote CLAUDE.md: ${claudePath}`);
+        } else {
+          info("CLAUDE.md already contains Enact configuration, skipping");
+          info("Use --force to overwrite");
+        }
+      } else {
+        // Append Enact content to existing file
+        const newContent = `${existingContent.trimEnd()}\n\n${templateContent}`;
+        writeFileSync(claudePath, newContent, "utf-8");
+        success(`Appended Enact configuration to existing CLAUDE.md: ${claudePath}`);
+      }
+    } else {
+      writeFileSync(claudePath, templateContent, "utf-8");
+      success(`Created CLAUDE.md: ${claudePath}`);
     }
-    writeFileSync(claudePath, loadTemplate("claude.md"), "utf-8");
-    success(`Created CLAUDE.md: ${claudePath}`);
 
     // Create .enact/tools.json
     if (createEnactProjectDir(targetDir, options.force ?? false)) {
@@ -253,15 +269,31 @@ async function initHandler(options: InitOptions, ctx: CommandContext): Promise<v
     return;
   }
 
-  // Handle default (agent) mode: create AGENTS.md for projects using Enact tools
+  // Handle default (agent) mode: create or append to AGENTS.md for projects using Enact tools
   const agentsPath = join(targetDir, "AGENTS.md");
-  if (existsSync(agentsPath) && !options.force) {
-    warning(`AGENTS.md already exists at: ${agentsPath}`);
-    info("Use --force to overwrite");
-    return;
+  const agentsTemplateContent = loadTemplate("agent-agents.md");
+
+  if (existsSync(agentsPath)) {
+    const existingContent = readFileSync(agentsPath, "utf-8");
+    // Check if Enact content is already present
+    if (existingContent.includes("This project uses Enact tools")) {
+      if (options.force) {
+        writeFileSync(agentsPath, agentsTemplateContent, "utf-8");
+        success(`Overwrote AGENTS.md: ${agentsPath}`);
+      } else {
+        info("AGENTS.md already contains Enact configuration, skipping");
+        info("Use --force to overwrite");
+      }
+    } else {
+      // Append Enact content to existing file
+      const newContent = `${existingContent.trimEnd()}\n\n${agentsTemplateContent}`;
+      writeFileSync(agentsPath, newContent, "utf-8");
+      success(`Appended Enact configuration to existing AGENTS.md: ${agentsPath}`);
+    }
+  } else {
+    writeFileSync(agentsPath, agentsTemplateContent, "utf-8");
+    success(`Created AGENTS.md: ${agentsPath}`);
   }
-  writeFileSync(agentsPath, loadTemplate("agent-agents.md"), "utf-8");
-  success(`Created AGENTS.md: ${agentsPath}`);
 
   // Create .enact/tools.json
   if (createEnactProjectDir(targetDir, options.force ?? false)) {

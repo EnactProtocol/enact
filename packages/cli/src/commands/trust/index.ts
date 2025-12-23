@@ -219,7 +219,7 @@ async function trustListHandler(options: TrustListOptions, _ctx: CommandContext)
     return;
   }
 
-  header("Trusted Identities (Local)");
+  header("Trusted Identities");
   newline();
   if (auditors.length === 0) {
     dim("  No trusted identities configured");

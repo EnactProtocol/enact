@@ -143,8 +143,9 @@ async function refreshSupabaseToken(refreshToken: string): Promise<{
 
 /**
  * Get a valid access token, refreshing if necessary
+ * Exported so other commands can use the user's JWT for private tool access
  */
-async function getValidToken(): Promise<string | null> {
+export async function getValidToken(): Promise<string | null> {
   const accessToken = await getStoredToken();
   if (!accessToken) {
     return null;

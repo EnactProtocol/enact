@@ -217,7 +217,14 @@ async function infoHandler(
     process.env.ENACT_REGISTRY_URL ??
     config.registry?.url ??
     "https://siikwkfgsmouioodghho.supabase.co/functions/v1";
-  const authToken = config.registry?.authToken;
+
+  // Get auth token - try stored JWT first (for private tools), then fall back to config
+  const { getValidToken } = await import("../auth/index.js");
+  let authToken: string | undefined = (await getValidToken()) ?? undefined;
+  if (!authToken) {
+    authToken = config.registry?.authToken;
+  }
+
   const client = createApiClient({
     baseUrl: registryUrl,
     authToken: authToken,

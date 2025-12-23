@@ -130,9 +130,16 @@ async function inspectHandler(
     return;
   }
 
+  // Get auth token - try stored JWT first (for private tools), then fall back to config
+  const { getValidToken } = await import("../auth/index.js");
+  let authToken: string | undefined = (await getValidToken()) ?? undefined;
+  if (!authToken) {
+    authToken = config.registry?.authToken;
+  }
+
   const client = createApiClient({
     baseUrl: registryUrl,
-    authToken: config.registry?.authToken,
+    authToken: authToken,
   });
 
   // Determine target version
