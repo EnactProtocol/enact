@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/enact-linux-x64",
-  "version": "2.1.21",
+  "version": "2.1.22",
   "description": "Enact prebuilt binary for linux-x64",
   "license": "Apache-2.0",
   "os": ["linux"],
