@@ -360,10 +360,10 @@ describe("configuration manager", () => {
 
   describe("Trust Management", () => {
     describe("Unified Identity Model", () => {
-      test("getTrustedIdentities returns empty array by default", () => {
+      test("getTrustedIdentities returns platform defaults by default", () => {
         resetConfig();
         const identities = getTrustedIdentities();
-        expect(identities).toEqual([]);
+        expect(identities).toContain("github:keith.groves@jointheleague.org");
       });
 
       test("addTrustedIdentity adds identity and returns true", () => {
@@ -426,7 +426,7 @@ describe("configuration manager", () => {
       test("getTrustedAuditors works as alias", () => {
         resetConfig();
         const auditors = getTrustedAuditors();
-        expect(auditors).toEqual([]);
+        expect(auditors).toContain("github:keith.groves@jointheleague.org");
       });
 
       test("addTrustedAuditor works as alias", () => {
@@ -668,7 +668,7 @@ describe("configuration manager", () => {
       const config = loadConfig();
       expect(config.trust?.policy).toBe("prompt");
       expect(config.trust?.minimum_attestations).toBe(1);
-      expect(config.trust?.auditors).toEqual([]);
+      expect(config.trust?.auditors).toContain("github:keith.groves@jointheleague.org");
     });
 
     test("default config has correct cache settings", () => {
