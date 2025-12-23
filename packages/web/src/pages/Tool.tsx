@@ -3,7 +3,7 @@ import AttestButton from "@/components/trust/AttestButton";
 import Badge from "@/components/ui/Badge";
 import CopyButton from "@/components/ui/CopyButton";
 import Spinner from "@/components/ui/Spinner";
-import { useApiClient } from "@/hooks/useApiClient";
+import { useApiClientWithAuth } from "@/hooks/useApiClient";
 import { getFileContent, getToolFiles, getToolInfo } from "@/lib/api";
 import type { FileContentResponse, ToolFilesResponse, ToolInfo } from "@/lib/api-client";
 import { formatNumber, getInstallCommand, getRunCommand } from "@/lib/utils";
@@ -59,7 +59,7 @@ export default function Tool() {
   const { "*": fullPath } = useParams<{ "*": string }>();
   const { toolName, isCodeView, filePath } = parseToolPath(fullPath);
   const { owner, displayName } = parseToolName(toolName);
-  const apiClient = useApiClient();
+  const { client: apiClient, isAuthLoading } = useApiClientWithAuth();
 
   // All hooks must be called before any conditional returns to satisfy React's rules of hooks
   const {
@@ -69,7 +69,7 @@ export default function Tool() {
   } = useQuery<ToolInfo>({
     queryKey: ["tool", toolName, apiClient],
     queryFn: () => getToolInfo(apiClient, toolName),
-    enabled: !isCodeView, // Only fetch when not in code view
+    enabled: !isCodeView && !isAuthLoading, // Wait for auth to be ready
   });
 
   // Fetch files list
@@ -110,7 +110,7 @@ export default function Tool() {
     return a.name.localeCompare(b.name);
   });
 
-  if (isLoading) {
+  if (isAuthLoading || isLoading) {
     return (
       <div className="container mx-auto px-4 py-20">
         <Spinner size={40} />

@@ -1,7 +1,7 @@
 import CodeViewer from "@/components/code/CodeViewer";
 import FileTree, { buildFileTree, type FileNode } from "@/components/code/FileTree";
 import Spinner from "@/components/ui/Spinner";
-import { useApiClient } from "@/hooks/useApiClient";
+import { useApiClientWithAuth } from "@/hooks/useApiClient";
 import { getFileContent, getToolFiles, getToolInfo } from "@/lib/api";
 import type { FileContentResponse, ToolFilesResponse, ToolInfo } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
@@ -16,14 +16,14 @@ interface ToolCodeProps {
 
 export default function ToolCode({ toolName, initialFilePath }: ToolCodeProps) {
   const navigate = useNavigate();
-  const apiClient = useApiClient();
+  const { client: apiClient, isAuthLoading } = useApiClientWithAuth();
   // Extract the display name (last segment of the tool name)
   const displayName = toolName.split("/").pop() || toolName;
 
   const [copied, setCopied] = useState(false);
   const currentFile = initialFilePath || "";
 
-  // Fetch tool info
+  // Fetch tool info - wait for auth to be ready before fetching
   const {
     data: tool,
     isLoading: toolLoading,
@@ -31,6 +31,7 @@ export default function ToolCode({ toolName, initialFilePath }: ToolCodeProps) {
   } = useQuery<ToolInfo>({
     queryKey: ["tool", toolName, apiClient],
     queryFn: () => getToolInfo(apiClient, toolName),
+    enabled: !isAuthLoading, // Wait for auth to be ready
   });
 
   // Fetch files list
@@ -100,8 +101,8 @@ export default function ToolCode({ toolName, initialFilePath }: ToolCodeProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Loading state
-  if (toolLoading || filesLoading) {
+  // Loading state (including auth loading)
+  if (isAuthLoading || toolLoading || filesLoading) {
     return (
       <div className="container mx-auto px-4 py-20">
         <Spinner size={40} />

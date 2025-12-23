@@ -73,13 +73,19 @@ Deno.serve(async (req) => {
     const isDev = Deno.env.get("ENACT_DEV_MODE") === "true";
 
     // In dev mode, use service role key to bypass RLS for write operations
-    // Don't pass the request auth header when using service role
     const useServiceRole = isDev && supabaseServiceKey;
     const supabaseKey = useServiceRole ? supabaseServiceKey : supabaseAnonKey;
 
+    // Create Supabase client with auth header passed through
+    // This allows RLS policies using auth.uid() to work for authenticated users
     const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
       global: {
         headers: useServiceRole ? {} : (authHeader ? { Authorization: authHeader } : {}),
+      },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
       },
     });
 
@@ -920,6 +926,10 @@ async function handleListFiles(
   toolName: string,
   version: string
 ): Promise<Response> {
+  // Debug: Check if user is authenticated
+  const { data: { user } } = await supabase.auth.getUser();
+  console.log(`[Tools] handleListFiles - User: ${user?.id ?? 'anonymous'}, Tool: ${toolName}@${version}`);
+
   // Get version info
   const { data, error } = await supabase
     .from("tool_versions")
@@ -931,7 +941,16 @@ async function handleListFiles(
     .eq("version", version)
     .single();
 
-  if (error || !data) {
+  if (error) {
+    console.error(`[Tools] Error fetching version for ${toolName}@${version}:`, error);
+    // If it's an RLS error for private tools, give a more helpful message
+    if (error.code === "PGRST116") {
+      return Errors.notFound(`Version not found: ${toolName}@${version}. If this is a private tool, make sure you're logged in as the owner.`);
+    }
+    return Errors.notFound(`Version not found: ${toolName}@${version}`);
+  }
+
+  if (!data) {
     return Errors.notFound(`Version not found: ${toolName}@${version}`);
   }
 
@@ -984,6 +1003,10 @@ async function handleGetFileContent(
   version: string,
   filePath: string
 ): Promise<Response> {
+  // Debug: Check if user is authenticated
+  const { data: { user } } = await supabase.auth.getUser();
+  console.log(`[Tools] handleGetFileContent - User: ${user?.id ?? 'anonymous'}, Tool: ${toolName}@${version}, File: ${filePath}`);
+
   // Get version info
   const { data, error } = await supabase
     .from("tool_versions")
@@ -995,7 +1018,15 @@ async function handleGetFileContent(
     .eq("version", version)
     .single();
 
-  if (error || !data) {
+  if (error) {
+    console.error(`[Tools] Error fetching version for file content ${toolName}@${version}:`, error);
+    if (error.code === "PGRST116") {
+      return Errors.notFound(`Version not found: ${toolName}@${version}. If this is a private tool, make sure you're logged in as the owner.`);
+    }
+    return Errors.notFound(`Version not found: ${toolName}@${version}`);
+  }
+
+  if (!data) {
     return Errors.notFound(`Version not found: ${toolName}@${version}`);
   }
 
