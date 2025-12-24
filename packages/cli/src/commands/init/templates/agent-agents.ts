@@ -24,16 +24,35 @@ enact list                                        # List project tools
 ## Tool Output
 Tools output JSON to stdout. Parse with jq or your language's JSON parser:
 \`\`\`bash
-enact run tool --args '{}' | jq '.result'
+enact run tool --args '{}' | jq '.result'               # Progress output is quiet by default
+enact run tool --args '{}' | jq -r '.field'             # Extract a specific field as raw text
+enact run tool --args '{}' --verbose | jq '.result'     # Use --verbose to see progress output
 \`\`\`
 
 ## Creating Local Tools
-Create \`tools/<name>/SKILL.md\` with:
+
+**IMPORTANT: Always use \`enact init --tool\` to create new tools!**
+
+This scaffolds a proper tool structure with SKILL.md and AGENTS.md templates:
+\`\`\`bash
+enact init --tool                                       # If logged in: uses username/my-tool automatically
+enact init --tool --name my-tool                        # Simple name
+enact init --tool --name username/my-tool               # Custom hierarchical name
+\`\`\`
+
+**Note:** When logged in, \`enact init --tool\` automatically uses your username as the namespace (e.g., \`enact/my-tool\`). When not logged in, it defaults to \`my-tool\`.
+
+Then edit the generated \`SKILL.md\` file to define your tool's behavior.
+
+### Tool Structure (for reference)
+The \`enact init --tool\` command creates a \`SKILL.md\` file with this structure:
 \`\`\`yaml
 ---
-name: my-tool
+name: my-tool                                           # Simple name works
+# OR
+name: namespace/tool-name                               # Hierarchical names recommended for organization (e.g., fun/my-tool)
 description: What it does
-command: echo "Hello \${name}"
+command: echo "Hello \${name}"                           # Shell command to execute
 inputSchema:
   type: object
   properties:
@@ -42,19 +61,13 @@ inputSchema:
 # My Tool
 Documentation here.
 \`\`\`
-Run with: \`enact run ./tools/<name> --args '{"name": "World"}'\`
+
+Run local tools with: \`enact run ./tools/<name> --args '{"key": "value"}'\`
 
 ## Environment & Secrets
 \`\`\`bash
 enact env set API_KEY --secret --namespace author/tool  # Set secret
 enact env list                                          # List env vars
-\`\`\`
-
-## Creating Your Own Tools
-To scaffold a new publishable tool with SKILL.md and AGENTS.md templates:
-\`\`\`bash
-enact init --tool                                       # Create tool in current directory
-enact init --tool --name username/my-tool              # Create with specific name
 \`\`\`
 
 ## Getting Help

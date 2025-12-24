@@ -18,9 +18,11 @@ export {
   validateManifest,
   validateManifestStrict,
   isValidToolName,
+  isValidLocalToolName,
   isValidVersion,
   isValidTimeout,
   ToolManifestSchema,
+  type ValidateManifestOptions,
 } from "./validator";
 
 // Loader
@@ -33,4 +35,5 @@ export {
   tryLoadManifest,
   tryLoadManifestFromDir,
   type LoadedManifest,
+  type LoadManifestOptions,
 } from "./loader";

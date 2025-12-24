@@ -66,7 +66,7 @@ interface RunOptions extends GlobalOptions {
   timeout?: string;
   noCache?: boolean;
   local?: boolean;
-  quiet?: boolean;
+  verbose?: boolean;
 }
 
 /**
@@ -501,7 +501,7 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
   let resolution: ToolResolution | null = null;
 
   // First, try to resolve locally (project → user → cache)
-  if (options.quiet) {
+  if (!options.verbose) {
     resolution = tryResolveTool(tool, { startDir: ctx.cwd });
   } else {
     const spinner = clack.spinner();
@@ -518,7 +518,7 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
   if (!resolution && !options.local) {
     // Check if this looks like a tool name (namespace/name format)
     if (tool.includes("/") && !tool.startsWith("/") && !tool.startsWith(".")) {
-      resolution = options.quiet
+      resolution = !options.verbose
         ? await fetchAndCacheTool(tool, options, ctx)
         : await withSpinner(
             `Fetching ${tool} from registry...`,
@@ -669,7 +669,7 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
     const containerImage = manifest.from ?? "node:18-alpine";
     const spinnerMessage = `Running ${manifest.name} (${containerImage})...`;
 
-    const result = options.quiet
+    const result = !options.verbose
       ? await executeTask()
       : await withSpinner(spinnerMessage, executeTask, `${symbols.success} Execution complete`);
 
@@ -720,8 +720,7 @@ export function configureRunCommand(program: Command): void {
     .option("--no-cache", "Disable container caching")
     .option("--local", "Only resolve from local sources")
     .option("--dry-run", "Show what would be executed without running")
-    .option("-q, --quiet", "Suppress spinner output, show only tool output")
-    .option("-v, --verbose", "Show detailed output")
+    .option("-v, --verbose", "Show progress spinners and detailed output")
     .option("--json", "Output result as JSON")
     .action(async (tool: string, options: RunOptions) => {
       const ctx: CommandContext = {

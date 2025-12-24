@@ -9,7 +9,7 @@ import { basename, join } from "node:path";
 import type { ParsedManifest, ToolManifest, ValidationResult } from "../types/manifest";
 import { MANIFEST_FILES } from "../types/manifest";
 import { ManifestParseError, parseManifestAuto } from "./parser";
-import { validateManifest } from "./validator";
+import { type ValidateManifestOptions, validateManifest } from "./validator";
 
 /**
  * Error thrown when loading a manifest fails
@@ -42,13 +42,21 @@ export interface LoadedManifest {
 }
 
 /**
+ * Options for loading a manifest
+ */
+export interface LoadManifestOptions extends ValidateManifestOptions {
+  // Inherits allowSimpleNames from ValidateManifestOptions
+}
+
+/**
  * Load a manifest from a file path
  *
  * @param filePath - Path to the manifest file (SKILL.md, enact.md, enact.yaml, or enact.yml)
+ * @param options - Options for loading and validation
  * @returns LoadedManifest with validated manifest and metadata
  * @throws ManifestLoadError if file doesn't exist, parse fails, or validation fails
  */
-export function loadManifest(filePath: string): LoadedManifest {
+export function loadManifest(filePath: string, options: LoadManifestOptions = {}): LoadedManifest {
   // Check file exists
   if (!existsSync(filePath)) {
     throw new ManifestLoadError(`Manifest file not found: ${filePath}`, filePath);
@@ -82,7 +90,7 @@ export function loadManifest(filePath: string): LoadedManifest {
   }
 
   // Validate the manifest
-  const validation = validateManifest(parsed.manifest);
+  const validation = validateManifest(parsed.manifest, options);
 
   if (!validation.valid) {
     const errorMessages =
@@ -114,15 +122,19 @@ export function loadManifest(filePath: string): LoadedManifest {
  * Searches for SKILL.md, enact.md, enact.yaml, or enact.yml in the given directory
  *
  * @param dir - Directory to search for manifest
+ * @param options - Options for loading and validation
  * @returns LoadedManifest if found
  * @throws ManifestLoadError if no manifest found or loading fails
  */
-export function loadManifestFromDir(dir: string): LoadedManifest {
+export function loadManifestFromDir(
+  dir: string,
+  options: LoadManifestOptions = {}
+): LoadedManifest {
   // Try each manifest filename in order of preference
   for (const filename of MANIFEST_FILES) {
     const filePath = join(dir, filename);
     if (existsSync(filePath)) {
-      return loadManifest(filePath);
+      return loadManifest(filePath, options);
     }
   }
 
@@ -162,11 +174,15 @@ export function hasManifest(dir: string): boolean {
  * Try to load a manifest, returning null instead of throwing
  *
  * @param filePath - Path to the manifest file
+ * @param options - Options for loading and validation
  * @returns LoadedManifest or null if loading fails
  */
-export function tryLoadManifest(filePath: string): LoadedManifest | null {
+export function tryLoadManifest(
+  filePath: string,
+  options: LoadManifestOptions = {}
+): LoadedManifest | null {
   try {
-    return loadManifest(filePath);
+    return loadManifest(filePath, options);
   } catch {
     return null;
   }
@@ -176,11 +192,15 @@ export function tryLoadManifest(filePath: string): LoadedManifest | null {
  * Try to load a manifest from a directory, returning null instead of throwing
  *
  * @param dir - Directory to search
+ * @param options - Options for loading and validation
  * @returns LoadedManifest or null if no manifest found or loading fails
  */
-export function tryLoadManifestFromDir(dir: string): LoadedManifest | null {
+export function tryLoadManifestFromDir(
+  dir: string,
+  options: LoadManifestOptions = {}
+): LoadedManifest | null {
   try {
-    return loadManifestFromDir(dir);
+    return loadManifestFromDir(dir, options);
   } catch {
     return null;
   }

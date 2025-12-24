@@ -10,7 +10,7 @@
 
 import { existsSync, readdirSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
-import { findManifestFile, loadManifest } from "./manifest/loader";
+import { type LoadManifestOptions, findManifestFile, loadManifest } from "./manifest/loader";
 import { getCacheDir, getProjectEnactDir } from "./paths";
 import { getInstalledVersion, getToolCachePath } from "./registry";
 import type { ToolLocation, ToolResolution } from "./types/manifest";
@@ -73,9 +73,14 @@ export function getToolPath(toolsDir: string, toolName: string): string {
  *
  * @param dir - Directory to check
  * @param location - The location type for metadata
+ * @param options - Options for loading the manifest
  * @returns ToolResolution or null if not found/invalid
  */
-function tryLoadFromDir(dir: string, location: ToolLocation): ToolResolution | null {
+function tryLoadFromDir(
+  dir: string,
+  location: ToolLocation,
+  options: LoadManifestOptions = {}
+): ToolResolution | null {
   if (!existsSync(dir)) {
     return null;
   }
@@ -86,7 +91,7 @@ function tryLoadFromDir(dir: string, location: ToolLocation): ToolResolution | n
   }
 
   try {
-    const loaded = loadManifest(manifestPath);
+    const loaded = loadManifest(manifestPath, options);
     return {
       manifest: loaded.manifest,
       sourceDir: dir,
@@ -103,12 +108,18 @@ function tryLoadFromDir(dir: string, location: ToolLocation): ToolResolution | n
 /**
  * Resolve a tool from a file path
  *
+ * Local/file tools are allowed to have simple names (without hierarchy)
+ * since they don't need to be published.
+ *
  * @param filePath - Path to manifest file or directory containing manifest
  * @returns ToolResolution
  * @throws ToolResolveError if not found
  */
 export function resolveToolFromPath(filePath: string): ToolResolution {
   const absolutePath = isAbsolute(filePath) ? filePath : resolve(filePath);
+
+  // Local tools can have simple names (no hierarchy required)
+  const localOptions: LoadManifestOptions = { allowSimpleNames: true };
 
   // Check if it's a manifest file directly
   if (
@@ -120,7 +131,7 @@ export function resolveToolFromPath(filePath: string): ToolResolution {
       throw new ToolResolveError(`Manifest file not found: ${absolutePath}`, filePath);
     }
 
-    const loaded = loadManifest(absolutePath);
+    const loaded = loadManifest(absolutePath, localOptions);
     return {
       manifest: loaded.manifest,
       sourceDir: dirname(absolutePath),
@@ -131,7 +142,7 @@ export function resolveToolFromPath(filePath: string): ToolResolution {
   }
 
   // Treat as directory
-  const result = tryLoadFromDir(absolutePath, "file");
+  const result = tryLoadFromDir(absolutePath, "file", localOptions);
   if (result) {
     return result;
   }
@@ -298,7 +309,8 @@ export function resolveToolAuto(
 
   // Check if the path exists as-is (could be a relative directory without ./)
   if (existsSync(toolNameOrPath)) {
-    const result = tryLoadFromDir(resolve(toolNameOrPath), "file");
+    // Local tools can have simple names (no hierarchy required)
+    const result = tryLoadFromDir(resolve(toolNameOrPath), "file", { allowSimpleNames: true });
     if (result) {
       return result;
     }

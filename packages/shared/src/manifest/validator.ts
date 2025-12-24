@@ -83,9 +83,15 @@ const SEMVER_REGEX =
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
 
 /**
- * Tool name regex - hierarchical path format
+ * Tool name regex - hierarchical path format (required for publishing)
  */
 const TOOL_NAME_REGEX = /^[a-z0-9_-]+(?:\/[a-z0-9_-]+)+$/;
+
+/**
+ * Tool name regex - simple format (allowed for local tools)
+ * Allows both hierarchical (org/tool) and simple (my-tool) names
+ */
+const TOOL_NAME_REGEX_LOCAL = /^[a-z0-9_-]+(?:\/[a-z0-9_-]+)*$/;
 
 /**
  * Go duration regex (used for timeout)
@@ -93,58 +99,69 @@ const TOOL_NAME_REGEX = /^[a-z0-9_-]+(?:\/[a-z0-9_-]+)+$/;
 const GO_DURATION_REGEX = /^(\d+)(ns|us|µs|ms|s|m|h)$/;
 
 /**
- * Complete tool manifest schema
+ * Create a tool manifest schema with configurable name validation
  */
-const ToolManifestSchema = z
-  .object({
-    // Required fields
-    name: z
-      .string()
-      .min(1, "Tool name is required")
-      .regex(
-        TOOL_NAME_REGEX,
-        "Tool name must be hierarchical path format (e.g., 'org/tool' or 'org/category/tool')"
-      ),
+function createToolManifestSchema(allowSimpleNames: boolean) {
+  const nameRegex = allowSimpleNames ? TOOL_NAME_REGEX_LOCAL : TOOL_NAME_REGEX;
+  const nameMessage = allowSimpleNames
+    ? "Tool name must contain only lowercase letters, numbers, hyphens, and underscores"
+    : "Tool name must be hierarchical path format (e.g., 'org/tool' or 'org/category/tool')";
 
-    description: z
-      .string()
-      .min(1, "Description is required")
-      .max(500, "Description should be 500 characters or less"),
+  return z
+    .object({
+      // Required fields
+      name: z.string().min(1, "Tool name is required").regex(nameRegex, nameMessage),
 
-    // Recommended fields
-    enact: z.string().optional(),
-    version: z
-      .string()
-      .regex(SEMVER_REGEX, "Version must be valid semver (e.g., '1.0.0')")
-      .optional(),
-    from: z.string().optional(),
-    command: z.string().optional(),
-    timeout: z
-      .string()
-      .regex(GO_DURATION_REGEX, "Timeout must be Go duration format (e.g., '30s', '5m', '1h')")
-      .optional(),
-    license: z.string().optional(),
-    tags: z.array(z.string()).optional(),
+      description: z
+        .string()
+        .min(1, "Description is required")
+        .max(500, "Description should be 500 characters or less"),
 
-    // Schema fields
-    inputSchema: JsonSchemaSchema.optional(),
-    outputSchema: JsonSchemaSchema.optional(),
+      // Recommended fields
+      enact: z.string().optional(),
+      version: z
+        .string()
+        .regex(SEMVER_REGEX, "Version must be valid semver (e.g., '1.0.0')")
+        .optional(),
+      from: z.string().optional(),
+      command: z.string().optional(),
+      timeout: z
+        .string()
+        .regex(GO_DURATION_REGEX, "Timeout must be Go duration format (e.g., '30s', '5m', '1h')")
+        .optional(),
+      license: z.string().optional(),
+      tags: z.array(z.string()).optional(),
 
-    // Environment variables
-    env: z.record(z.string(), EnvVariableSchema).optional(),
+      // Schema fields
+      inputSchema: JsonSchemaSchema.optional(),
+      outputSchema: JsonSchemaSchema.optional(),
 
-    // Behavior & Resources
-    annotations: ToolAnnotationsSchema.optional(),
-    resources: ResourceRequirementsSchema.optional(),
+      // Environment variables
+      env: z.record(z.string(), EnvVariableSchema).optional(),
 
-    // Documentation
-    doc: z.string().optional(),
-    authors: z.array(AuthorSchema).optional(),
+      // Behavior & Resources
+      annotations: ToolAnnotationsSchema.optional(),
+      resources: ResourceRequirementsSchema.optional(),
 
-    // Testing
-    examples: z.array(ToolExampleSchema).optional(),
-  })
-  .passthrough(); // Allow x-* custom fields
+      // Documentation
+      doc: z.string().optional(),
+      authors: z.array(AuthorSchema).optional(),
+
+      // Testing
+      examples: z.array(ToolExampleSchema).optional(),
+    })
+    .passthrough(); // Allow x-* custom fields
+}
+
+/**
+ * Complete tool manifest schema (strict - requires hierarchical names)
+ */
+const ToolManifestSchema = createToolManifestSchema(false);
+
+/**
+ * Local tool manifest schema (relaxed - allows simple names)
+ */
+const ToolManifestSchemaLocal = createToolManifestSchema(true);
 
 // ==================== Validation Functions ====================
 
@@ -240,13 +257,30 @@ function generateWarnings(manifest: ToolManifest): ValidationWarning[] {
 }
 
 /**
+ * Options for manifest validation
+ */
+export interface ValidateManifestOptions {
+  /**
+   * Allow simple tool names without hierarchy (e.g., "my-tool" instead of "org/my-tool").
+   * Use this for local tools that won't be published.
+   * @default false
+   */
+  allowSimpleNames?: boolean;
+}
+
+/**
  * Validate a tool manifest
  *
  * @param manifest - The manifest to validate (parsed but unvalidated)
+ * @param options - Validation options
  * @returns ValidationResult with valid flag, errors, and warnings
  */
-export function validateManifest(manifest: unknown): ValidationResult {
-  const result = ToolManifestSchema.safeParse(manifest);
+export function validateManifest(
+  manifest: unknown,
+  options: ValidateManifestOptions = {}
+): ValidationResult {
+  const schema = options.allowSimpleNames ? ToolManifestSchemaLocal : ToolManifestSchema;
+  const result = schema.safeParse(manifest);
 
   if (!result.success) {
     return {
@@ -270,11 +304,15 @@ export function validateManifest(manifest: unknown): ValidationResult {
  * Throws if validation fails
  *
  * @param manifest - The manifest to validate
+ * @param options - Validation options
  * @returns The validated ToolManifest
  * @throws Error if validation fails
  */
-export function validateManifestStrict(manifest: unknown): ToolManifest {
-  const result = validateManifest(manifest);
+export function validateManifestStrict(
+  manifest: unknown,
+  options: ValidateManifestOptions = {}
+): ToolManifest {
+  const result = validateManifest(manifest, options);
 
   if (!result.valid) {
     const errorMessages = result.errors?.map((e) => `${e.path}: ${e.message}`).join(", ");
@@ -285,10 +323,17 @@ export function validateManifestStrict(manifest: unknown): ToolManifest {
 }
 
 /**
- * Check if a string is a valid tool name
+ * Check if a string is a valid tool name (hierarchical format for publishing)
  */
 export function isValidToolName(name: string): boolean {
   return TOOL_NAME_REGEX.test(name);
+}
+
+/**
+ * Check if a string is a valid local tool name (allows simple names)
+ */
+export function isValidLocalToolName(name: string): boolean {
+  return TOOL_NAME_REGEX_LOCAL.test(name);
 }
 
 /**

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  isValidLocalToolName,
   isValidTimeout,
   isValidToolName,
   isValidVersion,
@@ -237,6 +238,63 @@ describe("manifest validator", () => {
     });
   });
 
+  describe("allowSimpleNames option", () => {
+    test("rejects simple names by default", () => {
+      const manifest = {
+        name: "my-tool", // No slash
+        description: "A local tool",
+      };
+
+      const result = validateManifest(manifest);
+      expect(result.valid).toBe(false);
+      expect(result.errors?.some((e) => e.path === "name")).toBe(true);
+    });
+
+    test("accepts simple names with allowSimpleNames option", () => {
+      const manifest = {
+        name: "my-tool",
+        description: "A local tool",
+      };
+
+      const result = validateManifest(manifest, { allowSimpleNames: true });
+      expect(result.valid).toBe(true);
+    });
+
+    test("accepts hierarchical names with allowSimpleNames option", () => {
+      const manifest = {
+        name: "org/tool",
+        description: "A published tool",
+      };
+
+      const result = validateManifest(manifest, { allowSimpleNames: true });
+      expect(result.valid).toBe(true);
+    });
+
+    test("still rejects invalid characters with allowSimpleNames", () => {
+      const manifest = {
+        name: "My-Tool", // Uppercase not allowed
+        description: "Invalid tool name",
+      };
+
+      const result = validateManifest(manifest, { allowSimpleNames: true });
+      expect(result.valid).toBe(false);
+    });
+
+    test("validateManifestStrict respects allowSimpleNames option", () => {
+      const manifest = {
+        name: "local-tool",
+        description: "A local tool",
+      };
+
+      // Should throw without option
+      expect(() => validateManifestStrict(manifest)).toThrow();
+
+      // Should succeed with option
+      const result = validateManifestStrict(manifest, { allowSimpleNames: true });
+      expect(result.name).toBe("local-tool");
+    });
+  });
+
   describe("warnings", () => {
     test("warns about missing recommended fields", () => {
       const manifest = {
@@ -357,6 +415,25 @@ describe("manifest validator", () => {
         expect(isValidToolName("Org/Tool")).toBe(false); // Uppercase
         expect(isValidToolName("org/ tool")).toBe(false); // Space
         expect(isValidToolName("")).toBe(false);
+      });
+    });
+
+    describe("isValidLocalToolName", () => {
+      test("returns true for simple names (no hierarchy)", () => {
+        expect(isValidLocalToolName("my-tool")).toBe(true);
+        expect(isValidLocalToolName("tool_name")).toBe(true);
+        expect(isValidLocalToolName("simple")).toBe(true);
+      });
+
+      test("returns true for hierarchical names", () => {
+        expect(isValidLocalToolName("org/tool")).toBe(true);
+        expect(isValidLocalToolName("acme/utils/greeter")).toBe(true);
+      });
+
+      test("returns false for invalid names", () => {
+        expect(isValidLocalToolName("My-Tool")).toBe(false); // Uppercase
+        expect(isValidLocalToolName("tool name")).toBe(false); // Space
+        expect(isValidLocalToolName("")).toBe(false);
       });
     });
 
