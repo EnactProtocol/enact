@@ -52,7 +52,6 @@ function extractBlogPosts(source: string): BlogPostMeta[] {
 
 function generateBlogHtml(post: BlogPostMeta, templateHtml: string): string {
   const url = `https://enact.tools/blog/${post.slug}`;
-  const imageUrl = "https://enact.tools/enactback.png";
 
   // Replace the default meta tags with post-specific ones
   let html = templateHtml;
