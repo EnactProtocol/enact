@@ -11,6 +11,205 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    id: "5",
+    title: "Skills Are All You Need",
+    excerpt:
+      "MCP standardizes how agents communicate with tools. But MCP is for communication, not distribution. Enact makes tools as portable as the protocols that describe them.",
+    date: "2024-12-27",
+    author: "Enact Team",
+    slug: "skills-are-all-you-need",
+    tags: ["vision", "mcp", "skills"],
+    content: `
+# Skills Are All You Need
+
+*Making skills executable*
+
+We have abundant intelligence. We have big context windows. But we still have an *action* problem.
+
+For an AI agent to actually *do* something—deploy an app, scan a codebase for secrets, or resize an image—it needs tools. The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) standardizes how agents communicate with tools. But MCP is for communication, not distribution. It defines how to talk to a server—not how to package, share, or deploy one.
+
+If we want agents to be truly autonomous, we need tools that are as portable as the protocols that describe them.
+
+## What Actually Is a Skill?
+
+Think of a Skill not as a piece of code, but as **an onboarding guide for a new team member**.
+
+If you were hiring a junior developer to "run the weekly security scan," you wouldn't just give them a Python script. You would give them:
+
+1. **The Context:** "This scans for exposed credentials before we deploy."
+2. **The Instructions:** "Run it against the repo, review the output, escalate anything critical."
+3. **The Tools:** The actual scripts, credentials, and environment needed to do the job.
+
+A Skill packages all of this together. At its simplest, a skill is just a single \`SKILL.md\` file—a Markdown document with YAML frontmatter that defines the schema, instructions, and optionally the execution environment:
+
+\`\`\`
+code-reviewer/
+└── SKILL.md    # Schema + instructions (no code required)
+\`\`\`
+
+Some skills are pure instructions for an LLM to follow. Others execute code in containers. Both are treated the same by the system—transparent, filesystem-based units of capability that an agent can read, understand, and execute.
+
+## The Portability Problem
+
+MCP gives us a standard way to *describe* tools. But to actually *run* an MCP server, you download code from GitHub, install dependencies, configure credentials, and hope it works. The spec supports running servers over stdio, which means many integrations instruct users to download and execute arbitrary code on their local machines.
+
+This creates two problems:
+
+1. **No portability.** The tool interface is portable, but the tool itself is not. Clone the repo, install Python 3.11 (not 3.9), pip install the right packages, configure the environment variables—and if it works on their machine but not yours, good luck debugging.
+
+2. **No trust.** You're running someone else's code with access to your filesystem, your credentials, your everything. There's no verification, no sandboxing, no audit trail.
+
+Enact fixes both. The skill definition includes its own runtime—the container, the dependencies, the command. Share a skill, and the recipient can run it immediately in a sandboxed environment. No setup, no environment mismatch, no blind trust.
+
+## The Skill *Is* The Executable
+
+In Enact, a Skill isn't just a definition. It is a self-contained, executable unit.
+
+For skills that run code, the folder includes source files and dependencies:
+
+\`\`\`
+secret-scanner/
+├── SKILL.md           # Manifest, schema, and execution config
+├── requirements.txt   # Dependencies
+└── src/
+    └── scan.py        # Implementation code
+\`\`\`
+
+The \`SKILL.md\` file bundles the **contract** (the MCP schema) with the **execution config** (the container image, build steps, and command):
+
+\`\`\`yaml
+---
+name: secops/secret-scanner
+version: 2.1.0
+description: Scans codebases for exposed secrets, API keys, and credentials
+from: python:3.12-slim
+build:
+  - pip install detect-secrets
+command: detect-secrets scan \${path} --all-files
+inputSchema:
+  type: object
+  properties:
+    path:
+      type: string
+      description: Directory to scan for secrets
+      default: "."
+---
+
+# Secret Scanner
+
+Scans your codebase for accidentally committed secrets using
+detect-secrets. Identifies API keys, passwords, private keys,
+and other sensitive data that shouldn't be in version control.
+\`\`\`
+
+When you run this—whether on your MacBook, a Linux server, or inside a CI pipeline—Enact uses [Dagger](https://dagger.io) to spin up the exact container environment defined in the skill. It mounts your code, runs the command, and captures the output.
+
+**No dependency hell. No "works on my machine." Just pure, portable capability.**
+
+## The npm Moment for AI
+
+We are building the Enact Registry to be the npm for the AI era.
+
+Imagine an agent that doesn't just rely on the tools you hard-coded for it. Imagine an agent that realizes it needs to scan for secrets, searches the registry for \`secops/secret-scanner\`, verifies the cryptographic signature to ensure it's from a trusted publisher, and executes it instantly.
+
+This enables **progressive discovery**:
+
+1. **Search:** The agent finds tools by semantic description
+2. **Introspect:** It reads the JSON schema to understand inputs
+3. **Learn:** It reads the Markdown documentation for usage nuances
+4. **Execute:** It runs the tool in a secure, sandboxed container
+
+The registry is local-first. You can build and run tools entirely offline—the network is optional. When you do publish, hierarchical naming (\`org/category/tool\`) prevents collisions while enabling discovery.
+
+## Trust Without Blind Faith
+
+Executable code from the internet is dangerous. Enact takes this seriously.
+
+Every published tool can be signed using [Sigstore](https://sigstore.dev), the same infrastructure securing npm and PyPI. But Enact goes further—it supports a trust model built on identity:
+
+\`\`\`yaml
+# ~/.enact/config.yaml
+trust:
+  auditors:
+    - github:alice
+    - github:my-company
+  policy: require_attestation
+  minimum_attestations: 1
+\`\`\`
+
+When you run a tool, Enact verifies:
+
+* The bundle hash matches what was signed
+* The signature is valid in Sigstore's transparency log
+* The signer is in your trusted auditors list
+
+This isn't just author verification. Third-party auditors can attest to tools they've reviewed. A security team can sign off on tools approved for production use. The trust graph is explicit and auditable.
+
+## The MCP Bridge
+
+Because Enact skills use MCP's schema conventions, bridging is trivial:
+
+\`\`\`bash
+enact mcp start
+\`\`\`
+
+Every Enact skill becomes an MCP tool. The mapping is direct:
+
+| Enact SKILL.md | MCP Tool |
+| --- | --- |
+| \`name\` | \`name\` |
+| \`description\` | \`description\` |
+| \`inputSchema\` | \`inputSchema\` |
+| \`outputSchema\` | \`outputSchema\` |
+
+The agent sees standard MCP tools. It doesn't know or care that execution happens in a container. Claude, GPT, or any MCP-compatible client can invoke Enact skills without Enact-specific integration.
+
+## Composing the Future
+
+The future of AI isn't just about smarter models. It's about smarter plumbing.
+
+By standardizing how we package, publish, and run agentic tools, we unlock composition. A security audit agent can chain a \`git/clone\` skill, a \`secops/trivy-scan\` skill, and a \`slack/notify\` skill. These can come from three different authors, yet they work together seamlessly because they share a common protocol.
+
+**Composition becomes trivial.** An agent can chain tools without understanding their internals.
+
+**Sharing becomes frictionless.** Found a useful tool? Run it. Want to share yours? Publish it.
+
+**Trust becomes explicit.** Cryptographic verification against identities you've chosen to trust.
+
+**The Self-Evolving Agent.** This is the paradigm shift. Because a Skill is just a file, an agent can *write* a \`SKILL.md\` at runtime. If it encounters a novel problem (e.g., "I need to decode this specific protobuf format"), it can generate the code, wrap it in a Skill definition, run \`enact run\` to test it, and then add it to its own library to be used by a network of agents. **Agents stop being limited by the tools we give them and start building the tools they need.**
+
+## Getting Started
+
+Create a skill:
+
+\`\`\`bash
+enact init my-tool
+cd my-tool
+# Edit SKILL.md
+enact run .
+\`\`\`
+
+Use a published skill:
+
+\`\`\`bash
+enact run secops/secret-scanner --input ./my-project
+\`\`\`
+
+Publish your own:
+
+\`\`\`bash
+enact publish
+enact sign .
+\`\`\`
+
+The registry is at [enact.tools](https://enact.tools). The CLI is \`npm install -g @enactprotocol/cli\`.
+
+---
+
+*Published on December 27, 2024*
+    `,
+  },
+  {
     id: "1",
     title: "Introducing Enact: Containerized Tools for Everyone",
     excerpt:
