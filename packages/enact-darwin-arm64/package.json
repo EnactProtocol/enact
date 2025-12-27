@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/enact-darwin-arm64",
-  "version": "2.1.27",
+  "version": "2.1.28",
   "description": "Enact prebuilt binary for darwin-arm64",
   "license": "Apache-2.0",
   "os": ["darwin"],
