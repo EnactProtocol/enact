@@ -65,7 +65,7 @@ inputSchema:
       description: "Name to greet"
       default: "World"
 
-command: "python /work/hello.py ${name}"
+command: "python /workspace/hello.py ${name}"
 ---
 
 # Hello Python
@@ -107,7 +107,7 @@ version: 1.0.0
 description: A friendly greeting tool
 from: python:3.12-slim
 build: pip install -r requirements.txt
-command: python /work/main.py ${name}
+command: python /workspace/main.py ${name}
 
 inputSchema:
   type: object

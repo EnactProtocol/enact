@@ -20,7 +20,7 @@ outputSchema:
     greeting:
       type: string
 
-command: "python /work/hello.py ${name}"
+command: "python /workspace/hello.py ${name}"
 ---
 
 # Hello Python

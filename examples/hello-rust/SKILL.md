@@ -20,8 +20,8 @@ outputSchema:
     greeting:
       type: string
 
-build: "rustc /work/hello.rs -o /work/hello"
-command: "/work/hello ${name}"
+build: "rustc /workspace/hello.rs -o /workspace/hello"
+command: "/workspace/hello ${name}"
 ---
 
 # Hello Rust

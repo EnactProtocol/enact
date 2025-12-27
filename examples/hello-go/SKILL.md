@@ -20,7 +20,7 @@ outputSchema:
     greeting:
       type: string
 
-command: "go run /work/hello.go ${name}"
+command: "go run /workspace/hello.go ${name}"
 ---
 
 # Hello Go

@@ -4,7 +4,7 @@ name: enact/formatter
 version: 1.0.0
 description: Formats and prettifies JSON with configurable indentation
 from: "node:20-alpine"
-command: "node /work/format.js ${json} ${indent}"
+command: "node /workspace/format.js ${json} ${indent}"
 
 inputSchema:
   type: object

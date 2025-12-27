@@ -114,17 +114,12 @@ async function learnHandler(
     config.registry?.url ??
     "https://siikwkfgsmouioodghho.supabase.co/functions/v1";
 
-  // Get auth token - try stored JWT first (for private tools), then fall back to config/env/anon
-  const { getValidToken } = await import("../auth/index.js");
-  let authToken: string | undefined = (await getValidToken()) ?? undefined;
-  if (!authToken) {
-    authToken = config.registry?.authToken ?? process.env.ENACT_AUTH_TOKEN;
-  }
-  // Fall back to anon key for unauthenticated public access
-  if (!authToken && registryUrl.includes("siikwkfgsmouioodghho.supabase.co")) {
-    authToken =
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpaWt3a2Znc21vdWlvb2RnaGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2MTkzMzksImV4cCI6MjA4MDE5NTMzOX0.kxnx6-IPFhmGx6rzNx36vbyhFMFZKP_jFqaDbKnJ_E0";
-  }
+  // Anon key for public access (learn doesn't require authentication)
+  const SUPABASE_ANON_KEY =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpaWt3a2Znc21vdWlvb2RnaGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2MTkzMzksImV4cCI6MjA4MDE5NTMzOX0.kxnx6-IPFhmGx6rzNx36vbyhFMFZKP_jFqaDbKnJ_E0";
+
+  // Use anon key for public tool access - no auth required for learn command
+  const authToken = process.env.ENACT_AUTH_TOKEN ?? config.registry?.authToken ?? SUPABASE_ANON_KEY;
 
   const client = createApiClient({
     baseUrl: registryUrl,

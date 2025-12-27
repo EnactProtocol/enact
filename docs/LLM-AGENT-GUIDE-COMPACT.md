@@ -73,7 +73,7 @@ license: "MIT"
 
 from: "python:3.12-slim"
 build: "pip install pandas"
-command: "python /work/process.py ${input_file} ${operation}"
+command: "python /workspace/process.py ${input_file} ${operation}"
 timeout: "5m"
 
 tags:
@@ -183,10 +183,10 @@ Enact auto-quotes parameters. **Don't add quotes in templates:**
 
 ```yaml
 # WRONG - causes double-quoting
-command: "python /work/main.py '${input}'"
+command: "python /workspace/main.py '${input}'"
 
 # RIGHT - Enact handles quoting
-command: "python /work/main.py ${input}"
+command: "python /workspace/main.py ${input}"
 ```
 
 **Modifiers:**
@@ -224,7 +224,7 @@ version: "1.0.0"
 description: "Analyzes text for sentiment"
 from: "python:3.12-slim"
 build: "pip install textblob"
-command: "python /work/analyze.py ${text}"
+command: "python /workspace/analyze.py ${text}"
 timeout: "2m"
 
 inputSchema:
@@ -336,7 +336,7 @@ name: "myorg/python/my-tool"
 description: "A Python tool"
 from: "python:3.12-slim"
 build: "pip install requests"
-command: "python /work/main.py ${input}"
+command: "python /workspace/main.py ${input}"
 
 inputSchema:
   type: object
@@ -370,7 +370,7 @@ my-tool/
 name: "myorg/node/my-tool"
 description: "A Node.js tool"
 from: "node:20-alpine"
-command: "node /work/index.js ${input}"
+command: "node /workspace/index.js ${input}"
 
 inputSchema:
   type: object
@@ -402,8 +402,8 @@ my-tool/
 name: "myorg/rust/my-tool"
 description: "A Rust tool"
 from: "rust:1.83-slim"
-build: "rustc /work/main.rs -o /work/tool"
-command: "/work/tool ${input}"
+build: "rustc /workspace/main.rs -o /workspace/tool"
+command: "/workspace/tool ${input}"
 
 inputSchema:
   type: object
@@ -439,7 +439,7 @@ name: "myorg/go/url-checker"
 description: "Checks URL accessibility"
 from: "golang:1.22-alpine"
 build: "cd /work && go build -o checker main.go"
-command: "/work/checker ${url}"
+command: "/workspace/checker ${url}"
 timeout: "30s"
 
 inputSchema:
@@ -642,7 +642,7 @@ from: "node:20-alpine"
 build:
   - "npm install"
   - "npm run build"
-command: "node /work/dist/index.js ${input}"
+command: "node /workspace/dist/index.js ${input}"
 ```
 
 ### Structured Output
@@ -727,7 +727,7 @@ version: "1.0.0"
 description: "Creates short URLs"
 from: "python:3.12-slim"
 build: "pip install requests"
-command: "python /work/shorten.py ${url}"
+command: "python /workspace/shorten.py ${url}"
 timeout: "30s"
 
 inputSchema:
@@ -780,7 +780,7 @@ from: "node:20-alpine"
 build:
   - "cd /work && npm install"
   - "cd /work && npm run build"
-command: "node /work/dist/index.js ${code}"
+command: "node /workspace/dist/index.js ${code}"
 
 inputSchema:
   type: object

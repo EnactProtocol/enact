@@ -20,7 +20,7 @@ outputSchema:
     greeting:
       type: string
 
-command: "ruby /work/hello.rb ${name}"
+command: "ruby /workspace/hello.rb ${name}"
 ---
 
 # Hello Ruby

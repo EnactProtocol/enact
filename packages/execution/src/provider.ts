@@ -441,17 +441,33 @@ export class DaggerExecutionProvider implements ExecutionProvider {
             try {
               // Execute the main command (this is what the timeout applies to)
               const shellCommand = ["sh", "-c", command];
+              // Use withExec with skipEntrypoint to ensure we run our command
               container = container.withExec(shellCommand);
 
               // Capture stdout and stderr
-              // Note: Newer Dagger versions use sync() to get the final container state
-              const finalContainer = await container.sync();
-              const [stdout, stderr] = await Promise.all([
-                finalContainer.stdout(),
-                finalContainer.stderr(),
-              ]);
-              // Exit code is determined by whether stderr contains errors
-              const exitCode = stderr ? 1 : 0;
+              // Note: Dagger throws on non-zero exit. We need to handle this gracefully.
+              let stdout = "";
+              let stderr = "";
+              let exitCode = 0;
+              let finalContainer: Container | null = null;
+
+              try {
+                finalContainer = await container.sync();
+                [stdout, stderr] = await Promise.all([
+                  finalContainer.stdout(),
+                  finalContainer.stderr(),
+                ]);
+              } catch (execError) {
+                // Dagger throws when command fails - extract what we can
+                const errorMsg = execError instanceof Error ? execError.message : String(execError);
+
+                // Try to extract exit code from error message
+                const exitCodeMatch = errorMsg.match(/exit code: (\d+)/);
+                exitCode = exitCodeMatch ? Number.parseInt(exitCodeMatch[1] ?? "1", 10) : 1;
+
+                // The error message IS the stderr in this case
+                stderr = errorMsg;
+              }
 
               clearTimeout(timeoutId);
 
@@ -463,7 +479,7 @@ export class DaggerExecutionProvider implements ExecutionProvider {
               };
 
               // Export /output directory to host if outputPath specified
-              if (options.outputPath) {
+              if (options.outputPath && finalContainer) {
                 try {
                   await finalContainer.directory("/output").export(options.outputPath);
                 } catch (exportError) {
@@ -475,11 +491,11 @@ export class DaggerExecutionProvider implements ExecutionProvider {
               }
 
               // Extract output files if requested (legacy outputFiles option)
-              if (options.outputFiles && options.outputFiles.length > 0) {
+              if (options.outputFiles && options.outputFiles.length > 0 && finalContainer) {
                 const extractedFiles: Record<string, Buffer> = {};
                 for (const filePath of options.outputFiles) {
                   try {
-                    const content = await container.file(filePath).contents();
+                    const content = await finalContainer.file(filePath).contents();
                     extractedFiles[filePath] = Buffer.from(content);
                   } catch {
                     // File doesn't exist or can't be read - skip

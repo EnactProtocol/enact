@@ -194,7 +194,7 @@ function createMcpServer(): Server {
         },
         {
           mountDirs: {
-            [toolInfo.cachePath]: "/work",
+            [toolInfo.cachePath]: "/workspace",
           },
         }
       );

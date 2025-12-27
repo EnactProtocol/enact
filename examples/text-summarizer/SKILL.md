@@ -4,7 +4,7 @@ name: enact/text-summarizer
 version: 1.0.1
 description: Analyzes text and provides word count, character count, and sentence statistics
 from: "node:20-alpine"
-command: "node /work/summarize.js ${text}"
+command: "node /workspace/summarize.js ${text}"
 timeout: "30s"
 
 inputSchema:

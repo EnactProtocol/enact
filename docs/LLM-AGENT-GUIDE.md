@@ -95,8 +95,8 @@ name: myorg/hello-rust
 version: 1.0.0
 description: A compiled Rust greeting tool
 from: "rust:1.83-slim"
-build: "rustc /work/hello.rs -o /work/hello"
-command: "/work/hello ${name}"
+build: "rustc /workspace/hello.rs -o /workspace/hello"
+command: "/workspace/hello ${name}"
 
 inputSchema:
   type: object
@@ -209,7 +209,7 @@ license: "MIT"
 
 from: "python:3.12-slim"
 build: "pip install pandas"
-command: "python /work/process.py ${input_file} ${operation}"
+command: "python /workspace/process.py ${input_file} ${operation}"
 timeout: "5m"
 
 tags:
@@ -334,10 +334,10 @@ Enact automatically shell-escapes parameter values to prevent injection and hand
 
 ```yaml
 # WRONG - causes double-quoting issues
-command: "python /work/main.py '${input}'"
+command: "python /workspace/main.py '${input}'"
 
 # RIGHT - Enact handles quoting automatically
-command: "python /work/main.py ${input}"
+command: "python /workspace/main.py ${input}"
 ```
 
 **Modifiers:**
@@ -382,7 +382,7 @@ version: "1.0.0"
 description: "Analyzes text for sentiment and entities"
 from: "python:3.12-slim"
 build: "pip install textblob spacy && python -m spacy download en_core_web_sm"
-command: "python /work/analyze.py ${text}"
+command: "python /workspace/analyze.py ${text}"
 timeout: "2m"
 
 inputSchema:
@@ -524,7 +524,7 @@ from: "python:3.12-slim"
 build:
   - "pip install textblob spacy"
   - "python -m spacy download en_core_web_sm"
-command: "python /work/analyze.py ${text}"
+command: "python /workspace/analyze.py ${text}"
 timeout: "2m"
 
 inputSchema:
@@ -628,7 +628,7 @@ from: "node:20-alpine"
 build:
   - "cd /work && npm install"
   - "cd /work && npm run build"
-command: "node /work/dist/index.js ${code}"
+command: "node /workspace/dist/index.js ${code}"
 timeout: "30s"
 
 inputSchema:
@@ -688,7 +688,7 @@ version: "1.0.0"
 description: "Checks if URLs are accessible and returns status codes"
 from: "golang:1.22-alpine"
 build: "cd /work && go build -o checker main.go"
-command: "/work/checker ${url}"
+command: "/workspace/checker ${url}"
 timeout: "30s"
 
 inputSchema:
@@ -785,7 +785,7 @@ version: "1.0.0"
 description: "Converts Markdown to HTML with syntax highlighting"
 from: "ruby:3.3-slim"
 build: "gem install kramdown rouge"
-command: "ruby /work/convert.rb"
+command: "ruby /workspace/convert.rb"
 timeout: "30s"
 
 inputSchema:
@@ -845,7 +845,7 @@ version: "1.0.0"
 description: "A Python tool"
 from: "python:3.12-slim"
 build: "pip install requests"
-command: "python /work/main.py ${input}"
+command: "python /workspace/main.py ${input}"
 
 inputSchema:
   type: object
@@ -886,7 +886,7 @@ name: "myorg/node/my-tool"
 version: "1.0.0"
 description: "A Node.js tool"
 from: "node:20-alpine"
-command: "node /work/index.js ${input}"
+command: "node /workspace/index.js ${input}"
 
 inputSchema:
   type: object
@@ -922,8 +922,8 @@ name: "myorg/rust/my-tool"
 version: "1.0.0"
 description: "A Rust tool"
 from: "rust:1.83-slim"
-build: "rustc /work/main.rs -o /work/tool"
-command: "/work/tool ${input}"
+build: "rustc /workspace/main.rs -o /workspace/tool"
+command: "/workspace/tool ${input}"
 
 inputSchema:
   type: object
@@ -1005,7 +1005,7 @@ enact env set API_KEY --secret --namespace myorg/tools
 
 Secrets are injected as environment variables:
 ```yaml
-command: "python /work/main.py"
+command: "python /workspace/main.py"
 # In main.py, access via: os.environ.get('API_KEY')
 ```
 
@@ -1122,13 +1122,13 @@ build:
 ```yaml
 from: "rust:1.83-slim"
 build: "cargo build --release"
-command: "/work/target/release/my-tool ${input}"
+command: "/workspace/target/release/my-tool ${input}"
 ```
 
 ### Pattern 2: JSON Input/Output
 
 ```yaml
-command: "python /work/main.py"
+command: "python /workspace/main.py"
 # Pass input as JSON via stdin or file
 ```
 
@@ -1164,7 +1164,7 @@ from: "node:20-alpine"
 build:
   - "npm install"
   - "npm run build"
-command: "node /work/dist/index.js ${input}"
+command: "node /workspace/dist/index.js ${input}"
 ```
 
 ### Pattern 5: Environment-Based Config
@@ -1178,7 +1178,7 @@ env:
     description: "Enable debug logging"
     default: "false"
 
-command: "python /work/main.py"
+command: "python /workspace/main.py"
 ```
 
 ### Pattern 6: Structured Output
@@ -1280,7 +1280,7 @@ version: "1.0.0"
 description: "Creates a short URL using a URL shortening service"
 from: "python:3.12-slim"
 build: "pip install requests"
-command: "python /work/shorten.py ${url}"
+command: "python /workspace/shorten.py ${url}"
 timeout: "30s"
 
 inputSchema:

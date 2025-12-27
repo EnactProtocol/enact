@@ -32,7 +32,7 @@ version: "1.0.0"
 description: "What it does"
 from: "python:3.12-slim"
 build: "pip install requests pandas"
-command: "python /work/main.py ${input}"
+command: "python /workspace/main.py ${input}"
 timeout: "30s"
 
 inputSchema:
@@ -119,28 +119,28 @@ command: "python script.py ${input}"
 ```yaml
 from: "python:3.12-slim"
 build: "pip install pandas"
-command: "python /work/main.py ${input}"
+command: "python /workspace/main.py ${input}"
 ```
 
 ### Node.js
 ```yaml
 from: "node:20-alpine"
 build: "npm install"
-command: "node /work/index.js ${input}"
+command: "node /workspace/index.js ${input}"
 ```
 
 ### Rust
 ```yaml
 from: "rust:1.83-slim"
-build: "rustc /work/main.rs -o /work/app"
-command: "/work/app ${input}"
+build: "rustc /workspace/main.rs -o /workspace/app"
+command: "/workspace/app ${input}"
 ```
 
 ### Go
 ```yaml
 from: "golang:1.22-alpine"
-build: "go build -o /work/app /work/main.go"
-command: "/work/app ${input}"
+build: "go build -o /workspace/app /workspace/main.go"
+command: "/workspace/app ${input}"
 ```
 
 ### Shell (no build)

@@ -181,8 +181,8 @@ By standardizing how we package, publish, and run agentic tools, we unlock compo
 Create a skill:
 
 \`\`\`bash
-enact init my-tool
-cd my-tool
+enact init --tool 
+
 # Edit SKILL.md
 enact run .
 \`\`\`
@@ -190,7 +190,7 @@ enact run .
 Use a published skill:
 
 \`\`\`bash
-enact run secops/secret-scanner --input ./my-project
+enact run enact/context7/docs --args '{"library_id": "/vercel/next.js"}'
 \`\`\`
 
 Publish your own:

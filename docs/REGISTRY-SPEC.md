@@ -306,7 +306,7 @@ Get specific version metadata.
     "from": "node:18-alpine",
     "inputSchema": { },
     "outputSchema": { },
-    "command": "node /work/index.js ${name}"
+    "command": "node /workspace/index.js ${name}"
   },
   "bundle": {
     "hash": "sha256:abc123...",
@@ -369,7 +369,7 @@ Get just the manifest for a version.
   "from": "node:18-alpine",
   "inputSchema": { },
   "outputSchema": { },
-  "command": "node /work/index.js ${name}"
+  "command": "node /workspace/index.js ${name}"
 }
 ```
 
