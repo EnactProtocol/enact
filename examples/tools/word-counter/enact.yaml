@@ -1,0 +1,16 @@
+name: examples/word-counter
+version: 1.0.0
+description: Count words in files from /input and write results to /output
+from: alpine:latest
+command: |
+  mkdir -p /output
+  for file in /input/*; do
+    if [ -f "$file" ]; then
+      name=$(basename "$file")
+      words=$(wc -w < "$file")
+      echo "$name: $words words" >> /output/counts.txt
+      echo "Counted $name: $words words"
+    fi
+  done
+  echo "---"
+  cat /output/counts.txt

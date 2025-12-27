@@ -25,7 +25,7 @@ enact: "2.0.0"
 
 from: python:3.12-slim            # Docker image (pin versions, not :latest)
 build: pip install requests       # Build steps (cached by Dagger)
-command: python /work/main.py \${input}
+command: python /workspace/main.py \${input}
 timeout: 30s
 
 inputSchema:
@@ -72,10 +72,10 @@ Enact auto-quotes parameters. **Never manually quote:**
 
 \`\`\`yaml
 # WRONG - causes double-quoting
-command: python /work/main.py "\${input}"
+command: python /workspace/main.py "\${input}"
 
 # RIGHT - Enact handles quoting
-command: python /work/main.py \${input}
+command: python /workspace/main.py \${input}
 \`\`\`
 
 **Optional params:** Missing optional params become empty strings. Always provide defaults:
@@ -130,15 +130,15 @@ build:
 **Rust:**
 \`\`\`yaml
 from: rust:1.83-slim
-build: rustc /work/main.rs -o /work/tool
-command: /work/tool \${input}
+build: rustc /workspace/main.rs -o /workspace/tool
+command: /workspace/tool \${input}
 \`\`\`
 
 **Go:**
 \`\`\`yaml
 from: golang:1.22-alpine
-build: cd /work && go build -o tool main.go
-command: /work/tool \${input}
+build: cd /workspace && go build -o tool main.go
+command: /workspace/tool \${input}
 \`\`\`
 
 **System packages:**
@@ -150,7 +150,7 @@ Build steps are cached — first run slow, subsequent runs instant.
 
 ## File Access
 
-Tools run in a container with \`/work\` as the working directory. All source files are copied there.
+Tools run in a container with \`/workspace\` as the working directory. All source files are copied there.
 
 ## Secrets
 

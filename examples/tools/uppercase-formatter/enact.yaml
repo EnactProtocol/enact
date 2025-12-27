@@ -1,0 +1,14 @@
+name: examples/uppercase-formatter
+version: 1.0.0
+description: Convert all text files in /input to uppercase and write to /output
+from: alpine:latest
+command: |
+  mkdir -p /output
+  cd /input
+  find . -type f -name "*.txt" | while read file; do
+    outdir="/output/$(dirname "$file")"
+    mkdir -p "$outdir"
+    tr '[:lower:]' '[:upper:]' < "$file" > "/output/$file"
+    echo "Converted: $file"
+  done
+  echo "Done!"

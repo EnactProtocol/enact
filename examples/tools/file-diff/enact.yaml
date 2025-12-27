@@ -1,0 +1,40 @@
+name: examples/file-diff
+version: 1.0.0
+description: Compare files from two directories (left and right) using named inputs
+from: alpine:latest
+command: |
+  echo "Comparing /inputs/left with /inputs/right"
+  echo "---"
+  mkdir -p /output
+
+  # Find files only in left
+  echo "Files only in left:" | tee /output/diff.txt
+  for f in /inputs/left/*; do
+    name=$(basename "$f")
+    if [ ! -f "/inputs/right/$name" ]; then
+      echo "  - $name" | tee -a /output/diff.txt
+    fi
+  done
+
+  # Find files only in right
+  echo "Files only in right:" | tee -a /output/diff.txt
+  for f in /inputs/right/*; do
+    name=$(basename "$f")
+    if [ ! -f "/inputs/left/$name" ]; then
+      echo "  + $name" | tee -a /output/diff.txt
+    fi
+  done
+
+  # Find files that differ
+  echo "Files that differ:" | tee -a /output/diff.txt
+  for f in /inputs/left/*; do
+    name=$(basename "$f")
+    if [ -f "/inputs/right/$name" ]; then
+      if ! diff -q "$f" "/inputs/right/$name" > /dev/null 2>&1; then
+        echo "  ~ $name" | tee -a /output/diff.txt
+      fi
+    fi
+  done
+
+  echo "---"
+  echo "Results written to /output/diff.txt"

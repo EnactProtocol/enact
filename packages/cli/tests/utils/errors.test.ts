@@ -65,6 +65,42 @@ describe("error classes", () => {
       expect(err.exitCode).toBe(EXIT_TOOL_NOT_FOUND);
       expect(err.suggestion).toContain("owner/namespace/tool");
     });
+
+    test("includes reason when provided", () => {
+      const err = new ToolNotFoundError("my-tool", {
+        reason: "Manifest validation failed",
+      });
+      expect(err.message).toContain("Tool not found: my-tool");
+      expect(err.message).toContain("Manifest validation failed");
+    });
+
+    test("includes searched locations when provided", () => {
+      const err = new ToolNotFoundError("my-tool", {
+        searchedLocations: ["/path/to/tools", "/other/path"],
+      });
+      expect(err.message).toContain("Searched locations:");
+      expect(err.message).toContain("/path/to/tools");
+      expect(err.message).toContain("/other/path");
+    });
+
+    test("provides different suggestion when localOnly is true", () => {
+      const err = new ToolNotFoundError("my-tool", { localOnly: true });
+      expect(err.suggestion).toContain("Remove --local flag");
+      expect(err.suggestion).not.toContain("owner/namespace/tool");
+    });
+
+    test("handles all options together", () => {
+      const err = new ToolNotFoundError("my-tool", {
+        reason: "No manifest found",
+        searchedLocations: ["/a", "/b"],
+        localOnly: true,
+      });
+      expect(err.message).toContain("my-tool");
+      expect(err.message).toContain("No manifest found");
+      expect(err.message).toContain("/a");
+      expect(err.message).toContain("/b");
+      expect(err.suggestion).toContain("Remove --local flag");
+    });
   });
 
   describe("ManifestError", () => {

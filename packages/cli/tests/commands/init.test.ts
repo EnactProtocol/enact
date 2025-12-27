@@ -456,7 +456,7 @@ describe("init command", () => {
       expect(content).toContain("enact publish");
       expect(content).toContain("${param}");
       expect(content).toContain("build:");
-      expect(content).toContain("/work");
+      expect(content).toContain("/workspace");
     });
 
     test("AGENTS.md for agent projects contains usage instructions", async () => {

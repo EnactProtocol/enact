@@ -1,0 +1,6 @@
+Files only in left:
+  - only-left.txt
+Files only in right:
+  + only-right.txt
+Files that differ:
+  ~ a.txt

@@ -5,6 +5,7 @@
  * containerized commands for Enact tools.
  */
 
+import { basename } from "node:path";
 import { type Client, type Container, connect } from "@dagger.io/dagger";
 import type { ToolManifest } from "@enactprotocol/shared";
 import {
@@ -57,7 +58,7 @@ export class DaggerExecutionProvider implements ExecutionProvider {
     this.config = {
       defaultTimeout: config.defaultTimeout ?? 300000, // 5 minutes
       verbose: config.verbose ?? false,
-      workdir: config.workdir ?? "/work",
+      workdir: config.workdir ?? "/workspace",
     };
     // Only set preferredRuntime if provided
     if (config.preferredRuntime) {
@@ -325,7 +326,7 @@ export class DaggerExecutionProvider implements ExecutionProvider {
             await container.platform();
 
             // Set working directory
-            const workdir = options.workdir ?? this.config.workdir ?? "/work";
+            const workdir = options.workdir ?? this.config.workdir ?? "/workspace";
             container = container.withWorkdir(workdir);
 
             // Add environment variables from manifest
@@ -360,14 +361,45 @@ export class DaggerExecutionProvider implements ExecutionProvider {
               }
             }
 
-            // Mount host directories if specified
+            // Mount host directories if specified (legacy mountDirs)
             if (options.mountDirs) {
               for (const [source, target] of Object.entries(options.mountDirs)) {
-                container = container.withMountedDirectory(target, client.host().directory(source));
+                container = container.withDirectory(target, client.host().directory(source));
               }
             }
 
-            // Mount input files
+            // Mount input paths (new inputPaths option with file/directory support)
+            if (options.inputPaths) {
+              for (const inputPath of options.inputPaths) {
+                if (inputPath.name) {
+                  // Named input: mount to /inputs/<name>
+                  const target = `/inputs/${inputPath.name}`;
+                  if (inputPath.type === "file") {
+                    container = container.withFile(target, client.host().file(inputPath.path));
+                  } else {
+                    container = container.withDirectory(
+                      target,
+                      client.host().directory(inputPath.path)
+                    );
+                  }
+                } else if (inputPath.type === "file") {
+                  // Single file: mount to /input/<filename>
+                  const filename = basename(inputPath.path);
+                  container = container.withFile(
+                    `/input/${filename}`,
+                    client.host().file(inputPath.path)
+                  );
+                } else {
+                  // Single directory: mount to /input
+                  container = container.withDirectory(
+                    "/input",
+                    client.host().directory(inputPath.path)
+                  );
+                }
+              }
+            }
+
+            // Mount input files (legacy files option)
             if (input.files) {
               for (const [name, fileInput] of Object.entries(input.files)) {
                 if (fileInput.content) {
@@ -430,7 +462,19 @@ export class DaggerExecutionProvider implements ExecutionProvider {
                 exitCode,
               };
 
-              // Extract output files if requested
+              // Export /output directory to host if outputPath specified
+              if (options.outputPath) {
+                try {
+                  await finalContainer.directory("/output").export(options.outputPath);
+                } catch (exportError) {
+                  // /output directory may not exist - that's ok, tool may not produce output
+                  if (this.config.verbose) {
+                    console.error(`Note: Could not export /output: ${exportError}`);
+                  }
+                }
+              }
+
+              // Extract output files if requested (legacy outputFiles option)
               if (options.outputFiles && options.outputFiles.length > 0) {
                 const extractedFiles: Record<string, Buffer> = {};
                 for (const filePath of options.outputFiles) {

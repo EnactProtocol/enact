@@ -17,6 +17,7 @@ export type {
   ExecutionErrorCode,
   // Options
   ExecutionOptions,
+  InputPathConfig,
   RetryConfig,
   // Runtime types
   ContainerRuntime,

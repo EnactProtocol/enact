@@ -9,8 +9,20 @@
  * 3. Run from resolved location (never copies to installed tools)
  */
 
-import { mkdirSync, unlinkSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, dirname, join, resolve } from "node:path";
 import * as clack from "@clack/prompts";
 import {
   type AttestationListResponse,
@@ -35,12 +47,14 @@ import {
   prepareCommand,
   toolNameToPath,
   tryResolveTool,
+  tryResolveToolDetailed,
   validateInputs,
 } from "@enactprotocol/shared";
 import type { Command } from "commander";
 import type { CommandContext, GlobalOptions } from "../../types";
 import {
   EXIT_EXECUTION_ERROR,
+  ManifestError,
   ToolNotFoundError,
   TrustError,
   ValidationError,
@@ -67,6 +81,8 @@ interface RunOptions extends GlobalOptions {
   noCache?: boolean;
   local?: boolean;
   verbose?: boolean;
+  output?: string;
+  apply?: boolean;
 }
 
 /**
@@ -142,6 +158,144 @@ function parseInputArgs(
   }
 
   return inputs;
+}
+
+/**
+ * Input path configuration (file or directory)
+ */
+interface InputPathConfig {
+  /** Absolute path on host */
+  path: string;
+  /** Whether it's a file or directory */
+  type: "file" | "directory";
+  /** Named input (for multi-input support, e.g., "left" from --input left=./path) */
+  name?: string;
+}
+
+/**
+ * Parse --input flags to separate key=value parameters from directory/file paths
+ *
+ * The --input flag is overloaded to handle both:
+ * 1. Key=value parameters: --input name=Alice --input count=5
+ * 2. Directory/file paths: --input ./data --input left=./old
+ *
+ * Detection logic:
+ * - If value contains '=' and doesn't start with './' or '/' → key=value param
+ * - If value is a path (starts with ./, ../, /) → input path
+ * - If value exists as a path on disk → input path
+ * - Named input: name=./path where path exists → named input
+ */
+function parseInputPaths(inputs: string[] | undefined): {
+  params: Record<string, unknown>;
+  inputPaths: InputPathConfig[];
+} {
+  if (!inputs) return { params: {}, inputPaths: [] };
+
+  const params: Record<string, unknown> = {};
+  const inputPaths: InputPathConfig[] = [];
+
+  for (const input of inputs) {
+    const eqIndex = input.indexOf("=");
+
+    // Check if it's a path (no = or starts with path chars)
+    const looksLikePath =
+      input.startsWith("./") ||
+      input.startsWith("../") ||
+      input.startsWith("/") ||
+      (eqIndex === -1 && existsSync(input));
+
+    if (looksLikePath) {
+      // Simple path: --input ./data
+      const absolutePath = resolve(input);
+      if (!existsSync(absolutePath)) {
+        throw new Error(`Input path does not exist: ${input}`);
+      }
+      const stat = statSync(absolutePath);
+      inputPaths.push({
+        path: absolutePath,
+        type: stat.isDirectory() ? "directory" : "file",
+      });
+    } else if (eqIndex > 0) {
+      const key = input.slice(0, eqIndex);
+      const value = input.slice(eqIndex + 1);
+
+      // Check if value is a path (named input like left=./old)
+      const valueLooksLikePath =
+        value.startsWith("./") ||
+        value.startsWith("../") ||
+        value.startsWith("/") ||
+        existsSync(value);
+
+      if (valueLooksLikePath && existsSync(value)) {
+        // Named input path: --input left=./old
+        const absolutePath = resolve(value);
+        const stat = statSync(absolutePath);
+        inputPaths.push({
+          path: absolutePath,
+          type: stat.isDirectory() ? "directory" : "file",
+          name: key,
+        });
+      } else {
+        // Key=value parameter: --input name=Alice
+        try {
+          params[key] = JSON.parse(value);
+        } catch {
+          params[key] = value;
+        }
+      }
+    } else {
+      // No = sign and doesn't exist as path - treat as error
+      throw new Error(`Invalid input: "${input}". Expected key=value or a valid path.`);
+    }
+  }
+
+  return { params, inputPaths };
+}
+
+/**
+ * Atomically replace directory contents with new contents
+ *
+ * Process:
+ * 1. Create backup of original directory
+ * 2. Copy new contents to original location
+ * 3. Remove backup on success, or restore on failure
+ *
+ * @param targetDir - Directory to replace contents of
+ * @param sourceDir - Directory containing new contents
+ */
+function atomicReplace(targetDir: string, sourceDir: string): void {
+  const backupDir = `${targetDir}.backup-${Date.now()}`;
+
+  try {
+    // Step 1: Backup original
+    if (existsSync(targetDir)) {
+      renameSync(targetDir, backupDir);
+    }
+
+    // Step 2: Move new contents to target
+    // We copy instead of rename because source might be on different filesystem (temp)
+    mkdirSync(targetDir, { recursive: true });
+    const entries = readdirSync(sourceDir, { withFileTypes: true });
+    for (const entry of entries) {
+      const srcPath = join(sourceDir, entry.name);
+      const destPath = join(targetDir, entry.name);
+      cpSync(srcPath, destPath, { recursive: true });
+    }
+
+    // Step 3: Remove backup on success
+    if (existsSync(backupDir)) {
+      rmSync(backupDir, { recursive: true, force: true });
+    }
+  } catch (err) {
+    // Restore backup on failure
+    if (existsSync(backupDir)) {
+      if (existsSync(targetDir)) {
+        rmSync(targetDir, { recursive: true, force: true });
+      }
+      renameSync(backupDir, targetDir);
+    }
+    throw err;
+  }
 }
 
 /**
@@ -418,7 +572,10 @@ function displayDryRun(
   manifest: ToolManifest,
   inputs: Record<string, unknown>,
   command: string[],
-  env: Record<string, string>
+  env: Record<string, string>,
+  inputPaths: InputPathConfig[],
+  outputPath: string | undefined,
+  apply?: boolean
 ): void {
   newline();
   info(colors.bold("Dry Run Preview"));
@@ -430,7 +587,7 @@ function displayDryRun(
   newline();
 
   if (Object.keys(inputs).length > 0) {
-    info("Inputs:");
+    info("Parameters:");
     for (const [key, value] of Object.entries(inputs)) {
       dim(`  ${key}: ${JSON.stringify(value)}`);
     }
@@ -441,6 +598,28 @@ function displayDryRun(
     info("Environment:");
     for (const [key] of Object.entries(env)) {
       dim(`  ${key}: ***`);
+    }
+    newline();
+  }
+
+  if (inputPaths.length > 0) {
+    info("Input:");
+    for (const input of inputPaths) {
+      const target = input.name
+        ? `/inputs/${input.name}`
+        : input.type === "file"
+          ? `/input/${basename(input.path)}`
+          : "/input";
+      dim(`  ${input.path} → ${target} (${input.type})`);
+    }
+    newline();
+  }
+
+  if (outputPath) {
+    info("Output:");
+    dim(`  /output → ${outputPath}`);
+    if (apply) {
+      dim(`  ${colors.warning("(--apply)")} Changes will be atomically applied to ${outputPath}`);
     }
     newline();
   }
@@ -499,19 +678,31 @@ function displayResult(result: ExecutionResult, options: RunOptions): void {
  */
 async function runHandler(tool: string, options: RunOptions, ctx: CommandContext): Promise<void> {
   let resolution: ToolResolution | null = null;
+  let resolveResult: ReturnType<typeof tryResolveToolDetailed> | null = null;
 
   // First, try to resolve locally (project → user → cache)
   if (!options.verbose) {
-    resolution = tryResolveTool(tool, { startDir: ctx.cwd });
+    resolveResult = tryResolveToolDetailed(tool, { startDir: ctx.cwd });
+    resolution = resolveResult.resolution;
   } else {
     const spinner = clack.spinner();
     spinner.start(`Resolving tool: ${tool}`);
-    resolution = tryResolveTool(tool, { startDir: ctx.cwd });
+    resolveResult = tryResolveToolDetailed(tool, { startDir: ctx.cwd });
+    resolution = resolveResult.resolution;
     if (resolution) {
       spinner.stop(`${symbols.success} Resolved: ${tool}`);
     } else {
       spinner.stop(`${symbols.info} Checking registry...`);
     }
+  }
+
+  // If manifest was found but had errors, throw a descriptive error immediately
+  if (!resolution && resolveResult?.manifestFound && resolveResult?.error) {
+    const errorMessage = resolveResult.error.message;
+    const manifestPath = resolveResult.manifestPath;
+    throw new ManifestError(
+      `Invalid manifest${manifestPath ? ` at ${manifestPath}` : ""}: ${errorMessage}`
+    );
   }
 
   // If not found locally and --local flag not set, try fetching from registry
@@ -530,15 +721,26 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
 
   if (!resolution) {
     if (options.local) {
-      throw new ToolNotFoundError(`${tool} (--local flag set, skipped registry)`);
+      throw new ToolNotFoundError(tool, {
+        localOnly: true,
+        searchedLocations: resolveResult?.searchedLocations,
+      });
     }
-    throw new ToolNotFoundError(tool);
+    throw new ToolNotFoundError(tool, {
+      searchedLocations: resolveResult?.searchedLocations,
+    });
   }
 
   const manifest = resolution.manifest;
 
-  // Parse inputs
-  const inputs = parseInputArgs(options.args, options.inputFile, options.input);
+  // Parse --input flags to separate key=value params from path inputs
+  const { params: pathParams, inputPaths } = parseInputPaths(options.input);
+
+  // Parse other input sources (--args, --input-file)
+  const otherInputs = parseInputArgs(options.args, options.inputFile, undefined);
+
+  // Merge inputs: path params override other inputs
+  const inputs = { ...otherInputs, ...pathParams };
 
   // Apply defaults from schema
   const inputsWithDefaults = manifest.inputSchema
@@ -554,6 +756,44 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
 
   // Use coerced values from validation (or inputs with defaults)
   const finalInputs = validation.coercedValues ?? inputsWithDefaults;
+
+  // Validate output path if provided
+  if (options.output) {
+    const outputDir = dirname(resolve(options.output));
+    if (!existsSync(outputDir)) {
+      mkdirSync(outputDir, { recursive: true });
+    }
+  }
+
+  // Validate --apply flag requirements
+  // --apply requires exactly one input directory and output path
+  let applyInputPath: string | undefined;
+  if (options.apply) {
+    // Must have exactly one directory input
+    const dirInputs = inputPaths.filter((p) => p.type === "directory" && !p.name);
+    if (dirInputs.length !== 1) {
+      throw new ValidationError(
+        "--apply requires exactly one unnamed directory input (e.g., --input ./src)"
+      );
+    }
+    applyInputPath = dirInputs[0]?.path;
+
+    // Must have output path
+    if (!options.output) {
+      throw new ValidationError("--apply requires --output to be specified");
+    }
+
+    // Output should point to same location as input for in-place apply
+    const resolvedOutput = resolve(options.output);
+    if (applyInputPath && resolvedOutput !== applyInputPath) {
+      // Warn but allow - user might want to apply to a different location
+      if (options.verbose) {
+        dim(
+          `Note: --apply with different input/output paths will copy results to ${resolvedOutput}`
+        );
+      }
+    }
+  }
 
   // Check if this is an instruction-based tool (no command)
   if (!manifest.command) {
@@ -630,9 +870,39 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
     }
   }
 
+  // Build mount configuration
+  // Tool source directory is mounted to /workspace
+  const mountDirs: Record<string, string> = {
+    [resolution.sourceDir]: "/workspace",
+  };
+
+  // Add input paths to mount configuration
+  for (const input of inputPaths) {
+    if (input.name) {
+      // Named input: --input left=./old → /inputs/left
+      mountDirs[input.path] = `/inputs/${input.name}`;
+    } else if (input.type === "file") {
+      // Single file: mount parent dir and we'll use withFile in provider
+      // For now, mount as /input/<filename>
+      // Note: Dagger's withFile is better but requires provider changes
+      mountDirs[input.path] = `/input/${basename(input.path)}`;
+    } else {
+      // Single directory: --input ./data → /input
+      mountDirs[input.path] = "/input";
+    }
+  }
+
   // Dry run mode
   if (options.dryRun) {
-    displayDryRun(manifest, finalInputs, command, envVars);
+    displayDryRun(
+      manifest,
+      finalInputs,
+      command,
+      envVars,
+      inputPaths,
+      options.output,
+      options.apply
+    );
     return;
   }
 
@@ -647,23 +917,41 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
 
   const provider = new DaggerExecutionProvider(providerConfig);
 
+  // For --apply, we export to a temp directory first, then atomically replace
+  let tempOutputDir: string | undefined;
+  if (options.apply && options.output) {
+    tempOutputDir = mkdtempSync(join(tmpdir(), "enact-apply-"));
+  }
+
   try {
     await provider.initialize();
 
-    const executeTask = () =>
-      provider.execute(
+    const executeTask = () => {
+      const execOptions: {
+        mountDirs: Record<string, string>;
+        inputPaths: typeof inputPaths;
+        outputPath?: string;
+      } = {
+        mountDirs,
+        inputPaths,
+      };
+
+      // When using --apply, export to temp dir first
+      if (tempOutputDir) {
+        execOptions.outputPath = tempOutputDir;
+      } else if (options.output) {
+        execOptions.outputPath = resolve(options.output);
+      }
+
+      return provider.execute(
         manifest,
         {
           params: finalInputs,
           envOverrides: envVars,
         },
-        {
-          // Mount the tool directory to /work in the container
-          mountDirs: {
-            [resolution.sourceDir]: "/work",
-          },
-        }
+        execOptions
       );
+    };
 
     // Build a descriptive message - container may need to be pulled
     const containerImage = manifest.from ?? "node:18-alpine";
@@ -678,8 +966,35 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
     if (!result.success) {
       process.exit(EXIT_EXECUTION_ERROR);
     }
+
+    // Apply atomically if --apply was used and execution succeeded
+    if (options.apply && tempOutputDir && options.output) {
+      const targetPath = resolve(options.output);
+
+      if (options.verbose) {
+        info(`Applying changes atomically to ${targetPath}...`);
+      }
+
+      try {
+        atomicReplace(targetPath, tempOutputDir);
+        if (options.verbose) {
+          success(`Changes applied to ${targetPath}`);
+        }
+      } catch (applyErr) {
+        error(`Failed to apply changes: ${formatError(applyErr)}`);
+        dim("Original directory preserved. Changes available in temp directory.");
+        throw applyErr;
+      }
+    }
   } finally {
-    // Provider doesn't have cleanup - Dagger handles this
+    // Clean up temp directory if it exists
+    if (tempOutputDir && existsSync(tempOutputDir)) {
+      try {
+        rmSync(tempOutputDir, { recursive: true, force: true });
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
   }
 }
 
@@ -715,7 +1030,15 @@ export function configureRunCommand(program: Command): void {
     .argument("<tool>", "Tool to run (name, path, or '.' for current directory)")
     .option("-a, --args <json>", "Input arguments as JSON string (recommended)")
     .option("-f, --input-file <path>", "Load input arguments from JSON file")
-    .option("-i, --input <key=value...>", "Input arguments as key=value pairs (simple values only)")
+    .option(
+      "-i, --input <value...>",
+      "Input: key=value params, ./path for data, or name=./path for named inputs"
+    )
+    .option("-o, --output <path>", "Export /output directory to this path after execution")
+    .option(
+      "--apply",
+      "Apply output back to input directory atomically (use with --input and --output pointing to same path)"
+    )
     .option("-t, --timeout <duration>", "Execution timeout (e.g., 30s, 5m)")
     .option("--no-cache", "Disable container caching")
     .option("--local", "Only resolve from local sources")

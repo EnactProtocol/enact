@@ -53,13 +53,25 @@ const commands: CommandDoc[] = [
     usage: "enact run <tool> [options]",
     category: "core",
     options: [
-      { flag: "-a, --args <json>", description: "Input arguments as JSON string (recommended)" },
+      { flag: "-a, --args <json>", description: "Input arguments as JSON string" },
       { flag: "-f, --input-file <path>", description: "Load input arguments from JSON file" },
-      { flag: "-i, --input <key=value...>", description: "Input arguments as key=value pairs" },
+      {
+        flag: "-i, --input <value>",
+        description:
+          "Input: key=value for params, ./path for files/dirs, name=./path for named inputs",
+      },
+      {
+        flag: "-o, --output <path>",
+        description: "Export /output directory to this path after execution",
+      },
+      {
+        flag: "--apply",
+        description:
+          "Apply output back to input directory atomically (for in-place transformations)",
+      },
       { flag: "-t, --timeout <duration>", description: "Execution timeout (e.g., 30s, 5m)" },
       { flag: "--local", description: "Only resolve from local sources" },
       { flag: "--dry-run", description: "Show what would be executed without running" },
-      { flag: "-q, --quiet", description: "Suppress spinner output, show only tool output" },
       { flag: "-v, --verbose", description: "Show detailed output" },
       { flag: "--json", description: "Output result as JSON" },
     ],
@@ -69,14 +81,21 @@ const commands: CommandDoc[] = [
         description: "Run with JSON args",
       },
       {
-        command: "enact run ./my-tool --input-file inputs.json",
-        description: "Run local tool with input file",
+        command: "enact run ./formatter --input ./src --output ./dist",
+        description: "Process files from ./src, export results to ./dist",
+      },
+      {
+        command: "enact run ./formatter --input ./src --output ./src --apply",
+        description: "In-place transformation with atomic apply",
+      },
+      {
+        command: "enact run ./diff-tool --input left=./old --input right=./new",
+        description: "Named inputs for multi-input tools",
       },
       {
         command: "enact run alice/resizer --dry-run",
         description: "Preview what would be executed",
       },
-      { command: "enact run alice/resizer -q | jq '.result'", description: "Pipe output to jq" },
     ],
   },
   {
@@ -171,7 +190,7 @@ const commands: CommandDoc[] = [
     ],
     examples: [
       {
-        command: 'enact exec alice/resizer "ls -la /work"',
+        command: 'enact exec alice/resizer "ls -la /workspace"',
         description: "List files in container",
       },
       { command: 'enact exec ./my-tool "python --version"', description: "Check Python version" },
@@ -1081,7 +1100,7 @@ function ManifestReference() {
             {`: pip install requests pandas
 `}
             <span className="text-brand-teal">command</span>
-            {`: python /work/main.py \${input}
+            {`: python /workspace/main.py \${input}
 `}
             <span className="text-brand-teal">timeout</span>
             {`: 30s
@@ -1220,6 +1239,72 @@ enact run owner/category/tool --args '{"input": "hello"}'
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        {/* Container Layout */}
+        <div>
+          <h2 className="text-xl font-semibold text-gray-600 mb-4 flex items-center gap-2">
+            <span className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Package className="w-4 h-4 text-blue-600" />
+            </span>
+            Container Layout
+          </h2>
+          <p className="text-gray-500 mb-4">
+            Tools run in containers with a standard directory layout. Use{" "}
+            <code className="bg-gray-200 px-1 rounded">--input</code> and{" "}
+            <code className="bg-gray-200 px-1 rounded">--output</code> to mount files and export
+            results.
+          </p>
+          <div className="bg-blue-100 border border-blue-200 rounded-xl overflow-hidden">
+            <table className="w-full">
+              <tbody>
+                <tr className="border-b border-blue-200">
+                  <td className="px-4 py-3 font-mono text-sm text-blue-600">/workspace</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    Tool source code (your SKILL.md, scripts, etc.)
+                  </td>
+                </tr>
+                <tr className="border-b border-blue-200">
+                  <td className="px-4 py-3 font-mono text-sm text-blue-600">/input</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    User data from <code className="bg-blue-200 px-1 rounded">--input ./path</code>
+                  </td>
+                </tr>
+                <tr className="border-b border-blue-200">
+                  <td className="px-4 py-3 font-mono text-sm text-blue-600">
+                    /inputs/&lt;name&gt;
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    Named inputs from{" "}
+                    <code className="bg-blue-200 px-1 rounded">--input name=./path</code>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-3 font-mono text-sm text-blue-600">/output</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    Results exported via{" "}
+                    <code className="bg-blue-200 px-1 rounded">--output ./path</code>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+            <h4 className="font-semibold text-gray-600 mb-2">In-Place Transformations</h4>
+            <p className="text-sm text-gray-500 mb-3">
+              Use <code className="bg-blue-100 px-1 rounded">--apply</code> for tools that transform
+              files in-place (formatters, linters, etc.):
+            </p>
+            <div className="bg-gray-800 rounded-lg p-3">
+              <code className="text-brand-green font-mono text-sm">
+                $ enact run ./formatter --input ./src --output ./src --apply
+              </code>
+            </div>
+            <p className="text-xs text-gray-400 mt-2">
+              Changes are applied atomically - if execution fails, the original directory is
+              preserved.
+            </p>
           </div>
         </div>
 

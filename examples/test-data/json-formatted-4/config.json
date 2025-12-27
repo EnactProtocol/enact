@@ -1,0 +1,9 @@
+{
+    "debug": true,
+    "name": "test",
+    "settings": {
+        "retries": 3,
+        "timeout": 30
+    },
+    "version": "1.0.0"
+}

@@ -45,12 +45,32 @@ export class CliError extends Error {
  * Tool not found error
  */
 export class ToolNotFoundError extends CliError {
-  constructor(toolName: string) {
-    super(
-      `Tool not found: ${toolName}`,
-      EXIT_TOOL_NOT_FOUND,
-      "Check the tool name or provide a path to a local tool.\nFor registry tools, use the format: owner/namespace/tool[@version]"
-    );
+  constructor(
+    toolName: string,
+    options?: {
+      /** Additional context about why the tool wasn't found */
+      reason?: string;
+      /** Locations that were searched */
+      searchedLocations?: string[];
+      /** Whether --local flag was set */
+      localOnly?: boolean;
+    }
+  ) {
+    let message = `Tool not found: ${toolName}`;
+    if (options?.reason) {
+      message += `\n${options.reason}`;
+    }
+    if (options?.searchedLocations && options.searchedLocations.length > 0) {
+      message += `\nSearched locations:\n${options.searchedLocations.map((l) => `  - ${l}`).join("\n")}`;
+    }
+
+    let suggestion =
+      "Check the tool name or provide a path to a local tool.\nFor registry tools, use the format: owner/namespace/tool[@version]";
+    if (options?.localOnly) {
+      suggestion = "Remove --local flag to search the registry, or check the tool path.";
+    }
+
+    super(message, EXIT_TOOL_NOT_FOUND, suggestion);
     this.name = "ToolNotFoundError";
   }
 }

@@ -28,7 +28,9 @@ The `run` command executes a tool using the command defined in its manifest (`en
 | Option | Description |
 |--------|-------------|
 | `-a, --args <json>` | Input arguments as a JSON object |
-| `-i, --input <key=value>` | Input arguments as key=value pairs (can be repeated) |
+| `-i, --input <value>` | Input: `key=value` for params, `./path` for files/directories, `name=./path` for named inputs |
+| `-o, --output <path>` | Export `/output` directory to this path after execution |
+| `--apply` | Apply output back to input directory atomically (for in-place transformations) |
 | `-t, --timeout <duration>` | Execution timeout (e.g., `30s`, `5m`, `1h`) |
 | `--no-cache` | Disable container caching |
 | `--local` | Only resolve from local sources |
@@ -76,6 +78,54 @@ enact run my-tool --args '{"config":{"debug":true}}' --input file=input.txt
 # Multiple key=value pairs
 enact run my-tool --input name=test --input count=5 --input enabled=true
 ```
+
+### Input Files and Directories
+
+Mount files or directories into the container for file-based tools:
+
+```bash
+# Single file input (mounted to /input/<filename>)
+enact run my-tool --input ./document.pdf
+
+# Single directory input (mounted to /input)
+enact run my-tool --input ./data
+
+# Named inputs (mounted to /inputs/<name>)
+enact run my-tool --input left=./old --input right=./new
+```
+
+### Output Export
+
+Export the container's `/output` directory to the host:
+
+```bash
+# Export output to a local directory
+enact run my-tool --input ./src --output ./dist
+
+# The tool writes to /output inside the container
+# After execution, /output is copied to ./dist
+```
+
+### In-Place Transformations with --apply
+
+For tools that transform data in-place (formatters, linters with --fix, etc.):
+
+```bash
+# Apply changes atomically back to the input directory
+enact run formatter --input ./src --output ./src --apply
+
+# What happens:
+# 1. ./src is mounted read-only to /input
+# 2. Tool processes files and writes to /output
+# 3. On success, ./src is atomically replaced with /output contents
+# 4. On failure, ./src remains unchanged
+```
+
+**Notes:**
+- `--apply` requires exactly one unnamed directory input
+- `--apply` requires `--output` to be specified
+- Changes are atomic: either all succeed or original is preserved
+- Tool source files are mounted to `/workspace` by default
 
 ## Input Resolution
 

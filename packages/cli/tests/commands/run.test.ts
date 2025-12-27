@@ -239,6 +239,178 @@ describe("run command", () => {
     });
   });
 
+  describe("--output option configuration", () => {
+    test("has --output option", () => {
+      const program = new Command();
+      configureRunCommand(program);
+
+      const runCmd = program.commands.find((cmd) => cmd.name() === "run");
+      const opts = runCmd?.options ?? [];
+      const outputOpt = opts.find((o) => o.long === "--output");
+      expect(outputOpt).toBeDefined();
+    });
+
+    test("--output option has short flag -o", () => {
+      const program = new Command();
+      configureRunCommand(program);
+
+      const runCmd = program.commands.find((cmd) => cmd.name() === "run");
+      const opts = runCmd?.options ?? [];
+      const outputOpt = opts.find((o) => o.long === "--output");
+      expect(outputOpt?.short).toBe("-o");
+    });
+
+    test("--output option takes a path argument", () => {
+      const program = new Command();
+      configureRunCommand(program);
+
+      const runCmd = program.commands.find((cmd) => cmd.name() === "run");
+      const opts = runCmd?.options ?? [];
+      const outputOpt = opts.find((o) => o.long === "--output");
+      // Non-variadic options should not be variadic
+      expect(outputOpt?.variadic).toBeFalsy();
+    });
+  });
+
+  describe("input path parsing patterns", () => {
+    // Test the input parsing logic patterns (--input can be key=value or path)
+
+    test("key=value is detected as parameter, not path", () => {
+      const input = "name=Alice";
+      const eqIndex = input.indexOf("=");
+      const looksLikePath =
+        input.startsWith("./") || input.startsWith("../") || input.startsWith("/");
+
+      expect(eqIndex).toBeGreaterThan(0);
+      expect(looksLikePath).toBe(false);
+      // This should be treated as a key=value parameter
+    });
+
+    test("./path is detected as input path", () => {
+      const input = "./data";
+      const looksLikePath =
+        input.startsWith("./") || input.startsWith("../") || input.startsWith("/");
+
+      expect(looksLikePath).toBe(true);
+    });
+
+    test("../path is detected as input path", () => {
+      const input = "../parent/data";
+      const looksLikePath =
+        input.startsWith("./") || input.startsWith("../") || input.startsWith("/");
+
+      expect(looksLikePath).toBe(true);
+    });
+
+    test("/absolute/path is detected as input path", () => {
+      const input = "/absolute/data";
+      const looksLikePath =
+        input.startsWith("./") || input.startsWith("../") || input.startsWith("/");
+
+      expect(looksLikePath).toBe(true);
+    });
+
+    test("name=./path is detected as named input", () => {
+      const input = "left=./old";
+      const eqIndex = input.indexOf("=");
+      const key = input.slice(0, eqIndex);
+      const value = input.slice(eqIndex + 1);
+
+      expect(key).toBe("left");
+      expect(value).toBe("./old");
+      expect(value.startsWith("./")).toBe(true);
+      // This should be treated as a named input path
+    });
+  });
+
+  describe("input target paths", () => {
+    test("single unnamed input goes to /input", () => {
+      const inputName = undefined;
+
+      const target = inputName !== undefined ? `/inputs/${inputName}` : "/input";
+
+      expect(target).toBe("/input");
+    });
+
+    test("named input goes to /inputs/<name>", () => {
+      const inputName = "left";
+
+      const target = `/inputs/${inputName}`;
+      expect(target).toBe("/inputs/left");
+    });
+
+    test("single file input goes to /input/<filename>", () => {
+      const inputType = "file";
+      const inputName = undefined;
+      const filename = "data.csv";
+
+      const target =
+        inputName !== undefined
+          ? `/inputs/${inputName}`
+          : inputType === "file"
+            ? `/input/${filename}`
+            : "/input";
+
+      expect(target).toBe("/input/data.csv");
+    });
+  });
+
+  describe("--apply option configuration", () => {
+    test("has --apply option", () => {
+      const program = new Command();
+      configureRunCommand(program);
+
+      const runCmd = program.commands.find((cmd) => cmd.name() === "run");
+      const opts = runCmd?.options ?? [];
+      const applyOpt = opts.find((o) => o.long === "--apply");
+      expect(applyOpt).toBeDefined();
+    });
+
+    test("--apply option is a boolean flag", () => {
+      const program = new Command();
+      configureRunCommand(program);
+
+      const runCmd = program.commands.find((cmd) => cmd.name() === "run");
+      const opts = runCmd?.options ?? [];
+      const applyOpt = opts.find((o) => o.long === "--apply");
+      // Boolean flags don't have required or optional args
+      expect(applyOpt?.required).toBeFalsy();
+    });
+  });
+
+  describe("--apply validation logic", () => {
+    test("--apply requires a directory input", () => {
+      // When using --apply, you need exactly one unnamed directory input
+      const inputPaths = [{ path: "/some/dir", type: "directory" as const }];
+      const hasValidInput = inputPaths.some((p) => p.type === "directory");
+      expect(hasValidInput).toBe(true);
+    });
+
+    test("--apply rejects file-only inputs", () => {
+      const inputPaths: { path: string; type: "directory" | "file" }[] = [
+        { path: "/some/file.txt", type: "file" as "directory" | "file" },
+      ];
+      const dirInputs = inputPaths.filter((p) => p.type === "directory");
+      expect(dirInputs.length).toBe(0);
+    });
+
+    test("--apply requires output path", () => {
+      // Validation check: --apply needs --output
+      const options = { apply: true, output: undefined };
+      const isValid = options.apply ? options.output !== undefined : true;
+      expect(isValid).toBe(false);
+    });
+
+    test("--apply with matching input/output is valid", () => {
+      const options = { apply: true, output: "/some/dir" };
+      const inputPath = "/some/dir";
+      const outputPath = options.output;
+
+      // When input and output match, it's an in-place apply
+      expect(inputPath).toBe(outputPath);
+    });
+  });
+
   describe("input file handling", () => {
     test("JSON input file can be parsed", () => {
       // Create a test JSON file

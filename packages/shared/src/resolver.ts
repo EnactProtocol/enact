@@ -10,7 +10,12 @@
 
 import { existsSync, readdirSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
-import { type LoadManifestOptions, findManifestFile, loadManifest } from "./manifest/loader";
+import {
+  type LoadManifestOptions,
+  ManifestLoadError,
+  findManifestFile,
+  loadManifest,
+} from "./manifest/loader";
 import { getCacheDir, getProjectEnactDir } from "./paths";
 import { getInstalledVersion, getToolCachePath } from "./registry";
 import type { ToolLocation, ToolResolution } from "./types/manifest";
@@ -27,6 +32,22 @@ export class ToolResolveError extends Error {
     super(message);
     this.name = "ToolResolveError";
   }
+}
+
+/**
+ * Result of trying to resolve a tool with error details
+ */
+export interface TryResolveResult {
+  /** The resolved tool, or null if not found/invalid */
+  resolution: ToolResolution | null;
+  /** Error that occurred during resolution, if any */
+  error?: Error;
+  /** Locations that were searched */
+  searchedLocations: string[];
+  /** Whether a manifest was found but had errors */
+  manifestFound: boolean;
+  /** Path where manifest was found (if any) */
+  manifestPath?: string;
 }
 
 /**
@@ -267,21 +288,123 @@ export function tryResolveTool(
   toolNameOrPath: string,
   options: ResolveOptions = {}
 ): ToolResolution | null {
-  try {
-    // Check if it looks like a path
-    if (
-      toolNameOrPath.startsWith("/") ||
-      toolNameOrPath.startsWith("./") ||
-      toolNameOrPath.startsWith("../") ||
-      toolNameOrPath.includes("\\") ||
-      existsSync(toolNameOrPath)
-    ) {
-      return resolveToolFromPath(toolNameOrPath);
+  const result = tryResolveToolDetailed(toolNameOrPath, options);
+  return result.resolution;
+}
+
+/**
+ * Try to resolve a tool with detailed error information
+ *
+ * Unlike tryResolveTool, this function returns information about why
+ * resolution failed, allowing callers to provide better error messages.
+ *
+ * @param toolNameOrPath - Tool name or path
+ * @param options - Resolution options
+ * @returns TryResolveResult with resolution or error details
+ */
+export function tryResolveToolDetailed(
+  toolNameOrPath: string,
+  options: ResolveOptions = {}
+): TryResolveResult {
+  const searchedLocations: string[] = [];
+
+  // Check if it looks like a path
+  const isPath =
+    toolNameOrPath.startsWith("/") ||
+    toolNameOrPath.startsWith("./") ||
+    toolNameOrPath.startsWith("../") ||
+    toolNameOrPath.includes("\\") ||
+    existsSync(toolNameOrPath);
+
+  if (isPath) {
+    // Resolve from path
+    const absolutePath = isAbsolute(toolNameOrPath) ? toolNameOrPath : resolve(toolNameOrPath);
+    searchedLocations.push(absolutePath);
+
+    // Check if path exists
+    if (!existsSync(absolutePath)) {
+      return {
+        resolution: null,
+        searchedLocations,
+        manifestFound: false,
+      };
     }
 
-    return resolveTool(toolNameOrPath, options);
-  } catch {
-    return null;
+    // Find manifest file
+    const manifestPath =
+      absolutePath.endsWith(".yaml") ||
+      absolutePath.endsWith(".yml") ||
+      absolutePath.endsWith(".md")
+        ? absolutePath
+        : findManifestFile(absolutePath);
+
+    if (!manifestPath) {
+      return {
+        resolution: null,
+        searchedLocations,
+        manifestFound: false,
+      };
+    }
+
+    // Try to load the manifest
+    try {
+      const resolution = resolveToolFromPath(toolNameOrPath);
+      return {
+        resolution,
+        searchedLocations,
+        manifestFound: true,
+        manifestPath,
+      };
+    } catch (error) {
+      // Manifest found but invalid
+      return {
+        resolution: null,
+        error: error instanceof Error ? error : new Error(String(error)),
+        searchedLocations,
+        manifestFound: true,
+        manifestPath,
+      };
+    }
+  }
+
+  // Resolve by name
+  try {
+    const resolution = resolveTool(toolNameOrPath, options);
+    return {
+      resolution,
+      searchedLocations: getToolSearchPaths(toolNameOrPath, options),
+      manifestFound: true,
+      manifestPath: resolution.manifestPath,
+    };
+  } catch (error) {
+    // Check if error is due to manifest validation vs not found
+    if (error instanceof ToolResolveError) {
+      return {
+        resolution: null,
+        error,
+        searchedLocations: error.searchedLocations ?? [],
+        manifestFound: false,
+      };
+    }
+
+    // ManifestLoadError means manifest was found but invalid
+    if (error instanceof ManifestLoadError) {
+      return {
+        resolution: null,
+        error,
+        searchedLocations: getToolSearchPaths(toolNameOrPath, options),
+        manifestFound: true,
+        manifestPath: error.filePath,
+      };
+    }
+
+    // Other error
+    return {
+      resolution: null,
+      error: error instanceof Error ? error : new Error(String(error)),
+      searchedLocations: getToolSearchPaths(toolNameOrPath, options),
+      manifestFound: false,
+    };
   }
 }
 

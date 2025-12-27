@@ -122,6 +122,18 @@ export interface ExecutionError {
 // ============================================================================
 
 /**
+ * Input path configuration for mounting files/directories
+ */
+export interface InputPathConfig {
+  /** Absolute path on host */
+  path: string;
+  /** Whether it's a file or directory */
+  type: "file" | "directory";
+  /** Named input (for multi-input support, e.g., "left" from --input left=./path) */
+  name?: string;
+}
+
+/**
  * Options for tool execution
  */
 export interface ExecutionOptions {
@@ -139,6 +151,10 @@ export interface ExecutionOptions {
   additionalEnv?: Record<string, string>;
   /** Mount host directories (host path -> container path) */
   mountDirs?: Record<string, string>;
+  /** Input paths to mount (files or directories) */
+  inputPaths?: InputPathConfig[];
+  /** Output path to export /output directory to after execution */
+  outputPath?: string;
   /** Output files to extract (container path) */
   outputFiles?: string[];
   /** Retry configuration */

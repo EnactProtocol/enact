@@ -33,7 +33,7 @@ description: Clear description for search
 version: 1.0.0
 from: python:3.12-slim            # Docker image
 build: pip install requests       # Install dependencies (cached)
-command: python /work/main.py \${input}
+command: python /workspace/main.py \${input}
 inputSchema:
   type: object
   properties:

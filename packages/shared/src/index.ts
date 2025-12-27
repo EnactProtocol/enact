@@ -119,11 +119,13 @@ export {
   resolveToolAuto,
   resolveToolFromPath,
   tryResolveTool,
+  tryResolveToolDetailed,
   normalizeToolName,
   toolNameToPath,
   getToolPath,
   getToolSearchPaths,
   type ResolveOptions,
+  type TryResolveResult,
 } from "./resolver";
 
 // Local tool registry (tools.json management)
@@ -211,6 +213,7 @@ export {
   type ExecutionError,
   type ExecutionErrorCode,
   type ExecutionOptions,
+  type InputPathConfig,
   type RetryConfig,
   type ContainerRuntime,
   type RuntimeDetection,
