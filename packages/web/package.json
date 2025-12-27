@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "vite",
     "dev:clean": "rm -rf node_modules/.vite && vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && bun run scripts/generate-blog-meta.ts",
+    "build:vite": "tsc && vite build",
     "preview": "vite preview",
     "lint": "biome check src/",
     "lint:fix": "biome check --write src/",

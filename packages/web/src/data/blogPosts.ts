@@ -20,9 +20,7 @@ export const blogPosts: BlogPost[] = [
     slug: "skills-are-all-you-need",
     tags: ["vision", "mcp", "skills"],
     content: `
-# Skills Are All You Need
-
-*Making skills executable*
+# Making Skills Executable
 
 We have abundant intelligence. We have big context windows. But we still have an *action* problem.
 
