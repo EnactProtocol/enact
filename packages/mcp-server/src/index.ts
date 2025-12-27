@@ -34,7 +34,7 @@ import {
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 
-export const version = "2.1.0";
+export const version = "2.0.2";
 
 /** Default HTTP port for streamable HTTP transport */
 const DEFAULT_HTTP_PORT = 3000;
