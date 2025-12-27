@@ -80,6 +80,7 @@ interface RunOptions extends GlobalOptions {
   timeout?: string;
   noCache?: boolean;
   local?: boolean;
+  remote?: boolean;
   verbose?: boolean;
   output?: string;
   apply?: boolean;
@@ -680,35 +681,46 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
   let resolution: ToolResolution | null = null;
   let resolveResult: ReturnType<typeof tryResolveToolDetailed> | null = null;
 
-  // First, try to resolve locally (project → user → cache)
-  if (!options.verbose) {
-    resolveResult = tryResolveToolDetailed(tool, { startDir: ctx.cwd });
-    resolution = resolveResult.resolution;
-  } else {
-    const spinner = clack.spinner();
-    spinner.start(`Resolving tool: ${tool}`);
-    resolveResult = tryResolveToolDetailed(tool, { startDir: ctx.cwd });
-    resolution = resolveResult.resolution;
-    if (resolution) {
-      spinner.stop(`${symbols.success} Resolved: ${tool}`);
-    } else {
-      spinner.stop(`${symbols.info} Checking registry...`);
-    }
+  // Check if --remote flag is valid (requires namespace/name format)
+  const isRegistryFormat = tool.includes("/") && !tool.startsWith("/") && !tool.startsWith(".");
+  if (options.remote && !isRegistryFormat) {
+    throw new ValidationError(
+      `--remote requires a registry tool name (e.g., user/tool), got: ${tool}`
+    );
   }
 
-  // If manifest was found but had errors, throw a descriptive error immediately
-  if (!resolution && resolveResult?.manifestFound && resolveResult?.error) {
-    const errorMessage = resolveResult.error.message;
-    const manifestPath = resolveResult.manifestPath;
-    throw new ManifestError(
-      `Invalid manifest${manifestPath ? ` at ${manifestPath}` : ""}: ${errorMessage}`
-    );
+  // Skip local resolution if --remote is set
+  if (!options.remote) {
+    // First, try to resolve locally (project → user → cache)
+    if (!options.verbose) {
+      resolveResult = tryResolveToolDetailed(tool, { startDir: ctx.cwd });
+      resolution = resolveResult.resolution;
+    } else {
+      const spinner = clack.spinner();
+      spinner.start(`Resolving tool: ${tool}`);
+      resolveResult = tryResolveToolDetailed(tool, { startDir: ctx.cwd });
+      resolution = resolveResult.resolution;
+      if (resolution) {
+        spinner.stop(`${symbols.success} Resolved: ${tool}`);
+      } else {
+        spinner.stop(`${symbols.info} Checking registry...`);
+      }
+    }
+
+    // If manifest was found but had errors, throw a descriptive error immediately
+    if (!resolution && resolveResult?.manifestFound && resolveResult?.error) {
+      const errorMessage = resolveResult.error.message;
+      const manifestPath = resolveResult.manifestPath;
+      throw new ManifestError(
+        `Invalid manifest${manifestPath ? ` at ${manifestPath}` : ""}: ${errorMessage}`
+      );
+    }
   }
 
   // If not found locally and --local flag not set, try fetching from registry
   if (!resolution && !options.local) {
     // Check if this looks like a tool name (namespace/name format)
-    if (tool.includes("/") && !tool.startsWith("/") && !tool.startsWith(".")) {
+    if (isRegistryFormat) {
       resolution = !options.verbose
         ? await fetchAndCacheTool(tool, options, ctx)
         : await withSpinner(
@@ -723,11 +735,15 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
     if (options.local) {
       throw new ToolNotFoundError(tool, {
         localOnly: true,
-        searchedLocations: resolveResult?.searchedLocations,
+        ...(resolveResult?.searchedLocations && {
+          searchedLocations: resolveResult.searchedLocations,
+        }),
       });
     }
     throw new ToolNotFoundError(tool, {
-      searchedLocations: resolveResult?.searchedLocations,
+      ...(resolveResult?.searchedLocations && {
+        searchedLocations: resolveResult.searchedLocations,
+      }),
     });
   }
 
@@ -1042,6 +1058,7 @@ export function configureRunCommand(program: Command): void {
     .option("-t, --timeout <duration>", "Execution timeout (e.g., 30s, 5m)")
     .option("--no-cache", "Disable container caching")
     .option("--local", "Only resolve from local sources")
+    .option("-r, --remote", "Skip local resolution and fetch from registry")
     .option("--dry-run", "Show what would be executed without running")
     .option("-v, --verbose", "Show progress spinners and detailed output")
     .option("--json", "Output result as JSON")

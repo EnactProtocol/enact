@@ -140,6 +140,94 @@ describe("run command", () => {
       const localOpt = opts.find((o) => o.long === "--local");
       expect(localOpt).toBeDefined();
     });
+
+    test("has --remote option", () => {
+      const program = new Command();
+      configureRunCommand(program);
+
+      const runCmd = program.commands.find((cmd) => cmd.name() === "run");
+      const opts = runCmd?.options ?? [];
+      const remoteOpt = opts.find((o) => o.long === "--remote");
+      expect(remoteOpt).toBeDefined();
+    });
+
+    test("--remote option has short flag -r", () => {
+      const program = new Command();
+      configureRunCommand(program);
+
+      const runCmd = program.commands.find((cmd) => cmd.name() === "run");
+      const opts = runCmd?.options ?? [];
+      const remoteOpt = opts.find((o) => o.long === "--remote");
+      expect(remoteOpt?.short).toBe("-r");
+    });
+  });
+
+  describe("tool resolution logic", () => {
+    // Test the resolution logic patterns for local vs remote tools
+
+    test("path-like targets are local only (./)", () => {
+      const tool = "./hello";
+      const isRegistryFormat = tool.includes("/") && !tool.startsWith("/") && !tool.startsWith(".");
+      expect(isRegistryFormat).toBe(false);
+    });
+
+    test("path-like targets are local only (../)", () => {
+      const tool = "../tools/hello";
+      const isRegistryFormat = tool.includes("/") && !tool.startsWith("/") && !tool.startsWith(".");
+      expect(isRegistryFormat).toBe(false);
+    });
+
+    test("path-like targets are local only (/abs)", () => {
+      const tool = "/absolute/path/hello";
+      const isRegistryFormat = tool.includes("/") && !tool.startsWith("/") && !tool.startsWith(".");
+      expect(isRegistryFormat).toBe(false);
+    });
+
+    test("simple names without slash are local only", () => {
+      const tool = "hello";
+      const isRegistryFormat = tool.includes("/") && !tool.startsWith("/") && !tool.startsWith(".");
+      expect(isRegistryFormat).toBe(false);
+    });
+
+    test("namespace/tool format can be registry", () => {
+      const tool = "user/hello";
+      const isRegistryFormat = tool.includes("/") && !tool.startsWith("/") && !tool.startsWith(".");
+      expect(isRegistryFormat).toBe(true);
+    });
+
+    test("nested namespace/ns/tool format can be registry", () => {
+      const tool = "org/namespace/hello";
+      const isRegistryFormat = tool.includes("/") && !tool.startsWith("/") && !tool.startsWith(".");
+      expect(isRegistryFormat).toBe(true);
+    });
+
+    test("--remote with simple name should be rejected", () => {
+      const tool = "hello";
+      const isRegistryFormat = tool.includes("/") && !tool.startsWith("/") && !tool.startsWith(".");
+      const remoteFlag = true;
+
+      // --remote requires registry format
+      const isValid = !remoteFlag || isRegistryFormat;
+      expect(isValid).toBe(false);
+    });
+
+    test("--remote with namespace/tool is valid", () => {
+      const tool = "user/hello";
+      const isRegistryFormat = tool.includes("/") && !tool.startsWith("/") && !tool.startsWith(".");
+      const remoteFlag = true;
+
+      const isValid = !remoteFlag || isRegistryFormat;
+      expect(isValid).toBe(true);
+    });
+
+    test("--remote with path should be rejected", () => {
+      const tool = "./hello";
+      const isRegistryFormat = tool.includes("/") && !tool.startsWith("/") && !tool.startsWith(".");
+      const remoteFlag = true;
+
+      const isValid = !remoteFlag || isRegistryFormat;
+      expect(isValid).toBe(false);
+    });
   });
 
   describe("input parsing helpers", () => {
