@@ -20,7 +20,7 @@ export const blogPosts: BlogPost[] = [
     slug: "claude-code-superpowers",
     tags: ["tutorial", "claude", "getting-started"],
     content: `
-# Give Claude Code Superpowers in 5 Minutes
+# Give Claude Code Superpowers in Minutes
 
 This guide shows you how to give Claude Code the ability to browse the web, take screenshots, and analyze websites - using Enact's containerized tools.
 
@@ -38,7 +38,7 @@ In your project folder, run:
 enact init --claude
 \`\`\`
 
-This creates an \`AGENTS.md\` file that teaches Claude Code how to use Enact tools. Claude reads this file and immediately knows how to discover and run containerized tools.
+This creates an \`CLAUDE.md\` file that teaches Claude Code how to use Enact tools. Claude reads this file and immediately knows how to discover and run containerized tools.
 
 ## Step 3: Start a Conversation
 
