@@ -37,6 +37,22 @@ describe("Input Validation", () => {
       expect(result.errors[0]?.path).toContain("name");
     });
 
+    test("includes type hint in error message for missing required params", () => {
+      const result = validateInputs({ count: 5 }, simpleSchema);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors[0]?.message).toContain("name");
+      expect(result.errors[0]?.message).toContain("string");
+    });
+
+    test("allows optional params to be omitted", () => {
+      // Only "name" is required, "count" is optional
+      const result = validateInputs({ name: "test" }, simpleSchema);
+
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
     test("reports type errors", () => {
       const result = validateInputs({ name: "test", count: "not a number" }, simpleSchema);
 

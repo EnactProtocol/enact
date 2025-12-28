@@ -12,6 +12,7 @@ Enact tools are containerized, cryptographically-signed executables. Each tool i
 | Run with JSON | \`enact run ./ --args '{"key": "value"}'\` |
 | Run from file | \`enact run ./ --input-file inputs.json\` |
 | Dry run | \`enact run ./ --args '{}' --dry-run\` |
+| Debug params | \`enact run ./ --args '{}' --debug\` |
 | Sign & publish | \`enact sign ./ && enact publish ./\` |
 
 ## SKILL.md Structure
@@ -78,18 +79,33 @@ command: python /workspace/main.py "\${input}"
 command: python /workspace/main.py \${input}
 \`\`\`
 
-**Optional params:** Missing optional params become empty strings. Always provide defaults:
+**Optional vs Required Parameters:**
+
+Parameters listed in the \`required\` array must be provided. All other properties are optional.
+
 \`\`\`yaml
 inputSchema:
+  type: object
   properties:
-    greeting: 
+    url:                              # Required (in required array)
       type: string
-      default: "Hello"  # Recommended for optional params
+    user_agent:                       # Optional (not in required array)
+      type: string
+      default: "Mozilla/5.0"          # Provide default for optional params
+    timeout:
+      type: number
+      default: 30
+  required: [url]                     # Only url is required
 \`\`\`
 
-Or handle empty in shell:
+**Best practices for optional parameters:**
+1. Always provide a \`default\` value in the schema when possible
+2. Optional params without defaults become empty strings in commands
+3. Use \`--debug\` to see how parameters are resolved: \`enact run ./ --debug\`
+
+Handle optional params in shell commands:
 \`\`\`yaml
-command: "echo \${greeting:-Hello} \${name}"
+command: "curl \${url} -A '\${user_agent:-Mozilla/5.0}' --max-time \${timeout:-30}"
 \`\`\`
 
 Modifiers:
@@ -147,6 +163,37 @@ build: apt-get update && apt-get install -y libfoo-dev
 \`\`\`
 
 Build steps are cached — first run slow, subsequent runs instant.
+
+## Base Image Requirements
+
+Not all Docker images work as Enact base images. Requirements:
+
+**Must have:**
+- \`/bin/sh\` (POSIX shell) - Enact wraps commands with \`sh -c\`
+- Standard filesystem layout
+
+**Recommended base images:**
+| Language | Image | Notes |
+|----------|-------|-------|
+| Python | \`python:3.12-slim\` | Best balance of size/features |
+| Node.js | \`node:20-alpine\` | Smallest, may need build tools |
+| Ruby | \`ruby:3.2-slim\` | For Ruby tools |
+| Go | \`golang:1.22-alpine\` | Compile in build step |
+| Rust | \`rust:1.83-slim\` | Compile in build step |
+| General | \`alpine:3.18\` | Minimal, use apk for packages |
+| Debian | \`debian:bookworm-slim\` | More packages, larger |
+
+**Images that may NOT work:**
+- Distroless images (no shell)
+- Scratch images (no shell)
+- Some specialized images with custom entrypoints
+
+**Debugging image issues:**
+\`\`\`bash
+# Test if an image works with Enact
+enact exec . "echo test"  # Run simple command in tool's container
+enact run ./ --verbose    # See detailed container output
+\`\`\`
 
 ## File Access
 
@@ -212,7 +259,35 @@ Return JSON: {"issues": [...], "score": 75}
 
 \`\`\`bash
 enact run ./ --args '{"x": "y"}' --verbose   # Verbose output
-enact run ./ --args '{}' --dry-run             # Preview command
-enact list                                      # List installed tools
+enact run ./ --args '{}' --dry-run           # Preview command without running
+enact run ./ --args '{}' --debug             # Show parameter resolution details
+enact list                                   # List installed tools
+\`\`\`
+
+**Common issues:**
+
+| Issue | Solution |
+|-------|----------|
+| "Missing required parameter" | Check your \`required\` array in inputSchema |
+| Parameters not substituting | Use \`--debug\` to see what values are being passed |
+| Optional params failing | Add \`default\` values or handle empty strings |
+| Build step fails | Use \`--verbose\` to see build output |
+| Base image not working | Use recommended images (see Base Image Requirements) |
+| Command exit code 2 | Check if command exists in the container |
+
+**Debugging build failures:**
+\`\`\`bash
+enact run ./ --args '{}' --verbose   # See build output
+enact exec . "which python"          # Check if command exists
+enact exec . "ls /workspace"         # Check file mounts
+enact validate ./                    # Validate SKILL.md structure
+\`\`\`
+
+**Multi-step builds:** Use YAML array syntax for clearer error reporting:
+\`\`\`yaml
+build:
+  - apk add --no-cache ruby ruby-dev
+  - gem install bundler
+  - bundle install
 \`\`\`
 `;

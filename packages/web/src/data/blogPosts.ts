@@ -11,6 +11,112 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    id: "6",
+    title: "Give Claude Code Superpowers in 5 Minutes",
+    excerpt:
+      "Learn how to give Claude Code the ability to browse the web, take screenshots, and analyze websites using Enact's containerized tools.",
+    date: "2024-12-28",
+    author: "Enact Team",
+    slug: "claude-code-superpowers",
+    tags: ["tutorial", "claude", "getting-started"],
+    content: `
+# Give Claude Code Superpowers in 5 Minutes
+
+This guide shows you how to give Claude Code the ability to browse the web, take screenshots, and analyze websites - using Enact's containerized tools.
+
+## Step 1: Install Enact
+
+\`\`\`bash
+npm install -g enact-cli
+\`\`\`
+
+## Step 2: Initialize Your Project
+
+In your project folder, run:
+
+\`\`\`bash
+enact init --claude
+\`\`\`
+
+This creates an \`AGENTS.md\` file that teaches Claude Code how to use Enact tools. Claude reads this file and immediately knows how to discover and run containerized tools.
+
+## Step 3: Start a Conversation
+
+Now just talk to Claude. Here's a real example:
+
+---
+
+**You:** "Take a screenshot of https://enact.tools and describe what you see."
+
+**Claude:** Let me find a tool that can do that.
+
+*Claude runs \`enact search screenshot\` and finds enact/playwright*
+
+*Then runs \`enact learn enact/playwright\` to understand how to use it*
+
+*Then executes the tool with the screenshot action*
+
+"Here's what I found on the Enact homepage:
+- A clean hero section with the tagline 'The npm for AI tools'
+- Navigation links: Browse Tools, Docs, GitHub, Blog, Discord
+- A search bar for discovering tools
+- The page emphasizes safe, containerized tool execution"
+
+---
+
+**You:** "What tech stack is github.com running?"
+
+**Claude:** Let me search for a tool that can detect web technologies.
+
+*Claude runs \`enact search scanner\` and finds enact/scanner/whatweb*
+
+*Then runs \`enact learn enact/scanner/whatweb\` to see the available options*
+
+*Then executes the scan*
+
+"GitHub.com is using:
+- Custom HTTP server (GitHub.com)
+- Strict security headers (HSTS, X-Frame-Options: deny)
+- Ruby on Rails backend indicators
+- Fastly CDN for content delivery"
+
+---
+
+## What Just Happened?
+
+1. Claude read the \`AGENTS.md\` file and learned about Enact
+2. It searched for relevant tools using \`enact search\`
+3. It learned how to use them with \`enact learn\`
+4. It ran the tools in isolated containers
+5. It parsed the structured output and explained it to you
+
+You never typed a single Enact command. Claude handled everything.
+
+## Available Tools
+
+| Tool | What it does |
+|------|--------------|
+| \`enact/playwright\` | Screenshots, text extraction, HTML scraping |
+| \`enact/scanner/whatweb\` | Detect web technologies, servers, frameworks |
+
+Browse more at [enact.tools](https://enact.tools)
+
+## Why Containers?
+
+- **No installation** - Playwright needs Chromium, WhatWeb needs Ruby. The containers include everything.
+- **Safe execution** - Tools run isolated from your system
+- **Consistent results** - Same environment every time
+
+---
+
+Ready? Install Enact, run \`enact init --claude\`, and start asking Claude to browse the web for you.
+
+---
+
+*Published on December 28, 2024*
+    `,
+  },
+  {
     id: "5",
     title: "Skills Are All You Need",
     excerpt:

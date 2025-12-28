@@ -35,3 +35,6 @@ export { configureUnyankCommand } from "./unyank";
 export { configureVisibilityCommand } from "./visibility";
 // MCP integration commands
 export { configureMcpCommand } from "./mcp";
+
+// Validation command
+export { configureValidateCommand } from "./validate";

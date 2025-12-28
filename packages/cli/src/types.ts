@@ -16,6 +16,8 @@ export interface GlobalOptions {
   quiet?: boolean;
   /** Run without making changes (preview mode) */
   dryRun?: boolean;
+  /** Enable debug mode - show detailed parameter and environment information */
+  debug?: boolean;
 }
 
 /**

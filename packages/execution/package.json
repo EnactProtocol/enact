@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@enactprotocol/shared": "workspace:*",
-    "@dagger.io/dagger": "^0.11.1"
+    "@dagger.io/dagger": "^0.19.8"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.8.0",

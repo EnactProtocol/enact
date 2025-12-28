@@ -30,6 +30,7 @@ import {
   configureSignCommand,
   configureTrustCommand,
   configureUnyankCommand,
+  configureValidateCommand,
   configureVisibilityCommand,
   configureYankCommand,
 } from "./commands";
@@ -84,6 +85,9 @@ async function main() {
   configureVisibilityCommand(program);
   // MCP integration commands
   configureMcpCommand(program);
+
+  // Validation command
+  configureValidateCommand(program);
 
   // Global error handler - handle Commander's help/version exits gracefully
   program.exitOverride((err) => {

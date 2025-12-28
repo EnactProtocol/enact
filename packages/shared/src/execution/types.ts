@@ -93,6 +93,7 @@ export interface ExecutionMetadata {
 export type ExecutionErrorCode =
   | "TIMEOUT"
   | "CONTAINER_ERROR"
+  | "BUILD_ERROR"
   | "VALIDATION_ERROR"
   | "SECRET_ERROR"
   | "NETWORK_ERROR"

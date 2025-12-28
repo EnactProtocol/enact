@@ -565,7 +565,7 @@ describe("init command", () => {
 
       // Should be comprehensive but not excessive
       const lines = content.split("\n").length;
-      expect(lines).toBeLessThan(250); // Comprehensive guide under 250 lines
+      expect(lines).toBeLessThan(350); // Comprehensive guide under 350 lines (includes base image docs, troubleshooting)
       expect(lines).toBeGreaterThan(100); // But not too sparse
 
       // Clean up

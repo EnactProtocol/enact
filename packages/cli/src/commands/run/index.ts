@@ -84,6 +84,7 @@ interface RunOptions extends GlobalOptions {
   verbose?: boolean;
   output?: string;
   apply?: boolean;
+  debug?: boolean;
 }
 
 /**
@@ -631,6 +632,84 @@ function displayDryRun(
 }
 
 /**
+ * Display debug information about parameter resolution
+ */
+function displayDebugInfo(
+  manifest: ToolManifest,
+  rawInputs: Record<string, unknown>,
+  inputsWithDefaults: Record<string, unknown>,
+  finalInputs: Record<string, unknown>,
+  env: Record<string, string>,
+  command: string[]
+): void {
+  newline();
+  info(colors.bold("Debug: Parameter Resolution"));
+  newline();
+
+  // Show schema information
+  if (manifest.inputSchema?.properties) {
+    info("Schema Properties:");
+    const required = new Set(manifest.inputSchema.required || []);
+    for (const [name, prop] of Object.entries(manifest.inputSchema.properties)) {
+      const propSchema = prop as { type?: string; default?: unknown; description?: string };
+      const isRequired = required.has(name);
+      const hasDefault = propSchema.default !== undefined;
+      const status = isRequired ? colors.error("required") : colors.dim("optional");
+      dim(
+        `  ${name}: ${propSchema.type || "any"} [${status}]${hasDefault ? ` (default: ${JSON.stringify(propSchema.default)})` : ""}`
+      );
+    }
+    newline();
+  }
+
+  // Show raw inputs (what was provided)
+  info("Raw Inputs (provided by user):");
+  if (Object.keys(rawInputs).length === 0) {
+    dim("  (none)");
+  } else {
+    for (const [key, value] of Object.entries(rawInputs)) {
+      dim(`  ${key}: ${JSON.stringify(value)}`);
+    }
+  }
+  newline();
+
+  // Show inputs after defaults applied
+  info("After Defaults Applied:");
+  for (const [key, value] of Object.entries(inputsWithDefaults)) {
+    const wasDefault = rawInputs[key] === undefined;
+    dim(`  ${key}: ${JSON.stringify(value)}${wasDefault ? colors.dim(" (default)") : ""}`);
+  }
+  newline();
+
+  // Show final inputs (after coercion)
+  info("Final Inputs (after validation/coercion):");
+  for (const [key, value] of Object.entries(finalInputs)) {
+    dim(`  ${key}: ${JSON.stringify(value)}`);
+  }
+  newline();
+
+  // Show environment variables
+  if (Object.keys(env).length > 0) {
+    info("Environment Variables:");
+    for (const [key, value] of Object.entries(env)) {
+      // Mask potentially sensitive values
+      const isSensitive =
+        key.toLowerCase().includes("secret") ||
+        key.toLowerCase().includes("key") ||
+        key.toLowerCase().includes("token") ||
+        key.toLowerCase().includes("password");
+      dim(`  ${key}=${isSensitive ? "***" : value}`);
+    }
+    newline();
+  }
+
+  // Show final command
+  info("Final Command:");
+  dim(`  ${command.join(" ")}`);
+  newline();
+}
+
+/**
  * Display execution result
  */
 function displayResult(result: ExecutionResult, options: RunOptions): void {
@@ -661,15 +740,30 @@ function displayResult(result: ExecutionResult, options: RunOptions): void {
   } else {
     error(`Execution failed: ${result.error?.message ?? "Unknown error"}`);
 
-    if (result.error?.details) {
+    // Show stdout if present (useful for debugging - command may have printed before failing)
+    if (result.output?.stdout?.trim()) {
       newline();
-      dim(JSON.stringify(result.error.details, null, 2));
+      info("stdout:");
+      console.log(result.output.stdout);
     }
 
-    if (result.output?.stderr) {
+    // Show stderr (the actual error output)
+    if (result.output?.stderr?.trim()) {
       newline();
-      dim("stderr:");
-      dim(result.output.stderr);
+      error("stderr:");
+      console.log(result.output.stderr);
+    }
+
+    // Show additional error details if present (and different from stderr)
+    if (result.error?.details) {
+      const detailsStr = JSON.stringify(result.error.details, null, 2);
+      // Only show if it adds new information (not just duplicating stderr)
+      const stderrInDetails = result.error.details.stderr;
+      if (!stderrInDetails || stderrInDetails !== result.output?.stderr) {
+        newline();
+        dim("Additional details:");
+        dim(detailsStr);
+      }
     }
   }
 }
@@ -908,6 +1002,11 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
     }
   }
 
+  // Debug mode - show detailed parameter resolution info
+  if (options.debug) {
+    displayDebugInfo(manifest, inputs, inputsWithDefaults, finalInputs, envVars, command);
+  }
+
   // Dry run mode
   if (options.dryRun) {
     displayDryRun(
@@ -1060,6 +1159,7 @@ export function configureRunCommand(program: Command): void {
     .option("--local", "Only resolve from local sources")
     .option("-r, --remote", "Skip local resolution and fetch from registry")
     .option("--dry-run", "Show what would be executed without running")
+    .option("--debug", "Show detailed parameter and environment variable resolution")
     .option("-v, --verbose", "Show progress spinners and detailed output")
     .option("--json", "Output result as JSON")
     .action(async (tool: string, options: RunOptions) => {

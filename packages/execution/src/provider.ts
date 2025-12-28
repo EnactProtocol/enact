@@ -6,7 +6,7 @@
  */
 
 import { basename } from "node:path";
-import { type Client, type Container, connect } from "@dagger.io/dagger";
+import { type Client, type Container, ReturnType, connect } from "@dagger.io/dagger";
 import type { ToolManifest } from "@enactprotocol/shared";
 import {
   applyDefaults,
@@ -185,14 +185,15 @@ export class DaggerExecutionProvider implements ExecutionProvider {
     }
 
     // Interpolate command with parameters - only substitute known inputSchema params
+    // Use onMissing: "empty" so optional params without values become empty strings
+    // (validation already caught truly missing required params above)
     const knownParameters = manifest.inputSchema?.properties
       ? new Set(Object.keys(manifest.inputSchema.properties))
       : undefined;
-    const interpolated = interpolateCommand(
-      command,
-      params,
-      knownParameters ? { knownParameters } : {}
-    );
+    const interpolated = interpolateCommand(command, params, {
+      onMissing: "empty",
+      ...(knownParameters ? { knownParameters } : {}),
+    });
 
     // Parse timeout
     const timeoutMs = this.parseTimeout(options.timeout ?? manifest.timeout);
@@ -250,14 +251,25 @@ export class DaggerExecutionProvider implements ExecutionProvider {
       this.consecutiveFailures++;
       const errorMessage = error instanceof Error ? error.message : String(error);
 
-      // Determine error code
+      // Determine error code and clean up message
       let code: ExecutionErrorCode = "CONTAINER_ERROR";
-      if (errorMessage.includes("timeout") || errorMessage === "TIMEOUT") {
+      let displayMessage = errorMessage;
+
+      if (errorMessage.startsWith("BUILD_ERROR:")) {
+        code = "BUILD_ERROR";
+        // Remove the BUILD_ERROR: prefix for cleaner display
+        displayMessage = errorMessage.slice("BUILD_ERROR:".length).trim();
+      } else if (errorMessage.includes("timeout") || errorMessage === "TIMEOUT") {
         code = "TIMEOUT";
+        displayMessage = `Container execution failed: ${errorMessage}`;
       } else if (errorMessage.includes("network")) {
         code = "NETWORK_ERROR";
+        displayMessage = `Container execution failed: ${errorMessage}`;
       } else if (errorMessage.includes("engine")) {
         code = "ENGINE_ERROR";
+        displayMessage = `Container execution failed: ${errorMessage}`;
+      } else {
+        displayMessage = `Container execution failed: ${errorMessage}`;
       }
 
       return this.createErrorResult(
@@ -266,7 +278,7 @@ export class DaggerExecutionProvider implements ExecutionProvider {
         executionId,
         startTime,
         code,
-        `Container execution failed: ${errorMessage}`
+        displayMessage
       );
     }
   }
@@ -426,11 +438,46 @@ export class DaggerExecutionProvider implements ExecutionProvider {
               const buildCommands = Array.isArray(manifest.build)
                 ? manifest.build
                 : [manifest.build];
-              for (const buildCmd of buildCommands) {
-                container = container.withExec(["sh", "-c", buildCmd]);
+
+              for (let i = 0; i < buildCommands.length; i++) {
+                const buildCmd = buildCommands[i] as string;
+                // Use expect: ReturnType.Any to capture output even on failure
+                container = container.withExec(["sh", "-c", buildCmd], { expect: ReturnType.Any });
+                // Force this build step to complete before moving to next
+                const buildContainer = await container.sync();
+
+                // Get exit code and output
+                const buildExitCode = await buildContainer.exitCode();
+                const buildStdout = await buildContainer.stdout();
+                const buildStderr = await buildContainer.stderr();
+
+                if (buildExitCode !== 0) {
+                  // Create detailed build error message with actual output
+                  const stepInfo =
+                    buildCommands.length > 1
+                      ? `Build failed at step ${i + 1} of ${buildCommands.length}`
+                      : "Build failed";
+
+                  const details = [
+                    stepInfo,
+                    `Command: ${buildCmd}`,
+                    `Exit code: ${buildExitCode}`,
+                    buildStderr ? `\nstderr:\n${buildStderr}` : "",
+                    buildStdout ? `\nstdout:\n${buildStdout}` : "",
+                  ]
+                    .filter(Boolean)
+                    .join("\n");
+
+                  throw new Error(`BUILD_ERROR: ${details}`);
+                }
+
+                // In verbose mode, show build progress
+                if (this.config.verbose) {
+                  console.error(
+                    `Build step ${i + 1}/${buildCommands.length} completed: ${buildCmd.slice(0, 50)}${buildCmd.length > 50 ? "..." : ""}`
+                  );
+                }
               }
-              // Force build to complete (triggers caching)
-              await container.sync();
             }
 
             // Now start the timeout for actual command execution only
@@ -441,33 +488,17 @@ export class DaggerExecutionProvider implements ExecutionProvider {
             try {
               // Execute the main command (this is what the timeout applies to)
               const shellCommand = ["sh", "-c", command];
-              // Use withExec with skipEntrypoint to ensure we run our command
-              container = container.withExec(shellCommand);
+              // Use withExec with expect: ReturnType.Any to allow non-zero exit codes
+              // This lets us capture actual stdout/stderr even when commands fail
+              container = container.withExec(shellCommand, { expect: ReturnType.Any });
 
-              // Capture stdout and stderr
-              // Note: Dagger throws on non-zero exit. We need to handle this gracefully.
-              let stdout = "";
-              let stderr = "";
-              let exitCode = 0;
-              let finalContainer: Container | null = null;
-
-              try {
-                finalContainer = await container.sync();
-                [stdout, stderr] = await Promise.all([
-                  finalContainer.stdout(),
-                  finalContainer.stderr(),
-                ]);
-              } catch (execError) {
-                // Dagger throws when command fails - extract what we can
-                const errorMsg = execError instanceof Error ? execError.message : String(execError);
-
-                // Try to extract exit code from error message
-                const exitCodeMatch = errorMsg.match(/exit code: (\d+)/);
-                exitCode = exitCodeMatch ? Number.parseInt(exitCodeMatch[1] ?? "1", 10) : 1;
-
-                // The error message IS the stderr in this case
-                stderr = errorMsg;
-              }
+              // Capture stdout and stderr - now always works since expect: Any prevents throwing
+              const finalContainer = await container.sync();
+              const [stdout, stderr, exitCode] = await Promise.all([
+                finalContainer.stdout(),
+                finalContainer.stderr(),
+                finalContainer.exitCode(),
+              ]);
 
               clearTimeout(timeoutId);
 
@@ -479,7 +510,7 @@ export class DaggerExecutionProvider implements ExecutionProvider {
               };
 
               // Export /output directory to host if outputPath specified
-              if (options.outputPath && finalContainer) {
+              if (options.outputPath) {
                 try {
                   await finalContainer.directory("/output").export(options.outputPath);
                 } catch (exportError) {
@@ -491,7 +522,7 @@ export class DaggerExecutionProvider implements ExecutionProvider {
               }
 
               // Extract output files if requested (legacy outputFiles option)
-              if (options.outputFiles && options.outputFiles.length > 0 && finalContainer) {
+              if (options.outputFiles && options.outputFiles.length > 0) {
                 const extractedFiles: Record<string, Buffer> = {};
                 for (const filePath of options.outputFiles) {
                   try {

@@ -662,6 +662,68 @@ echo "\${compliments[$random_index]}"
     });
   });
 
+  describe("onMissing: empty option", () => {
+    test("replaces missing params with empty string when onMissing is empty", () => {
+      const result = interpolateCommand(
+        "echo ${required} ${optional}",
+        { required: "hello" },
+        { onMissing: "empty" }
+      );
+
+      // Empty string is inserted (not quoted) - the shell will treat it as nothing
+      expect(result).toBe("echo hello ");
+    });
+
+    test("handles multiple missing optional params", () => {
+      const result = interpolateCommand(
+        "cmd ${a} ${b} ${c}",
+        { a: "value" },
+        { onMissing: "empty" }
+      );
+
+      // Multiple missing params become empty strings
+      expect(result).toBe("cmd value  ");
+    });
+
+    test("prepareCommand uses empty for missing params by default", () => {
+      // prepareCommand sets onMissing: "empty" by default
+      const result = prepareCommand("echo ${name} ${optional}", { name: "test" });
+
+      // When parsed, the empty string is just omitted from the args array
+      expect(result).toEqual(["echo", "test"]);
+    });
+
+    test("handles optional params in complex commands", () => {
+      const result = interpolateCommand(
+        "curl ${url} -H '${header}' -d '${data}'",
+        { url: "https://example.com" },
+        { onMissing: "empty" }
+      );
+
+      // Empty strings are inserted, quotes around params are stripped
+      expect(result).toBe("curl 'https://example.com' -H  -d ");
+    });
+
+    test("preserves provided values while emptying missing ones", () => {
+      const result = interpolateCommand(
+        "tool ${required} ${optional1} ${optional2}",
+        { required: "value", optional2: "present" },
+        { onMissing: "empty" }
+      );
+
+      // optional1 becomes empty, optional2 keeps its value
+      expect(result).toBe("tool value  present");
+    });
+
+    test("does not throw for missing params when onMissing is empty", () => {
+      // This is the key behavior - validation catches truly missing required params,
+      // but interpolation should not throw for optional params
+      expect(() => {
+        interpolateCommand("echo ${missing}", {}, { onMissing: "empty" });
+      }).not.toThrow();
+    });
+  });
+
   describe("getMissingParams", () => {
     test("returns empty array when all params present", () => {
       const result = getMissingParams("echo ${a} ${b}", { a: "1", b: "2" });

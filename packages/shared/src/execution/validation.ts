@@ -37,9 +37,11 @@ export function validateInputs(
   // Check required properties
   for (const propName of required) {
     if (inputs[propName] === undefined) {
+      const propSchema = properties[propName] as JSONSchema7 | undefined;
+      const typeHint = propSchema?.type ? ` (${propSchema.type})` : "";
       errors.push({
         path: `params.${propName}`,
-        message: `Missing required parameter: ${propName}`,
+        message: `Missing required parameter: ${propName}${typeHint}`,
         expected: "value",
       });
     }

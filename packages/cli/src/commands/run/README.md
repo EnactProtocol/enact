@@ -35,6 +35,7 @@ The `run` command executes a tool using the command defined in its manifest (`en
 | `--no-cache` | Disable container caching |
 | `--local` | Only resolve from local sources |
 | `--dry-run` | Show what would be executed without running |
+| `--debug` | Show detailed parameter and environment resolution |
 | `-v, --verbose` | Show detailed output including stderr and timing |
 | `--json` | Output result as JSON |
 
@@ -67,6 +68,9 @@ enact run alice/utils/greeter --args '{"name":"World"}' --json
 
 # Verbose mode for debugging
 enact run alice/utils/greeter --args '{"name":"World"}' --verbose
+
+# Debug parameter resolution
+enact run alice/utils/greeter --args '{"name":"World"}' --debug
 ```
 
 ### Multiple inputs
@@ -157,6 +161,19 @@ When using `--dry-run`, the command shows:
 - All input parameters
 - Environment variables (secrets masked as `***`)
 - The interpolated command
+
+## Debug Output
+
+When using `--debug`, the command shows detailed parameter resolution:
+
+- Schema properties with types and required/optional status
+- Raw inputs (exactly what was provided)
+- Inputs after defaults were applied
+- Final inputs after validation and type coercion
+- Environment variables (sensitive values masked)
+- The final interpolated command
+
+This is useful for troubleshooting parameter issues and understanding how optional parameters are handled.
 
 ## Exit Codes
 
