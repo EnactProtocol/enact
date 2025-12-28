@@ -84,7 +84,7 @@ Now just talk to Claude. Here's a real example:
 
 ## What Just Happened?
 
-1. Claude read the \`AGENTS.md\` file and learned about Enact
+1. Claude read the \`CLAUDE.md\` file and learned about Enact
 2. It searched for relevant tools using \`enact search\`
 3. It learned how to use them with \`enact learn\`
 4. It ran the tools in isolated containers
