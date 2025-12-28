@@ -36,7 +36,7 @@ import {
 } from "./commands";
 import { error, formatError } from "./utils";
 
-export const version = "2.1.28";
+export const version = "2.1.29";
 
 // Export types for external use
 export type { GlobalOptions, CommandContext } from "./types";
