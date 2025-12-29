@@ -14,7 +14,7 @@ export const blogPosts: BlogPost[] = [
     id: "6",
     title: "Give Claude Code Superpowers in 5 Minutes",
     excerpt:
-      "Learn how to give Claude Code the ability to browse the web, take screenshots, and analyze websites using Enact's containerized tools.",
+      "Enact is npm for AI tools. Connect it to Claude Code in 2 minutes and let Claude browse the web, take screenshots, and scan websites—just by asking.",
     date: "2024-12-28",
     author: "Enact Team",
     slug: "claude-code-superpowers",
@@ -22,15 +22,36 @@ export const blogPosts: BlogPost[] = [
     content: `
 # Give Claude Code Superpowers in Minutes
 
-This guide shows you how to give Claude Code the ability to browse the web, take screenshots, and analyze websites - using Enact's containerized tools.
+## What is Enact?
 
-## Step 1: Install Enact
+Enact is a tool registry and runtime for AI tools. Think of it as **npm for AI**—it lets you package, share, and run complex capabilities (like web browsers or security scanners) in sandboxed containers that any AI agent can use.
+
+Each tool runs in a Docker container, which means:
+- **No installation headaches** - Dependencies are bundled (Playwright needs Chromium? It's included.)
+- **Safe execution** - Tools run isolated from your system
+- **Works everywhere** - Same behavior on any machine
+
+## Why Connect Enact to Claude Code?
+
+Out of the box, Claude Code can read files, write code, and run shell commands. But it can't browse the web, take screenshots, or scan websites.
+
+With Enact, Claude gains access to a growing library of containerized tools. Instead of you manually running commands, Claude discovers and uses tools on its own:
+
+- "Take a screenshot of this website" → Claude finds and runs a Playwright-based tool
+- "What tech stack is this site running?" → Claude finds a web scanner and reports back
+- "Extract all the links from this page" → Claude finds the right tool and handles it
+
+You ask in plain English. Claude figures out which tool to use.
+
+## Setup (2 minutes)
+
+### Step 1: Install Enact
 
 \`\`\`bash
 npm install -g enact-cli
 \`\`\`
 
-## Step 2: Initialize Your Project
+### Step 2: Initialize Your Project
 
 In your project folder, run:
 
@@ -38,11 +59,15 @@ In your project folder, run:
 enact init --claude
 \`\`\`
 
-This creates an \`CLAUDE.md\` file that teaches Claude Code how to use Enact tools. Claude reads this file and immediately knows how to discover and run containerized tools.
+This creates a \`CLAUDE.md\` file that teaches Claude Code how to use Enact tools. Claude reads this file and immediately knows how to discover and run containerized tools.
 
-## Step 3: Start a Conversation
+> **Note:** This doesn't change your code—it just adds a small instruction file that acts as a "manual" for Claude.
 
-Now just talk to Claude. Here's a real example:
+That's it. You're ready.
+
+## See It In Action
+
+Now just talk to Claude. Here's what a real conversation looks like:
 
 ---
 
@@ -82,38 +107,42 @@ Now just talk to Claude. Here's a real example:
 
 ---
 
-## What Just Happened?
+## How It Works (Behind the Scenes)
 
-1. Claude read the \`CLAUDE.md\` file and learned about Enact
-2. It searched for relevant tools using \`enact search\`
-3. It learned how to use them with \`enact learn\`
-4. It ran the tools in isolated containers
-5. It parsed the structured output and explained it to you
+When you ask Claude to do something like "take a screenshot," here's what happens:
 
-You never typed a single Enact command. Claude handled everything.
+1. Claude reads the \`CLAUDE.md\` file you created and learns about Enact
+2. It searches for relevant tools using \`enact search screenshot\`
+3. It learns the tool's interface with \`enact learn enact/playwright\`
+4. It runs the tool in an isolated Docker container
+5. It parses the output and explains the results to you
 
-## Available Tools
+**Claude doesn't just run a script—it decides which tool it needs.** It performs its own discovery (search) and reads the documentation (learn) before executing. You never type a single Enact command. Claude handles everything autonomously.
+
+## Example Tools
 
 | Tool | What it does |
 |------|--------------|
 | \`enact/playwright\` | Screenshots, text extraction, HTML scraping |
 | \`enact/scanner/whatweb\` | Detect web technologies, servers, frameworks |
 
-Browse more at [enact.tools](https://enact.tools)
-
-## Why Containers?
-
-- **No installation** - Playwright needs Chromium, WhatWeb needs Ruby. The containers include everything.
-- **Safe execution** - Tools run isolated from your system
-- **Consistent results** - Same environment every time
+Browse the full registry at [enact.tools](https://enact.tools)
 
 ---
 
-Ready? Install Enact, run \`enact init --claude\`, and start asking Claude to browse the web for you.
+## TL;DR
+
+**Enact** = npm for AI tools. Containerized, safe, zero-config.
+
+**Setup**: \`npm install -g enact-cli && enact init --claude\`
+
+**Result**: Claude Code can now browse the web, take screenshots, scan sites, and more—just by asking.
 
 ---
 
 *Published on December 28, 2024*
+
+*Updated December 28, 2024: Restructured based on feedback from u/dagger378 on Reddit - thanks for the detailed suggestions!*
     `,
   },
   {
