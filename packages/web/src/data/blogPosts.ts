@@ -79,7 +79,10 @@ Now just talk to Claude. Here's what a real conversation looks like:
 
 *Then runs \`enact learn enact/playwright\` to understand how to use it*
 
-*Then executes the tool with the screenshot action*
+*Then executes:*
+\`\`\`bash
+enact run enact/playwright --args '{"url": "https://enact.tools", "action": "screenshot"}'
+\`\`\`
 
 "Here's what I found on the Enact homepage:
 - A clean hero section with the tagline 'The npm for AI tools'
@@ -97,7 +100,10 @@ Now just talk to Claude. Here's what a real conversation looks like:
 
 *Then runs \`enact learn enact/scanner/whatweb\` to see the available options*
 
-*Then executes the scan*
+*Then executes:*
+\`\`\`bash
+enact run enact/scanner/whatweb --args '{"url": "https://github.com"}'
+\`\`\`
 
 "GitHub.com is using:
 - Custom HTTP server (GitHub.com)
