@@ -11,6 +11,178 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    id: "8",
+    title: "Web Scraping for AI Agents: Firecrawl + Enact",
+    excerpt:
+      "Give your AI agent the ability to scrape websites, crawl documentation, search the web, and extract structured data—all with a single tool.",
+    date: "2024-12-29",
+    author: "Enact Team",
+    slug: "firecrawl-enact",
+    tags: ["tutorial", "firecrawl", "web-scraping", "tools"],
+    content: `
+AI agents need to access the web. Whether it's scraping documentation, extracting product data, or searching for current information, web access is a core capability.
+
+[Firecrawl](https://firecrawl.dev) is one of the best APIs for this—it handles anti-bot mechanisms, JavaScript rendering, and returns clean markdown. But integrating it into your agent workflow usually means writing custom code, handling API keys, and dealing with environment setup.
+
+With Enact, you can give your agent full Firecrawl capabilities in under 2 minutes.
+
+## Quick Setup
+
+### 1. Install the CLI
+
+\`\`\`bash
+npm install -g enact-cli
+\`\`\`
+
+### 2. Get a Firecrawl API Key
+
+Sign up at [firecrawl.dev](https://firecrawl.dev) and grab your API key.
+
+### 3. Store Your API Key Securely
+
+\`\`\`bash
+enact env set FIRECRAWL_API_KEY fc-your-api-key --secret --namespace enact
+\`\`\`
+
+This stores your key in your OS keyring (macOS Keychain, Windows Credential Manager, or Linux Secret Service)—never written to disk or exposed in logs.
+
+That's it. You're ready to scrape.
+
+## Five Capabilities, One Tool
+
+The \`enact/firecrawl\` tool supports five actions:
+
+### 1. Scrape: Single Page to Markdown
+
+\`\`\`bash
+enact run enact/firecrawl --args '{"url": "https://docs.anthropic.com", "action": "scrape"}'
+\`\`\`
+
+Returns clean markdown, perfect for feeding into an LLM context window.
+
+### 2. Crawl: Entire Sites
+
+\`\`\`bash
+enact run enact/firecrawl --args '{"url": "https://docs.anthropic.com", "action": "crawl", "limit": 20}'
+\`\`\`
+
+Automatically discovers and scrapes all subpages. Great for ingesting entire documentation sites.
+
+### 3. Map: Fast URL Discovery
+
+\`\`\`bash
+enact run enact/firecrawl --args '{"url": "https://example.com", "action": "map"}'
+\`\`\`
+
+Returns all URLs on a site without scraping content. Lightning fast for understanding site structure.
+
+### 4. Search: Web Search with Scraping
+
+\`\`\`bash
+enact run enact/firecrawl --args '{"url": "latest Claude API updates", "action": "search", "limit": 5}'
+\`\`\`
+
+Searches the web and returns scraped content from the top results. Perfect for current information.
+
+### 5. Extract: AI-Powered Structured Data
+
+\`\`\`bash
+enact run enact/firecrawl --args '{
+  "url": "https://news.ycombinator.com",
+  "action": "extract",
+  "prompt": "Extract the top 10 headlines with URLs and point counts"
+}'
+\`\`\`
+
+Uses AI to extract exactly the data you need, in structured JSON format.
+
+## Real Example: Extract Hacker News Headlines
+
+Let's see extract in action:
+
+\`\`\`bash
+enact run enact/firecrawl --args '{
+  "url": "https://news.ycombinator.com",
+  "action": "extract",
+  "prompt": "Extract the top 5 news headlines with their URLs and point counts"
+}'
+\`\`\`
+
+**Output:**
+\`\`\`json
+{
+  "success": true,
+  "data": {
+    "topNews": [
+      {
+        "headline": "GOG is getting acquired by its original co-founder",
+        "url": "https://www.gog.com/blog/...",
+        "points": 285
+      },
+      {
+        "headline": "Static Allocation with Zig",
+        "url": "https://nickmonad.blog/...",
+        "points": 91
+      }
+    ]
+  }
+}
+\`\`\`
+
+No parsing HTML. No writing extractors. Just describe what you want.
+
+## Using with Claude Code
+
+If you're using Claude Code, just tell it about the tool:
+
+> "Use enact/firecrawl to scrape the React documentation and summarize the hooks API"
+
+Claude will:
+1. Run \`enact search firecrawl\` to find the tool
+2. Run \`enact learn enact/firecrawl\` to understand its parameters
+3. Execute the scrape with the right arguments
+4. Summarize the results
+
+## Why Enact vs. Direct API Calls?
+
+You could call Firecrawl directly with curl or Python. But:
+
+- **Secret management**: API keys stored securely in OS keyring, not in scripts
+- **Containerized execution**: Runs in Docker, no dependency conflicts
+- **Consistent interface**: Same \`enact run\` pattern for all tools
+- **Agent-friendly**: Structured JSON input/output, discoverable via search
+
+## What Else Can You Build?
+
+The Firecrawl tool is just one example. Enact has a growing registry of tools:
+
+- **\`enact/playwright\`**: Browser automation, screenshots
+- **\`enact/scanner/whatweb\`**: Technology detection
+
+Or build your own. A tool is just a \`SKILL.md\` file and some code:
+
+\`\`\`bash
+enact init my-tool
+# Edit SKILL.md
+enact publish
+\`\`\`
+
+---
+
+**Get started:**
+
+\`\`\`bash
+npm install -g enact-cli
+enact env set FIRECRAWL_API_KEY <your-key> --secret --namespace enact
+enact run enact/firecrawl --args '{"url": "https://example.com", "action": "scrape"}'
+\`\`\`
+
+---
+
+*Published on December 29, 2024*
+    `,
+  },
+  {
     id: "7",
     title: "Why Claude Code Skills Are Broken (And How to Fix Them)",
     excerpt:
