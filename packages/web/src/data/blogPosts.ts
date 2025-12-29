@@ -20,8 +20,6 @@ export const blogPosts: BlogPost[] = [
     slug: "claude-code-superpowers",
     tags: ["tutorial", "claude", "getting-started"],
     content: `
-# Give Claude Code Superpowers in Minutes
-
 Claude Code is powerful out of the box—it can read files, write code, and run shell commands. But what if you want it to browse the web, take screenshots, or scan a website's tech stack?
 
 That's where Enact comes in.
