@@ -11,6 +11,192 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    id: "7",
+    title: "Why Claude Code Skills Are Broken (And How to Fix Them)",
+    excerpt:
+      "Skills that depend on curl, jq, or local toolchains are fragile. Environment differences, escaping bugs, and untestable integrations make them unreliable. Here's a better approach.",
+    date: "2024-12-29",
+    author: "Enact Team",
+    slug: "why-skills-break",
+    tags: ["skills", "claude", "reliability"],
+    content: `
+A Reddit user recently described a problem that resonated deeply:
+
+> "I've written many skills to enable Claude Code to support various APIs—Firecrawl, Hacker News, fal.ai. I found that making Claude Code use skills stably is a challenging thing."
+
+They went on to list the pain points:
+
+- **Environment dependencies** – Scripts rely on tools that may not exist on every machine. So you end up limiting yourself to "safe" toolchains like curl-only, which makes skills verbose and fragile.
+- **Shell escaping nightmares** – Claude Code has quirks with variable substitution in pipelines. You end up wrapping everything in \`bash -c\` with nested escaping that's impossible to debug.
+- **No automated testing** – Without tests, you can't know when upstream APIs change. Your skill silently breaks.
+
+This isn't a skill-writing problem. It's an environment problem.
+
+## The Root Cause
+
+Skills today are just instructions. They tell Claude *what* to do, but they assume *how* is already solved—that the right tools are installed, that shell behavior is consistent, that the environment matches what the skill author had.
+
+That assumption breaks constantly.
+
+Consider a skill that calls the Firecrawl API:
+
+\`\`\`bash
+curl -X POST https://api.firecrawl.dev/v1/scrape \\
+  -H "Authorization: Bearer $FIRECRAWL_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"url": "'"$TARGET_URL"'", "formats": ["markdown"]}'
+\`\`\`
+
+This looks simple. But:
+
+- What if \`curl\` isn't installed? (Some minimal containers don't have it.)
+- What if \`$TARGET_URL\` contains special characters that break the JSON?
+- What if the user is on Windows with different shell quoting rules?
+- What if the API changes its response format?
+
+Every one of these is a silent failure waiting to happen.
+
+## The Fix: Package the Environment
+
+The solution isn't to write more defensive shell scripts. It's to **stop depending on the host environment entirely**.
+
+This is where Enact comes in. Enact extends the [SKILL.md standard](https://github.com/EnactProtocol/skill.md) with fields for containerized execution—\`from\`, \`build\`, and \`command\`—so skills can define their own runtime. Think of it as npm for AI: a registry to share tools, plus a runtime to execute them in containers.
+
+Instead of skills being just instructions that hope the right tools exist, an Enact skill specifies everything needed to run. We just published \`enact/firecrawl\`—a full-featured Firecrawl tool that handles scraping, crawling, searching, and AI-powered extraction:
+
+\`\`\`yaml
+---
+name: enact/firecrawl
+version: 1.1.0
+description: Scrape, crawl, search, and extract structured data from websites
+from: python:3.12-slim
+build:
+  - pip install requests
+env:
+  FIRECRAWL_API_KEY:
+    description: Your Firecrawl API key
+    secret: true
+command: python /workspace/firecrawl.py \${action} \${url} \${formats} \${limit} \${only_main_content} \${prompt} \${schema}
+inputSchema:
+  type: object
+  properties:
+    action:
+      type: string
+      enum: [scrape, crawl, map, search, extract]
+      default: scrape
+    url:
+      type: string
+      description: URL to process or search query
+    prompt:
+      type: string
+      description: For extract - what to extract from the page
+  required: [url]
+---
+\`\`\`
+
+Now the skill author controls everything:
+- The base image (\`python:3.12-slim\`)
+- The dependencies (\`pip install requests\`)
+- The secrets (\`FIRECRAWL_API_KEY\` marked as sensitive)
+- The execution command with proper parameter handling
+
+No more "works on my machine." No more shell escaping bugs. The skill runs identically everywhere because it carries its environment with it.
+
+## Real Power: Five Actions, One Tool
+
+The \`enact/firecrawl\` tool isn't just a scraper—it's a complete web data toolkit:
+
+\`\`\`bash
+# Scrape a single page to markdown
+enact run enact/firecrawl --url "https://example.com" --action scrape
+
+# Crawl an entire documentation site
+enact run enact/firecrawl --url "https://docs.example.com" --action crawl --limit 20
+
+# Map all URLs on a site (lightning fast)
+enact run enact/firecrawl --url "https://example.com" --action map
+
+# Search the web
+enact run enact/firecrawl --url "latest AI news" --action search --limit 5
+
+# Extract structured data with AI
+enact run enact/firecrawl --url "https://news.ycombinator.com" --action extract \\
+  --prompt "Extract the top 10 headlines with URLs and point counts"
+\`\`\`
+
+Each action runs in the same containerized environment. No setup, no dependencies to install, no environment variables to configure on the host.
+
+## Escaping Issues? Eliminated.
+
+Remember the \`bash -c\` escaping nightmare? With a proper runtime, you write real code:
+
+\`\`\`python
+# firecrawl.py
+import os
+import json
+import requests
+
+def scrape(url, formats, only_main_content, api_key):
+    response = requests.post(
+        "https://api.firecrawl.dev/v1/scrape",
+        headers={"Authorization": f"Bearer {api_key}"},
+        json={"url": url, "formats": formats, "onlyMainContent": only_main_content}
+    )
+    return response.json()
+\`\`\`
+
+No escaping. No quoting issues. No \`bash -c\` wrapper. Just straightforward code in a language with proper string handling.
+
+## Testing Becomes Possible
+
+When your skill is a containerized unit, testing is straightforward:
+
+\`\`\`bash
+# Test locally
+enact run enact/firecrawl --url "https://example.com" --action scrape
+
+# Run in CI
+- name: Test Firecrawl skill
+  run: enact run enact/firecrawl --url "https://example.com" --action scrape
+\`\`\`
+
+The container is the same in development, CI, and production. If it works locally, it works everywhere.
+
+## The Tradeoff
+
+Containers add overhead. A curl command runs in milliseconds; spinning up a container takes seconds. For rapid-fire API calls, this matters.
+
+But for most AI agent workflows—where you're doing meaningful work like scraping pages, processing documents, or calling external services—a few seconds of container startup is negligible compared to the reliability you gain.
+
+And Enact caches container builds aggressively. After the first run, subsequent executions reuse the built image.
+
+## From Fragile to Portable
+
+The Reddit user asked: "Curious if others have found better patterns for writing stable skills."
+
+The pattern is this: **don't write shell scripts that assume an environment. Package the environment with the skill.**
+
+This is what Enact does. Every skill is a self-contained unit that includes its runtime, dependencies, and execution logic. Share it with anyone, and it runs the same way.
+
+No more curl compatibility issues. No more escaping bugs. No more silent failures when APIs change.
+
+Just portable, testable, reliable skills.
+
+---
+
+Ready to try it? Check out [enact.tools](https://enact.tools) or run:
+
+\`\`\`bash
+npm install -g enact-cli
+enact run enact/firecrawl --url "https://example.com" --action scrape
+\`\`\`
+
+---
+
+*Published on December 29, 2024*
+    `,
+  },
+  {
     id: "6",
     title: "Give Claude Code Superpowers in 5 Minutes",
     excerpt:
@@ -243,7 +429,7 @@ and other sensitive data that shouldn't be in version control.
 
 When you run this—whether on your MacBook, a Linux server, or inside a CI pipeline—Enact uses [Dagger](https://dagger.io) to spin up the exact container environment defined in the skill. It mounts your code, runs the command, and captures the output.
 
-**No dependency hell. No "works on my machine." Just pure, portable capability.**
+**No dependency issues. No "works on my machine." Just pure, portable capability.**
 
 ## The npm Moment for AI
 

@@ -969,6 +969,7 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
     .filter(([_, v]) => v.secret)
     .map(([k]) => k);
 
+  const missingSecrets: string[] = [];
   if (secretDeclarations.length > 0) {
     const namespace = manifest.name.split("/").slice(0, -1).join("/") || manifest.name;
     const secretResults = await resolveSecrets(namespace, secretDeclarations);
@@ -976,7 +977,18 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
     for (const [key, result] of secretResults) {
       if (result.found && result.value) {
         envVars[key] = result.value;
+      } else {
+        missingSecrets.push(key);
       }
+    }
+
+    // Warn about missing secrets
+    if (missingSecrets.length > 0) {
+      const namespace = manifest.name.split("/").slice(0, -1).join("/") || manifest.name;
+      clack.log.warn(
+        `Missing secret${missingSecrets.length > 1 ? "s" : ""}: ${missingSecrets.join(", ")}\n` +
+          `  To set: enact env set ${missingSecrets[0]} <value> --secret --namespace ${namespace}`
+      );
     }
   }
 
