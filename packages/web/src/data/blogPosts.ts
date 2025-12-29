@@ -179,6 +179,10 @@ enact run enact/firecrawl --args '{"url": "https://example.com", "action": "scra
 
 ---
 
+Enact is fully open source. Check out the code, file issues, or contribute at [github.com/enactprotocol/enact](https://github.com/enactprotocol/enact).
+
+---
+
 *Published on December 29, 2024*
     `,
   },
@@ -364,6 +368,8 @@ enact run enact/firecrawl --url "https://example.com" --action scrape
 \`\`\`
 
 ---
+
+Enact is fully open source. Check out the code, file issues, or contribute at [github.com/enactprotocol/enact](https://github.com/enactprotocol/enact).
 
 *Published on December 29, 2024*
     `,
