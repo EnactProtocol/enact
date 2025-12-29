@@ -212,7 +212,7 @@ This isn't a skill-writing problem. It's an environment problem.
 
 Skills today are just instructions. They tell Claude *what* to do, but they assume *how* is already solved: that the right tools are installed, that shell behavior is consistent, that the environment matches what the skill author had.
 
-That assumption breaks constantly.
+Obviously, that's not always a safe assumption to make.
 
 Consider a skill that calls the Firecrawl API:
 
@@ -223,7 +223,7 @@ curl -X POST https://api.firecrawl.dev/v1/scrape \\
   -d '{"url": "'"$TARGET_URL"'", "formats": ["markdown"]}'
 \`\`\`
 
-This looks simple. But:
+This is a simple example . But:
 
 - What if \`curl\` isn't installed? (Some minimal containers don't have it.)
 - What if \`$TARGET_URL\` contains special characters that break the JSON?
@@ -276,7 +276,7 @@ Now the skill author controls everything:
 - The secrets (\`FIRECRAWL_API_KEY\` marked as sensitive)
 - The execution command with proper parameter handling
 
-No more "works on my machine." No more shell escaping bugs. The skill runs identically everywhere because it carries its environment with it.
+The skill runs identically everywhere because it carries its environment with it.
 
 ## Real Power: Five Actions, One Tool
 
@@ -356,7 +356,7 @@ This is what Enact does. Every skill is a self-contained unit that includes its 
 
 No more curl compatibility issues. No more escaping bugs. No more silent failures when APIs change.
 
-Just portable, testable, reliable skills.
+Just portable, discoverable, testable, reliable skills.
 
 ---
 
