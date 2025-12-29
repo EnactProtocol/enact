@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/enact",
-  "version": "2.1.29",
+  "version": "2.1.30",
   "description": "Enact CLI (thin wrapper that loads the correct platform binary)",
   "license": "Apache-2.0",
   "repository": {
