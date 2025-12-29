@@ -22,20 +22,22 @@ export const blogPosts: BlogPost[] = [
     content: `
 # Give Claude Code Superpowers in Minutes
 
+Claude Code is powerful out of the box—it can read files, write code, and run shell commands. But what if you want it to browse the web, take screenshots, or scan a website's tech stack?
+
+That's where Enact comes in.
+
 ## What is Enact?
 
-Enact is a tool registry and runtime for AI tools. Think of it as **npm for AI**—it lets you package, share, and run complex capabilities (like web browsers or security scanners) in sandboxed containers that any AI agent can use.
+Enact is a tool registry and runtime for AI agents. Think of it as **npm for AI**—it lets you package, share, and run complex capabilities (like web browsers or security scanners) in sandboxed containers that any AI agent can use.
 
 Each tool runs in a Docker container, which means:
 - **No installation headaches** - Dependencies are bundled (Playwright needs Chromium? It's included.)
 - **Safe execution** - Tools run isolated from your system
 - **Works everywhere** - Same behavior on any machine
 
-## Why Connect Enact to Claude Code?
+## What Can Claude Do With Enact?
 
-Out of the box, Claude Code can read files, write code, and run shell commands. But it can't browse the web, take screenshots, or scan websites.
-
-With Enact, Claude gains access to a growing library of containerized tools. Instead of you manually running commands, Claude discovers and uses tools on its own:
+With Enact connected, Claude gains access to a growing library of containerized tools. Instead of you manually running commands, Claude discovers and uses tools on its own:
 
 - "Take a screenshot of this website" → Claude finds and runs a Playwright-based tool
 - "What tech stack is this site running?" → Claude finds a web scanner and reports back
