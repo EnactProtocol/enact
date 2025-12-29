@@ -236,7 +236,7 @@ Every one of these is a silent failure waiting to happen.
 
 The solution is not to write more defensive shell scripts. It's to **stop depending on the host environment entirely**.
 
-This is where Enact comes in. Enact extends the [SKILL.md standard](https://github.com/EnactProtocol/skill.md) with fields for containerized execution (\`from\`, \`build\`, and \`command\`) so skills can define their own runtime. Think of it as npm for AI: a registry to share tools, plus a runtime to execute them in containers.
+This is where Enact comes in. Enact extends the [SKILL.md standard](https://github.com/anthropics/skills/issues/157) with fields for containerized execution (\`from\`, \`build\`, and \`command\`) so skills can define their own runtime. Think of it as npm for AI: a registry to share tools, plus a runtime to execute them in containers.
 
 Instead of skills being just instructions that hope the right tools exist, an Enact skill specifies everything needed to run. We just published \`enact/firecrawl\`, a full-featured Firecrawl tool that handles scraping, crawling, searching, and AI-powered extraction:
 
