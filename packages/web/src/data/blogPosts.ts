@@ -14,7 +14,7 @@ export const blogPosts: BlogPost[] = [
     id: "8",
     title: "Web Scraping for AI Agents: Firecrawl + Enact",
     excerpt:
-      "Give your AI agent the ability to scrape websites, crawl documentation, search the web, and extract structured data—all with a single tool.",
+      "Give your AI agent the ability to scrape websites, crawl documentation, search the web, and extract structured data. All with a single tool.",
     date: "2024-12-29",
     author: "Enact Team",
     slug: "firecrawl-enact",
@@ -22,7 +22,7 @@ export const blogPosts: BlogPost[] = [
     content: `
 AI agents need to access the web. Whether it's scraping documentation, extracting product data, or searching for current information, web access is a core capability.
 
-[Firecrawl](https://firecrawl.dev) is one of the best APIs for this—it handles anti-bot mechanisms, JavaScript rendering, and returns clean markdown. But integrating it into your agent workflow usually means writing custom code, handling API keys, and dealing with environment setup.
+[Firecrawl](https://firecrawl.dev) is one of the best APIs for this. It handles anti-bot mechanisms, JavaScript rendering, and returns clean markdown. But integrating it into your agent workflow usually means writing custom code, handling API keys, and dealing with environment setup.
 
 With Enact, you can give your agent full Firecrawl capabilities in under 2 minutes.
 
@@ -44,7 +44,7 @@ Sign up at [firecrawl.dev](https://firecrawl.dev) and grab your API key.
 enact env set FIRECRAWL_API_KEY fc-your-api-key --secret --namespace enact
 \`\`\`
 
-This stores your key in your OS keyring (macOS Keychain, Windows Credential Manager, or Linux Secret Service)—never written to disk or exposed in logs.
+This stores your key in your OS keyring (macOS Keychain, Windows Credential Manager, or Linux Secret Service). Never written to disk or exposed in logs.
 
 That's it. You're ready to scrape.
 
@@ -198,19 +198,19 @@ Enact is fully open source. Check out the code, file issues, or contribute at [g
     content: `
 A Reddit user recently described a problem that resonated deeply:
 
-> "I've written many skills to enable Claude Code to support various APIs—Firecrawl, Hacker News, fal.ai. I found that making Claude Code use skills stably is a challenging thing."
+> "I've written many skills to enable Claude Code to support various APIs (Firecrawl, Hacker News, fal.ai). I found that making Claude Code use skills stably is a challenging thing."
 
 They went on to list the pain points:
 
-- **Environment dependencies** – Scripts rely on tools that may not exist on every machine. So you end up limiting yourself to "safe" toolchains like curl-only, which makes skills verbose and fragile.
-- **Shell escaping nightmares** – Claude Code has quirks with variable substitution in pipelines. You end up wrapping everything in \`bash -c\` with nested escaping that's impossible to debug.
-- **No automated testing** – Without tests, you can't know when upstream APIs change. Your skill silently breaks.
+- **Environment dependencies**: Scripts rely on tools that may not exist on every machine. So you end up limiting yourself to "safe" toolchains like curl-only, which makes skills verbose and fragile.
+- **Shell escaping nightmares**: Claude Code has quirks with variable substitution in pipelines. You end up wrapping everything in \`bash -c\` with nested escaping that's impossible to debug.
+- **No automated testing**: Without tests, you can't know when upstream APIs change. Your skill silently breaks.
 
 This isn't a skill-writing problem. It's an environment problem.
 
 ## The Root Cause
 
-Skills today are just instructions. They tell Claude *what* to do, but they assume *how* is already solved—that the right tools are installed, that shell behavior is consistent, that the environment matches what the skill author had.
+Skills today are just instructions. They tell Claude *what* to do, but they assume *how* is already solved: that the right tools are installed, that shell behavior is consistent, that the environment matches what the skill author had.
 
 That assumption breaks constantly.
 
@@ -234,11 +234,11 @@ Every one of these is a silent failure waiting to happen.
 
 ## The Fix: Package the Environment
 
-The solution isn't to write more defensive shell scripts. It's to **stop depending on the host environment entirely**.
+The solution is not to write more defensive shell scripts. It's to **stop depending on the host environment entirely**.
 
-This is where Enact comes in. Enact extends the [SKILL.md standard](https://github.com/EnactProtocol/skill.md) with fields for containerized execution—\`from\`, \`build\`, and \`command\`—so skills can define their own runtime. Think of it as npm for AI: a registry to share tools, plus a runtime to execute them in containers.
+This is where Enact comes in. Enact extends the [SKILL.md standard](https://github.com/EnactProtocol/skill.md) with fields for containerized execution (\`from\`, \`build\`, and \`command\`) so skills can define their own runtime. Think of it as npm for AI: a registry to share tools, plus a runtime to execute them in containers.
 
-Instead of skills being just instructions that hope the right tools exist, an Enact skill specifies everything needed to run. We just published \`enact/firecrawl\`—a full-featured Firecrawl tool that handles scraping, crawling, searching, and AI-powered extraction:
+Instead of skills being just instructions that hope the right tools exist, an Enact skill specifies everything needed to run. We just published \`enact/firecrawl\`, a full-featured Firecrawl tool that handles scraping, crawling, searching, and AI-powered extraction:
 
 \`\`\`yaml
 ---
@@ -280,7 +280,7 @@ No more "works on my machine." No more shell escaping bugs. The skill runs ident
 
 ## Real Power: Five Actions, One Tool
 
-The \`enact/firecrawl\` tool isn't just a scraper—it's a complete web data toolkit:
+The \`enact/firecrawl\` tool is not just a scraper. It's a complete web data toolkit:
 
 \`\`\`bash
 # Scrape a single page to markdown
@@ -342,7 +342,7 @@ The container is the same in development, CI, and production. If it works locall
 
 Containers add overhead. A curl command runs in milliseconds; spinning up a container takes seconds. For rapid-fire API calls, this matters.
 
-But for most AI agent workflows—where you're doing meaningful work like scraping pages, processing documents, or calling external services—a few seconds of container startup is negligible compared to the reliability you gain.
+But for most AI agent workflows, where you're doing meaningful work like scraping pages, processing documents, or calling external services, a few seconds of container startup is negligible compared to the reliability you gain.
 
 And Enact caches container builds aggressively. After the first run, subsequent executions reuse the built image.
 
@@ -378,24 +378,24 @@ Enact is fully open source. Check out the code, file issues, or contribute at [g
     id: "6",
     title: "Give Claude Code Superpowers in 5 Minutes",
     excerpt:
-      "Enact is npm for AI tools. Connect it to Claude Code in 2 minutes and let Claude browse the web, take screenshots, and scan websites—just by asking.",
+      "Enact is npm for AI tools. Connect it to Claude Code in 2 minutes and let Claude browse the web, take screenshots, and scan websites, just by asking.",
     date: "2024-12-28",
     author: "Enact Team",
     slug: "claude-code-superpowers",
     tags: ["tutorial", "claude", "getting-started"],
     content: `
-Claude Code is powerful out of the box—it can read files, write code, and run shell commands. But what if you want it to browse the web, take screenshots, or scan a website's tech stack?
+Claude Code is powerful out of the box. It can read files, write code, and run shell commands. But what if you want it to browse the web, take screenshots, or scan a website's tech stack?
 
 That's where Enact comes in.
 
 ## What is Enact?
 
-Enact is a tool registry and runtime for AI agents. Think of it as **npm for AI**—it lets you package, share, and run complex capabilities (like web browsers or security scanners) in sandboxed containers that any AI agent can use.
+Enact is a tool registry and runtime for AI agents. Think of it as **npm for AI**. It lets you package, share, and run complex capabilities (like web browsers or security scanners) in sandboxed containers that any AI agent can use.
 
 Each tool runs in a Docker container, which means:
-- **No installation headaches** - Dependencies are bundled (Playwright needs Chromium? It's included.)
-- **Safe execution** - Tools run isolated from your system
-- **Works everywhere** - Same behavior on any machine
+- **No installation headaches**: Dependencies are bundled (Playwright needs Chromium? It's included.)
+- **Safe execution**: Tools run isolated from your system
+- **Works everywhere**: Same behavior on any machine
 
 ## What Can Claude Do With Enact?
 
@@ -425,7 +425,7 @@ enact init --claude
 
 This creates a \`CLAUDE.md\` file that teaches Claude Code how to use Enact tools. Claude reads this file and immediately knows how to discover and run containerized tools.
 
-> **Note:** This doesn't change your code—it just adds a small instruction file that acts as a "manual" for Claude.
+> **Note:** This doesn't change your code. It just adds a small instruction file that acts as a "manual" for Claude.
 
 That's it. You're ready.
 
@@ -487,7 +487,7 @@ When you ask Claude to do something like "take a screenshot," here's what happen
 4. It runs the tool in an isolated Docker container
 5. It parses the output and explains the results to you
 
-**Claude doesn't just run a script—it decides which tool it needs.** It performs its own discovery (search) and reads the documentation (learn) before executing. You never type a single Enact command. Claude handles everything autonomously.
+**Claude doesn't just run a script. It decides which tool it needs.** It performs its own discovery (search) and reads the documentation (learn) before executing. You never type a single Enact command. Claude handles everything autonomously.
 
 ## Example Tools
 
@@ -506,7 +506,7 @@ Browse the full registry at [enact.tools](https://enact.tools)
 
 **Setup**: \`npm install -g enact-cli && enact init --claude\`
 
-**Result**: Claude Code can now browse the web, take screenshots, scan sites, and more—just by asking.
+**Result**: Claude Code can now browse the web, take screenshots, scan sites, and more. Just by asking.
 
 ---
 
@@ -529,7 +529,7 @@ Browse the full registry at [enact.tools](https://enact.tools)
 
 We have abundant intelligence. We have big context windows. But we still have an *action* problem.
 
-For an AI agent to actually *do* something—deploy an app, scan a codebase for secrets, or resize an image—it needs tools. The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) standardizes how agents communicate with tools. But MCP is for communication, not distribution. It defines how to talk to a server—not how to package, share, or deploy one.
+For an AI agent to actually *do* something (deploy an app, scan a codebase for secrets, or resize an image), it needs tools. The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) standardizes how agents communicate with tools. But MCP is for communication, not distribution. It defines how to talk to a server, not how to package, share, or deploy one.
 
 If we want agents to be truly autonomous, we need tools that are as portable as the protocols that describe them.
 
@@ -543,14 +543,14 @@ If you were hiring a junior developer to "run the weekly security scan," you wou
 2. **The Instructions:** "Run it against the repo, review the output, escalate anything critical."
 3. **The Tools:** The actual scripts, credentials, and environment needed to do the job.
 
-A Skill packages all of this together. At its simplest, a skill is just a single \`SKILL.md\` file—a Markdown document with YAML frontmatter that defines the schema, instructions, and optionally the execution environment:
+A Skill packages all of this together. At its simplest, a skill is just a single \`SKILL.md\` file, a Markdown document with YAML frontmatter that defines the schema, instructions, and optionally the execution environment:
 
 \`\`\`
 code-reviewer/
 └── SKILL.md    # Schema + instructions (no code required)
 \`\`\`
 
-Some skills are pure instructions for an LLM to follow. Others execute code in containers. Both are treated the same by the system—transparent, filesystem-based units of capability that an agent can read, understand, and execute.
+Some skills are pure instructions for an LLM to follow. Others execute code in containers. Both are treated the same by the system: transparent, filesystem-based units of capability that an agent can read, understand, and execute.
 
 ## The Portability Problem
 
@@ -558,15 +558,15 @@ MCP gives us a standard way to *describe* tools. But to actually *run* an MCP se
 
 This creates two problems:
 
-1. **No portability.** The tool interface is portable, but the tool itself is not. Clone the repo, install Python 3.11 (not 3.9), pip install the right packages, configure the environment variables—and if it works on their machine but not yours, good luck debugging.
+1. **No portability.** The tool interface is portable, but the tool itself is not. Clone the repo, install Python 3.11 (not 3.9), pip install the right packages, configure the environment variables. If it works on their machine but not yours, good luck debugging.
 
 2. **No trust.** You're running someone else's code with access to your filesystem, your credentials, your everything. There's no verification, no sandboxing, no audit trail.
 
-Enact fixes both. The skill definition includes its own runtime—the container, the dependencies, the command. Share a skill, and the recipient can run it immediately in a sandboxed environment. No setup, no environment mismatch, no blind trust.
+Enact fixes both. The skill definition includes its own runtime: the container, the dependencies, the command. Share a skill, and the recipient can run it immediately in a sandboxed environment. No setup, no environment mismatch, no blind trust.
 
 ## The Skill *Is* The Executable
 
-In Enact, a Skill isn't just a definition. It is a self-contained, executable unit.
+In Enact, a Skill is not just a definition. It is a self-contained, executable unit.
 
 For skills that run code, the folder includes source files and dependencies:
 
@@ -605,7 +605,7 @@ detect-secrets. Identifies API keys, passwords, private keys,
 and other sensitive data that shouldn't be in version control.
 \`\`\`
 
-When you run this—whether on your MacBook, a Linux server, or inside a CI pipeline—Enact uses [Dagger](https://dagger.io) to spin up the exact container environment defined in the skill. It mounts your code, runs the command, and captures the output.
+When you run this (whether on your MacBook, a Linux server, or inside a CI pipeline), Enact uses [Dagger](https://dagger.io) to spin up the exact container environment defined in the skill. It mounts your code, runs the command, and captures the output.
 
 **No dependency issues. No "works on my machine." Just pure, portable capability.**
 
@@ -622,13 +622,13 @@ This enables **progressive discovery**:
 3. **Learn:** It reads the Markdown documentation for usage nuances
 4. **Execute:** It runs the tool in a secure, sandboxed container
 
-The registry is local-first. You can build and run tools entirely offline—the network is optional. When you do publish, hierarchical naming (\`org/category/tool\`) prevents collisions while enabling discovery.
+The registry is local-first. You can build and run tools entirely offline. The network is optional. When you do publish, hierarchical naming (\`org/category/tool\`) prevents collisions while enabling discovery.
 
 ## Trust Without Blind Faith
 
 Executable code from the internet is dangerous. Enact takes this seriously.
 
-Every published tool can be signed using [Sigstore](https://sigstore.dev), the same infrastructure securing npm and PyPI. But Enact goes further—it supports a trust model built on identity:
+Every published tool can be signed using [Sigstore](https://sigstore.dev), the same infrastructure securing npm and PyPI. But Enact goes further. It supports a trust model built on identity:
 
 \`\`\`yaml
 # ~/.enact/config.yaml
@@ -646,7 +646,7 @@ When you run a tool, Enact verifies:
 * The signature is valid in Sigstore's transparency log
 * The signer is in your trusted auditors list
 
-This isn't just author verification. Third-party auditors can attest to tools they've reviewed. A security team can sign off on tools approved for production use. The trust graph is explicit and auditable.
+This is not just author verification. Third-party auditors can attest to tools they've reviewed. A security team can sign off on tools approved for production use. The trust graph is explicit and auditable.
 
 ## The MCP Bridge
 
@@ -855,7 +855,7 @@ Enact supports three visibility levels, with **private being the default**:
 
 ## How to Use
 
-Publishing a private tool is simple—it's the default:
+Publishing a private tool is simple. It's the default:
 
 \`\`\`bash
 # Publish as private (default)
