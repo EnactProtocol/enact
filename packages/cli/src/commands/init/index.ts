@@ -7,7 +7,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { getSecret } from "@enactprotocol/secrets";
+import { checkForUpdates } from "@enactprotocol/shared";
 import type { Command } from "commander";
+import { version } from "../../index";
 import type { CommandContext, GlobalOptions } from "../../types";
 import { error, formatError, info, success, warning } from "../../utils";
 import {
@@ -329,6 +331,14 @@ export function configureInitCommand(program: Command): void {
 
       try {
         await initHandler(options, ctx);
+
+        // Check for updates (non-blocking, after successful init)
+        const updateInfo = await checkForUpdates(version);
+        if (updateInfo) {
+          info("");
+          info(`Update available: ${updateInfo.currentVersion} → ${updateInfo.latestVersion}`);
+          info(`Run: ${updateInfo.updateCommand}`);
+        }
       } catch (err) {
         error(formatError(err));
         process.exit(1);

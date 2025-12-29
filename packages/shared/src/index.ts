@@ -200,6 +200,9 @@ export {
   type VersionRange,
 } from "./utils/version";
 
+// Update checker
+export { checkForUpdates, type UpdateInfo } from "./update-checker";
+
 // File system helpers
 export {
   ensureDir,
