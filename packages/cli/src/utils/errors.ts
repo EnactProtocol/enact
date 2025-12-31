@@ -105,8 +105,11 @@ export class ValidationError extends CliError {
  * Authentication error
  */
 export class AuthError extends CliError {
-  constructor(message: string) {
-    super(message, EXIT_AUTH_ERROR, "Run 'enact auth login' to authenticate.");
+  constructor(message: string, options?: { expired?: boolean }) {
+    const suggestion = options?.expired
+      ? "Your session may have expired. Run 'enact auth login' to log in again."
+      : "Run 'enact auth login' to authenticate.";
+    super(message, EXIT_AUTH_ERROR, suggestion);
     this.name = "AuthError";
   }
 }
@@ -319,12 +322,13 @@ export function categorizeError(err: unknown): CliError {
       return new TimeoutError("Operation", 30000);
     }
 
-    // Authentication
-    if (
-      message.includes("unauthorized") ||
-      message.includes("401") ||
-      message.includes("authentication")
-    ) {
+    // Authentication - check for 401 which usually means expired session
+    if (message.includes("401") || message.includes("unauthorized")) {
+      return new AuthError("Authentication failed", { expired: true });
+    }
+
+    // Other auth errors
+    if (message.includes("authentication") || message.includes("not authenticated")) {
       return new AuthError(err.message);
     }
 
@@ -356,6 +360,15 @@ export const ErrorMessages = {
     message: "You are not authenticated",
     suggestions: [
       `Log in: ${colors.command("enact auth login")}`,
+      `Check status: ${colors.command("enact auth status")}`,
+    ],
+  }),
+
+  sessionExpired: () => ({
+    message: "Authentication failed",
+    suggestions: [
+      "Your session may have expired",
+      `Log in again: ${colors.command("enact auth login")}`,
       `Check status: ${colors.command("enact auth status")}`,
     ],
   }),

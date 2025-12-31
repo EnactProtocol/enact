@@ -45,11 +45,11 @@ A browser automation tool that uses Playwright to interact with web pages.
 
 ```bash
 # Get text content from a page
-enact run ./playwright --args '{"url": "https://example.com"}'
+enact run enact/playwright --args '{"url": "https://example.com"}'
 
 # Take a screenshot
-enact run ./playwright --args '{"url": "https://example.com", "action": "screenshot"}'
+enact run enact/playwright --args '{"url": "https://example.com", "action": "screenshot"}'
 
 # Extract text from a specific element
-enact run ./playwright --args '{"url": "https://example.com", "selector": "h1"}'
+enact run enact/playwright --args '{"url": "https://example.com", "selector": "h1"}'
 ```

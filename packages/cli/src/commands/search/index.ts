@@ -333,11 +333,11 @@ async function searchHandler(
       dim(`Use --offset ${showing} to see more results`);
     }
   } catch (err) {
-    // Handle specific error types
+    // Handle specific error types with user-friendly messages
     if (err instanceof Error) {
       const message = err.message.toLowerCase();
 
-      // Connection errors
+      // Connection errors - add registry URL context
       if (
         message.includes("fetch") ||
         message.includes("econnrefused") ||
@@ -360,8 +360,9 @@ async function searchHandler(
       }
     }
 
-    // Re-throw other errors
-    throw err;
+    // Use centralized error categorization for auth and other errors
+    const { categorizeError, handleError } = await import("../../utils/errors.js");
+    handleError(categorizeError(err));
   }
 }
 
