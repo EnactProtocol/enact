@@ -1,6 +1,6 @@
 ---
 name: enact/firecrawl
-version: 1.2.0
+version: 1.2.1
 description: Scrape, crawl, search, and extract structured data from websites using Firecrawl API - converts web pages to LLM-ready markdown
 enact: "2.0"
 
@@ -153,36 +153,37 @@ This stores your API key securely in your OS keyring (macOS Keychain, Windows Cr
 
 ### Scrape a single page
 ```bash
-enact run enact/firecrawl --url "https://example.com" --action scrape
+enact run enact/firecrawl -a '{"url": "https://example.com", "action": "scrape"}'
 ```
 
 ### Crawl an entire documentation site
 ```bash
-enact run enact/firecrawl --url "https://docs.example.com" --action crawl --limit 20
+enact run enact/firecrawl -a '{"url": "https://docs.example.com", "action": "crawl", "limit": 20}'
 ```
 
 ### Map all URLs on a website
 ```bash
-enact run enact/firecrawl --url "https://example.com" --action map
+enact run enact/firecrawl -a '{"url": "https://example.com", "action": "map"}'
 ```
 
 ### Search the web
 ```bash
-enact run enact/firecrawl --url "latest AI developments 2024" --action search --limit 5
+enact run enact/firecrawl -a '{"url": "latest AI developments 2024", "action": "search", "limit": 5}'
 ```
 
 ### Extract structured data with AI
 ```bash
-enact run enact/firecrawl --url "https://news.ycombinator.com" --action extract --prompt "Extract the top 10 news headlines with their URLs"
+enact run enact/firecrawl -a '{"url": "https://news.ycombinator.com", "action": "extract", "prompt": "Extract the top 10 news headlines with their URLs"}'
 ```
 
 ### Extract with a JSON schema
 ```bash
-enact run enact/firecrawl \
-  --url "https://example.com/pricing" \
-  --action extract \
-  --prompt "Extract pricing information" \
-  --schema '{"type":"object","properties":{"plans":{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"price":{"type":"string"}}}}}}'
+enact run enact/firecrawl -a '{
+  "url": "https://example.com/pricing",
+  "action": "extract",
+  "prompt": "Extract pricing information",
+  "schema": "{\"type\":\"object\",\"properties\":{\"plans\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\"},\"price\":{\"type\":\"string\"}}}}}}"
+}'
 ```
 
 ## Output

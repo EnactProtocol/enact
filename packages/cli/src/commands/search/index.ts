@@ -332,6 +332,12 @@ async function searchHandler(
     if (response.hasMore) {
       dim(`Use --offset ${showing} to see more results`);
     }
+
+    // Help hint for discovering more about tools
+    newline();
+    dim(
+      "Tip: Use 'enact info <tool>' for details or 'enact learn <tool>' for AI-friendly documentation"
+    );
   } catch (err) {
     // Handle specific error types with user-friendly messages
     if (err instanceof Error) {

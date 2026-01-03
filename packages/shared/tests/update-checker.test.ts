@@ -10,7 +10,8 @@ import { checkForUpdates } from "../src/update-checker";
 function createMockFetch(handler: () => Promise<Partial<Response>>): typeof globalThis.fetch {
   const mockFn = (() => handler()) as unknown as typeof globalThis.fetch;
   // Add preconnect property required by Bun's fetch type
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // biome-ignore lint/suspicious/noExplicitAny: Required for mocking Bun's fetch type
+  // biome-ignore lint/suspicious/noEmptyBlockStatements: Intentional no-op for mock
   (mockFn as any).preconnect = () => {};
   return mockFn;
 }

@@ -260,24 +260,32 @@ async function macosDeletePassword(service: string, account: string): Promise<bo
 
 async function macosFindCredentials(service: string): Promise<Credential[]> {
   try {
-    // Use security dump-keychain and grep for our service
-    // Note: This only gets account names, we fetch passwords separately
-    const { stdout } = await execAsync(
-      `security dump-keychain 2>/dev/null | grep -B 5 '"svce"<blob>="${service}"' | grep '"acct"' || true`
-    );
+    // Use security dump-keychain and parse entries
+    // Each entry has "svce" (service) and "acct" (account) attributes
+    // We need to find entries where svce matches our service
+    const { stdout } = await execAsync("security dump-keychain 2>/dev/null");
 
     const credentials: Credential[] = [];
-    const matches = stdout.matchAll(/"acct"<blob>="([^"]+)"/g);
+    // Split by "keychain:" to get individual entries
+    const entries = stdout.split(/keychain:/);
 
-    for (const match of matches) {
-      const account = match[1];
-      try {
-        const password = await macosGetPassword(service, account);
-        if (password) {
-          credentials.push({ account, password });
+    for (const entry of entries) {
+      // Check if this entry has our service
+      const serviceMatch = entry.match(/"svce"<blob>="([^"]+)"/);
+      if (serviceMatch && serviceMatch[1] === service) {
+        // Find the account in this entry
+        const accountMatch = entry.match(/"acct"<blob>="([^"]+)"/);
+        if (accountMatch) {
+          const account = accountMatch[1];
+          try {
+            const password = await macosGetPassword(service, account);
+            if (password) {
+              credentials.push({ account, password });
+            }
+          } catch {
+            // Skip if can't get password
+          }
         }
-      } catch {
-        // Skip if can't get password
       }
     }
 
