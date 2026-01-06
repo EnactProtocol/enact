@@ -12,6 +12,7 @@ import {
   List,
   Package,
   Play,
+  Plug,
   Search,
   Shield,
   Terminal,
@@ -437,6 +438,125 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Using Enact with MCP Section */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-12">
+              <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Plug className="w-8 h-8 text-purple-600" />
+              </div>
+              <h2 className="text-3xl font-bold mb-4 text-gray-6">Using Enact with MCP</h2>
+              <p className="text-gray-5 max-w-2xl mx-auto">
+                Connect Enact to any MCP-compatible AI client. Your agent gets access to thousands
+                of verified tools through a standardized interface.
+              </p>
+            </div>
+
+            {/* Configuration Example */}
+            <div className="grid lg:grid-cols-2 gap-8 mb-12">
+              <div className="card">
+                <h3 className="text-xl font-semibold text-gray-6 mb-4">Claude Desktop Setup</h3>
+                <p className="text-sm text-gray-5 mb-4">
+                  Add Enact to your Claude Desktop configuration to give Claude access to all Enact
+                  tools:
+                </p>
+                <div className="bg-gray-900 text-gray-100 rounded-lg p-4 font-mono text-sm overflow-x-auto">
+                  <pre>{`{
+  "mcpServers": {
+    "enact": {
+      "command": "npx",
+      "args": ["-y", "@enactprotocol/mcp-server"]
+    }
+  }
+}`}</pre>
+                </div>
+                <p className="text-xs text-gray-4 mt-3">
+                  Config location:{" "}
+                  <code className="bg-gray-100 px-1 rounded">
+                    ~/Library/Application Support/Claude/claude_desktop_config.json
+                  </code>
+                </p>
+              </div>
+
+              <div className="card">
+                <h3 className="text-xl font-semibold text-gray-6 mb-4">Built-in Meta-Tools</h3>
+                <p className="text-sm text-gray-5 mb-4">
+                  The MCP server provides meta-tools for progressive discovery:
+                </p>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Search className="w-4 h-4 text-purple-600" />
+                    </div>
+                    <div>
+                      <code className="text-sm font-mono text-gray-6">enact_search</code>
+                      <p className="text-xs text-gray-5">
+                        Search the registry for tools by keyword
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <List className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <code className="text-sm font-mono text-gray-6">enact_learn</code>
+                      <p className="text-xs text-gray-5">
+                        Get detailed tool schema and documentation
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Play className="w-4 h-4 text-green-600" />
+                    </div>
+                    <div>
+                      <code className="text-sm font-mono text-gray-6">enact_run</code>
+                      <p className="text-xs text-gray-5">
+                        Execute any tool in a sandboxed container
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Download className="w-4 h-4 text-teal-600" />
+                    </div>
+                    <div>
+                      <code className="text-sm font-mono text-gray-6">enact_install</code>
+                      <p className="text-xs text-gray-5">Install tools as native MCP tools</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* How it works */}
+            <div className="card bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                  <Bot className="w-6 h-6 text-purple-600" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-gray-6 mb-2">Progressive Tool Discovery</h4>
+                  <p className="text-sm text-gray-5">
+                    AI agents can dynamically discover and use tools as needed. Ask Claude to "find
+                    a tool for web scraping" and it will search, learn, and run the right tool—all
+                    through MCP. No pre-configuration required.
+                  </p>
+                </div>
+                <div className="flex-shrink-0">
+                  <code className="text-xs bg-white/80 px-3 py-2 rounded-lg font-mono text-purple-700 block">
+                    npm i -g @enactprotocol/mcp-server
+                  </code>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Quick Start Section */}
       <section id="quick-start" className="py-20 bg-gray-1">
         <div className="container mx-auto px-4">

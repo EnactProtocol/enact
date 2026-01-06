@@ -115,7 +115,7 @@ function createToolManifestSchema(allowSimpleNames: boolean) {
       description: z
         .string()
         .min(1, "Description is required")
-        .max(500, "Description should be 500 characters or less"),
+        .max(1024, "Description should be 1024 characters or less"),
 
       // Recommended fields
       enact: z.string().optional(),
@@ -142,6 +142,14 @@ function createToolManifestSchema(allowSimpleNames: boolean) {
       // Behavior & Resources
       annotations: ToolAnnotationsSchema.optional(),
       resources: ResourceRequirementsSchema.optional(),
+
+      // Agent Skills Spec Fields
+      compatibility: z
+        .string()
+        .max(500, "Compatibility should be 500 characters or less")
+        .optional(),
+      metadata: z.record(z.string(), z.string()).optional(),
+      allowedTools: z.string().optional(),
 
       // Documentation
       doc: z.string().optional(),

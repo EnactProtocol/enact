@@ -11,6 +11,333 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    id: "10",
+    title: "Build an MCP Tool in Rust: A Dice Roller for AI Agents",
+    excerpt:
+      "Create a Rust tool that AI agents can discover and use via MCP. From code to published tool in 10 minutes.",
+    date: "2026-01-06",
+    author: "Enact Team",
+    slug: "rust-dice-roller-mcp-tutorial",
+    tags: ["tutorial", "rust", "mcp", "tools", "ai-agents"],
+    content: `
+AI agents need tools. With the Model Context Protocol (MCP), agents like Claude can dynamically discover and execute tools without any hardcoded integrations. But where do those tools come from?
+
+Enact is a registry and runtime for MCP tools. You publish a tool once, and any MCP-compatible agent can find it, learn its schema, and run it in a sandboxed container.
+
+In this tutorial, we'll build a dice roller in Rust and make it available to AI agents via MCP.
+
+## The End Result
+
+Once published, any AI agent with the Enact MCP server can use your tool. In Claude Desktop:
+
+> **You:** "Roll 4d6 for my character's strength stat"
+>
+> **Claude:** I'll roll 4d6 for you.
+>
+> *[Calls enact_run with tool="enact/dice-roll-rust", args={"sides": 6, "count": 4}]*
+>
+> You rolled: 5, 3, 6, 2 (total: 16)
+
+The agent discovers the tool, understands its schema, and executes it. No configuration on your part.
+
+## How MCP Tool Discovery Works
+
+The Enact MCP server exposes four meta-tools to agents:
+
+| Tool | Purpose |
+|------|---------|
+| \`enact_search\` | Find tools by keyword ("dice", "scraper", "pdf") |
+| \`enact_learn\` | Get a tool's input/output schema and docs |
+| \`enact_run\` | Execute any tool, even if not installed |
+| \`enact_install\` | Install for faster subsequent runs |
+
+When you ask Claude to roll dice, it:
+1. Calls \`enact_search\` with query "dice roll"
+2. Finds \`enact/dice-roll-rust\` in the results
+3. Calls \`enact_learn\` to understand the parameters
+4. Calls \`enact_run\` with the appropriate arguments
+
+Your tool just needs to exist in the registry. The agent handles discovery.
+
+## Building the Tool
+
+### Prerequisites
+
+- Node.js 18+ and Docker installed
+- Enact CLI: \`npm install -g enact-cli\`
+
+You do **not** need Rust locally. It compiles inside a container.
+
+### Step 1: Create the Project
+
+\`\`\`bash
+mkdir dice-roll-rust && cd dice-roll-rust
+\`\`\`
+
+### Step 2: Write the Rust Code
+
+Create \`dice.rs\`:
+
+\`\`\`rust
+use std::env;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+struct Rng { state: u64 }
+
+impl Rng {
+    fn new() -> Self {
+        let seed = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64;
+        Rng { state: seed }
+    }
+
+    fn next(&mut self) -> u64 {
+        self.state = self.state.wrapping_mul(1103515245).wrapping_add(12345);
+        self.state
+    }
+
+    fn range(&mut self, min: u64, max: u64) -> u64 {
+        min + (self.next() % (max - min + 1))
+    }
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    let sides: u64 = args.get(1).and_then(|s| s.parse().ok()).unwrap_or(6);
+    let count: u64 = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(1);
+
+    let sides = sides.clamp(2, 100);
+    let count = count.clamp(1, 100);
+
+    let mut rng = Rng::new();
+    let mut rolls: Vec<u64> = Vec::new();
+    let mut total: u64 = 0;
+
+    for _ in 0..count {
+        let roll = rng.range(1, sides);
+        rolls.push(roll);
+        total += roll;
+    }
+
+    let rolls_json: Vec<String> = rolls.iter().map(|r| r.to_string()).collect();
+    println!(
+        r#"{{"rolls":[{}],"total":{},"sides":{},"count":{}}}"#,
+        rolls_json.join(","), total, sides, count
+    );
+}
+\`\`\`
+
+We use only the standard library. No \`rand\`, no \`serde\`. The tool compiles fast and the binary is tiny.
+
+### Step 3: Create the SKILL.md Manifest
+
+The manifest tells Enact (and agents) everything about your tool:
+
+\`\`\`yaml
+---
+name: your-username/dice-roll-rust
+version: 1.0.0
+description: Roll dice with configurable sides and count
+enact: "2.0"
+
+from: rust:1.75-slim
+
+build:
+  - rustc -o /workspace/dice /workspace/dice.rs
+
+command: /workspace/dice \${sides} \${count}
+
+timeout: 60s
+
+inputSchema:
+  type: object
+  properties:
+    sides:
+      type: integer
+      description: Number of sides per die (6 for d6, 20 for d20)
+      default: 6
+    count:
+      type: integer
+      description: Number of dice to roll
+      default: 1
+
+outputSchema:
+  type: object
+  properties:
+    rolls:
+      type: array
+      items:
+        type: integer
+    total:
+      type: integer
+    sides:
+      type: integer
+    count:
+      type: integer
+---
+
+# Dice Roller
+
+Roll any combination of dice. Supports d4, d6, d8, d10, d12, d20, d100.
+\`\`\`
+
+The \`inputSchema\` is critical for MCP. When an agent calls \`enact_learn\`, it receives this schema and knows exactly what parameters to pass.
+
+### Step 4: Test Locally
+
+\`\`\`bash
+enact run . -a '{"sides": 20, "count": 1}'
+\`\`\`
+
+Output:
+\`\`\`json
+{"rolls":[14],"total":14,"sides":20,"count":1}
+\`\`\`
+
+### Step 5: Publish
+
+\`\`\`bash
+enact auth login
+enact publish --public
+\`\`\`
+
+Your tool is now in the registry. Any agent can find it.
+
+## Configuring Claude Desktop for Enact
+
+To give Claude access to Enact tools, add this to your Claude Desktop config:
+
+**macOS:** \`~/Library/Application Support/Claude/claude_desktop_config.json\`
+**Windows:** \`%APPDATA%\\Claude\\claude_desktop_config.json\`
+
+\`\`\`json
+{
+  "mcpServers": {
+    "enact": {
+      "command": "npx",
+      "args": ["-y", "@enactprotocol/mcp-server"]
+    }
+  }
+}
+\`\`\`
+
+Restart Claude Desktop. Now Claude has access to:
+- Every tool in the Enact registry
+- The four meta-tools for discovery
+
+## What Agents See
+
+When Claude calls \`enact_search\` with "dice", it gets:
+
+\`\`\`
+Found 2 tool(s) matching "dice":
+
+1. **enact/dice-roll-rust** (v1.0.0)
+   Roll dice with configurable sides and count
+   Tags: dice, random, rust, games
+
+2. **enact/dice-roll-python** (v1.2.0)
+   Python dice roller with advantage/disadvantage
+   Tags: dice, random, python, dnd
+\`\`\`
+
+When it calls \`enact_learn\` on your tool:
+
+\`\`\`
+# enact/dice-roll-rust@1.0.0
+
+**Description:** Roll dice with configurable sides and count
+
+## Input Schema
+{
+  "type": "object",
+  "properties": {
+    "sides": { "type": "integer", "default": 6 },
+    "count": { "type": "integer", "default": 1 }
+  }
+}
+
+## Output Schema
+{
+  "type": "object",
+  "properties": {
+    "rolls": { "type": "array", "items": { "type": "integer" } },
+    "total": { "type": "integer" }
+  }
+}
+\`\`\`
+
+The agent now knows exactly how to call your tool.
+
+## Real Conversation Examples
+
+### Basic Roll
+
+> **You:** "Roll a d20"
+>
+> **Claude:** *[enact_run: tool="enact/dice-roll-rust", args={"sides": 20}]*
+>
+> You rolled a 17!
+
+### Multiple Dice
+
+> **You:** "Roll 3d8 for my fireball damage"
+>
+> **Claude:** *[enact_run: tool="enact/dice-roll-rust", args={"sides": 8, "count": 3}]*
+>
+> Fireball damage: 4 + 7 + 2 = 13
+
+### Discovery Flow
+
+> **You:** "I need to roll some dice for my D&D game"
+>
+> **Claude:** Let me find a dice rolling tool.
+>
+> *[enact_search: query="dice roll"]*
+>
+> I found \`enact/dice-roll-rust\`. What would you like to roll?
+
+## Why This Matters
+
+Traditional tool integrations require:
+1. Hardcoding the tool into your agent
+2. Managing API keys and configurations
+3. Updating when the tool changes
+
+With Enact + MCP:
+1. Publish once to the registry
+2. Any MCP agent can discover and use it
+3. Tools run in sandboxed containers
+4. Schema validation happens automatically
+
+Your dice roller is now available to every Claude Desktop user who has Enact configured. No integration work on their part.
+
+## Next Steps
+
+- **Add more tools**: Weather lookups, unit converters, code formatters
+- **Sign your tools**: \`enact sign .\` for verified attestations
+- **Browse the registry**: [enact.tools/browse](https://enact.tools/browse)
+
+---
+
+**Quick start:**
+
+\`\`\`bash
+npm install -g enact-cli
+enact auth login
+enact init my-tool
+# Edit SKILL.md and add your code
+enact publish --public
+\`\`\`
+
+---
+
+*Published on January 6, 2026*
+    `,
+  },
+  {
     id: "9",
     title: "Should Agent Skills Be Executable?",
     excerpt:

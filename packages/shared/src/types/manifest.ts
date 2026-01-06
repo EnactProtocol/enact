@@ -134,6 +134,17 @@ export interface ToolManifest {
   /** Resource limits and requirements */
   resources?: ResourceRequirements;
 
+  // ==================== Agent Skills Spec Fields ====================
+
+  /** Environment requirements (intended product, system packages, network access, etc.) */
+  compatibility?: string;
+
+  /** Arbitrary key-value metadata for additional properties */
+  metadata?: Record<string, string>;
+
+  /** Space-delimited list of pre-approved tools the skill may use (experimental) */
+  allowedTools?: string;
+
   // ==================== Documentation ====================
 
   /** Extended documentation (Markdown) */

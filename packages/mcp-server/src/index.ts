@@ -13,6 +13,7 @@
  * @see https://modelcontextprotocol.io/specification/2025-03-26/basic/transports
  */
 
+import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { type IncomingMessage, type ServerResponse, createServer } from "node:http";
@@ -23,6 +24,7 @@ import {
   getToolInfo,
   getToolVersion,
   searchTools,
+  verifyAllAttestations,
 } from "@enactprotocol/api";
 import { DaggerExecutionProvider } from "@enactprotocol/execution";
 import {
@@ -33,7 +35,10 @@ import {
   getActiveToolset,
   getCacheDir,
   getMcpToolInfo,
+  getMinimumAttestations,
   getToolCachePath,
+  getTrustPolicy,
+  isIdentityTrusted,
   listMcpTools,
   loadConfig,
   loadManifestFromDir,
@@ -111,22 +116,30 @@ async function extractBundle(bundleData: ArrayBuffer, destPath: string): Promise
 
   mkdirSync(destPath, { recursive: true });
 
-  const proc = Bun.spawn(["tar", "-xzf", tempFile, "-C", destPath], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
+  await new Promise<void>((resolve, reject) => {
+    const proc = spawn("tar", ["-xzf", tempFile, "-C", destPath], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
 
-  const exitCode = await proc.exited;
+    let stderr = "";
+    proc.stderr?.on("data", (data) => {
+      stderr += data.toString();
+    });
+
+    proc.on("error", reject);
+    proc.on("close", (code) => {
+      if (code !== 0) {
+        reject(new Error(`Failed to extract bundle: ${stderr}`));
+      } else {
+        resolve();
+      }
+    });
+  });
 
   try {
     unlinkSync(tempFile);
   } catch {
     // Ignore cleanup errors
-  }
-
-  if (exitCode !== 0) {
-    const stderr = await new Response(proc.stderr).text();
-    throw new Error(`Failed to extract bundle: ${stderr}`);
   }
 }
 
@@ -327,6 +340,10 @@ async function handleMetaTool(
         const toolInfo = getMcpToolInfo(toolNameArg);
         let manifest: ToolManifest;
         let cachePath: string;
+        let bundleHash: string | undefined;
+        let toolVersion: string | undefined;
+
+        const apiClient = getApiClient();
 
         if (toolInfo) {
           // Tool is installed, use cached version
@@ -339,10 +356,19 @@ async function handleMetaTool(
           }
           manifest = loaded.manifest;
           cachePath = toolInfo.cachePath;
+          toolVersion = toolInfo.version;
+
+          // Get bundle hash for installed tool from registry
+          try {
+            const versionInfo = await getToolVersion(apiClient, toolNameArg, toolVersion);
+            bundleHash = versionInfo.bundle.hash;
+          } catch {
+            // Continue without hash - will skip verification
+          }
         } else {
           // Tool not installed - fetch and install temporarily
-          const apiClient = getApiClient();
           const info = await getToolInfo(apiClient, toolNameArg);
+          toolVersion = info.latestVersion;
 
           // Download bundle
           const bundleResult = await downloadBundle(apiClient, {
@@ -350,6 +376,7 @@ async function handleMetaTool(
             version: info.latestVersion,
             verify: true,
           });
+          bundleHash = bundleResult.hash;
 
           // Extract to cache
           cachePath = getToolCachePath(toolNameArg, info.latestVersion);
@@ -367,6 +394,79 @@ async function handleMetaTool(
             };
           }
           manifest = loaded.manifest;
+        }
+
+        // Verify attestations before execution
+        let verificationStatus = "⚠️ UNVERIFIED";
+
+        if (bundleHash && toolVersion) {
+          try {
+            const verified = await verifyAllAttestations(
+              apiClient,
+              toolNameArg,
+              toolVersion,
+              bundleHash
+            );
+
+            if (verified.length > 0) {
+              const auditorList = verified.map((v) => v.providerIdentity).join(", ");
+              verificationStatus = `✅ VERIFIED by: ${auditorList}`;
+            } else {
+              verificationStatus = "⚠️ UNVERIFIED - No valid attestations found";
+            }
+          } catch (verifyErr) {
+            verificationStatus = `⚠️ UNVERIFIED - Verification failed: ${verifyErr instanceof Error ? verifyErr.message : "Unknown error"}`;
+          }
+        } else {
+          verificationStatus = "⚠️ UNVERIFIED - Could not determine bundle hash";
+        }
+
+        // Enforce trust policy
+        const trustPolicy = getTrustPolicy();
+        const minimumAttestations = getMinimumAttestations();
+
+        // Count verified attestations from trusted auditors
+        let verifiedCount = 0;
+        if (bundleHash && toolVersion) {
+          try {
+            const verified = await verifyAllAttestations(
+              apiClient,
+              toolNameArg,
+              toolVersion,
+              bundleHash
+            );
+            verifiedCount = verified.filter((v) => isIdentityTrusted(v.providerIdentity)).length;
+          } catch {
+            // Already handled above in verificationStatus
+          }
+        }
+
+        // Check if trust requirements are met
+        if (verifiedCount < minimumAttestations) {
+          if (trustPolicy === "require_attestation") {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `Trust policy violation: Tool requires ${minimumAttestations} attestation(s) from trusted auditors, but only ${verifiedCount} found.\n\nConfigured trust policy: ${trustPolicy}\nTo run unverified tools, update your ~/.enact/config.yaml trust policy to 'allow' or 'prompt'.`,
+                },
+              ],
+              isError: true,
+            };
+          }
+          if (trustPolicy === "prompt") {
+            // In MCP context, we can't prompt interactively, so we block with a clear message
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `Trust policy violation: Tool requires ${minimumAttestations} attestation(s) from trusted auditors, but only ${verifiedCount} found.\n\nConfigured trust policy: ${trustPolicy}\nMCP server cannot prompt interactively. To run unverified tools via MCP, update your ~/.enact/config.yaml trust policy to 'allow'.`,
+                },
+              ],
+              isError: true,
+            };
+          }
+          // policy === 'allow' - continue execution with warning
         }
 
         // Validate and apply defaults
@@ -396,11 +496,12 @@ async function handleMetaTool(
         );
 
         if (result.success) {
+          const output = result.output?.stdout || "Tool executed successfully (no output)";
           return {
             content: [
               {
                 type: "text",
-                text: result.output?.stdout || "Tool executed successfully (no output)",
+                text: `[${verificationStatus}]\n\n${output}`,
               },
             ],
           };
@@ -409,7 +510,7 @@ async function handleMetaTool(
           content: [
             {
               type: "text",
-              text: `Tool execution failed: ${result.error?.message || "Unknown error"}\n\n${result.output?.stderr || ""}`,
+              text: `[${verificationStatus}]\n\nTool execution failed: ${result.error?.message || "Unknown error"}\n\n${result.output?.stderr || ""}`,
             },
           ],
           isError: true,
