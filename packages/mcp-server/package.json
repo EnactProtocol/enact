@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/mcp-server",
-  "version": "2.1.33",
+  "version": "2.2.0",
   "description": "MCP protocol server for Enact tool integration",
   "type": "module",
   "main": "./dist/index.js",
@@ -23,6 +23,7 @@
     "dev:http": "bun run src/index.ts --http"
   },
   "dependencies": {
+    "@enactprotocol/api": "workspace:*",
     "@enactprotocol/execution": "workspace:*",
     "@enactprotocol/shared": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.10.0"

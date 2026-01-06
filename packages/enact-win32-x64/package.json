@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/enact-win32-x64",
-  "version": "2.1.33",
+  "version": "2.2.0",
   "description": "Enact prebuilt binary for win32-x64",
   "license": "Apache-2.0",
   "os": ["win32"],
