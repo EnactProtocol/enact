@@ -127,6 +127,28 @@ Create a new tool with `enact init --tool`, test with `enact run ./`, and publis
 
 ---
 
+## MCP Integration
+
+Enact provides native [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) support, allowing AI agents like Claude to discover and run tools from the registry.
+
+### Setup for Claude Code
+
+```bash
+claude mcp add enact --transport stdio -- npx -y @enactprotocol/mcp-server
+```
+
+Once connected, Claude can use Enact tools directly. The MCP server provides:
+
+- `enact_search` — Search the registry for tools
+- `enact_learn` — Get tool documentation
+- `enact_run` — Execute any tool from the registry
+
+### Setup for Other MCP Clients
+
+Run `enact mcp install` for configuration instructions for Claude Desktop, Cursor, VS Code, and other MCP clients.
+
+---
+
 ## Enact Registry
 
 **[https://enact.tools](https://enact.tools)** is the official Enact registry where you can:
@@ -229,8 +251,8 @@ Execution engine with sandboxing and resource isolation using Dagger.
 
 ### **@enactprotocol/mcp-server**
 
-MCP server enabling AI agents to discover and invoke tools.
-**Status:** Not yet started.
+MCP server enabling AI agents to discover and invoke tools via the Model Context Protocol.
+**Status:** Complete with search, learn, run, and install meta-tools.
 
 ### **@enactprotocol/secrets**
 

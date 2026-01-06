@@ -180,6 +180,7 @@ if [[ -z "$SKIP_LIB" ]]; then
     "execution"
     "api"
     "cli"
+    "mcp-server"
   )
 
   for pkg in "${LIB_PACKAGES[@]}"; do

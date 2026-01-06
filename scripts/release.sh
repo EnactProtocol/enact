@@ -69,6 +69,7 @@ update_version "$ROOT_DIR/packages/shared/package.json"
 update_version "$ROOT_DIR/packages/execution/package.json"
 update_version "$ROOT_DIR/packages/api/package.json"
 update_version "$ROOT_DIR/packages/cli/package.json"
+update_version "$ROOT_DIR/packages/mcp-server/package.json"
 # Binary distribution packages
 update_version "$ROOT_DIR/packages/enact/package.json"
 update_version "$ROOT_DIR/packages/enact-darwin-arm64/package.json"
@@ -76,7 +77,7 @@ update_version "$ROOT_DIR/packages/enact-darwin-x64/package.json"
 update_version "$ROOT_DIR/packages/enact-linux-arm64/package.json"
 update_version "$ROOT_DIR/packages/enact-linux-x64/package.json"
 update_version "$ROOT_DIR/packages/enact-win32-x64/package.json"
-# Note: mcp-server, server, web are not published to npm
+# Note: server, web are not published to npm
 
 # Also update the version constant in CLI index.ts
 CLI_INDEX="$ROOT_DIR/packages/cli/src/index.ts"

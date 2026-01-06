@@ -151,32 +151,34 @@ This stores your API key securely in your OS keyring (macOS Keychain, Windows Cr
 
 ## Usage Examples
 
-### Scrape a single page
+### CLI
+
+#### Scrape a single page
 ```bash
 enact run enact/firecrawl -a '{"url": "https://example.com", "action": "scrape"}'
 ```
 
-### Crawl an entire documentation site
+#### Crawl an entire documentation site
 ```bash
 enact run enact/firecrawl -a '{"url": "https://docs.example.com", "action": "crawl", "limit": 20}'
 ```
 
-### Map all URLs on a website
+#### Map all URLs on a website
 ```bash
 enact run enact/firecrawl -a '{"url": "https://example.com", "action": "map"}'
 ```
 
-### Search the web
+#### Search the web
 ```bash
 enact run enact/firecrawl -a '{"url": "latest AI developments 2024", "action": "search", "limit": 5}'
 ```
 
-### Extract structured data with AI
+#### Extract structured data with AI
 ```bash
 enact run enact/firecrawl -a '{"url": "https://news.ycombinator.com", "action": "extract", "prompt": "Extract the top 10 news headlines with their URLs"}'
 ```
 
-### Extract with a JSON schema
+#### Extract with a JSON schema
 ```bash
 enact run enact/firecrawl -a '{
   "url": "https://example.com/pricing",
@@ -185,6 +187,25 @@ enact run enact/firecrawl -a '{
   "schema": "{\"type\":\"object\",\"properties\":{\"plans\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\"},\"price\":{\"type\":\"string\"}}}}}}"
 }'
 ```
+
+### MCP (for LLMs/Agents)
+
+When using this tool via MCP, call `enact__firecrawl` with these parameters:
+
+#### Scrape a single page
+Call with `url` set to the target URL and `action` set to `"scrape"`.
+
+#### Crawl a documentation site
+Call with `url`, `action` set to `"crawl"`, and `limit` to control the maximum number of pages.
+
+#### Map all URLs on a website
+Call with `url` and `action` set to `"map"` to discover all URLs without scraping content.
+
+#### Search the web
+Call with `url` set to your search query (e.g., "latest AI news") and `action` set to `"search"`. Use `limit` to control result count.
+
+#### Extract structured data with AI
+Call with `url`, `action` set to `"extract"`, and `prompt` describing what data to extract. Optionally provide a `schema` for structured output.
 
 ## Output
 

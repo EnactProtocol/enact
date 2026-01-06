@@ -52,6 +52,11 @@ interface McpInstallOptions extends GlobalOptions {
   client?: string;
 }
 
+interface McpServeOptions extends GlobalOptions {
+  http?: boolean;
+  port?: number;
+}
+
 interface McpOptions extends GlobalOptions {
   all?: boolean;
   sync?: boolean;
@@ -115,7 +120,17 @@ function detectClients(): McpClient[] {
       },
       configFormat: "json",
       detected: false,
-      instructions: "Add to mcpServers in your Claude Desktop config:",
+      instructions: `Run this command to add the Enact MCP server to Claude Code:
+
+  claude mcp add enact -- npx -y @enactprotocol/mcp-server
+
+For HTTP mode (remote/web access):
+
+  claude mcp add enact --transport http --url http://localhost:3000/mcp
+
+  Then start the server with: enact mcp serve --http
+
+Or manually add to mcpServers in your Claude Desktop config:`,
       configTemplate: (mcpPath) => `{
   "mcpServers": {
     "enact": {
@@ -247,7 +262,10 @@ function showClientConfig(client: McpClient, mcpPath: string): void {
 
   if (client.id === "claude-code") {
     newline();
-    dim('For HTTP mode (remote access), use args: ["--http", "--port", "3000"]');
+    dim("For HTTP mode, run: enact mcp serve --http --port 3000");
+    dim(
+      "Then add to Claude: claude mcp add enact --transport http --url http://localhost:3000/mcp"
+    );
   }
 
   newline();
@@ -638,10 +656,65 @@ async function toolsetHandler(action: string, args: string[], options: McpOption
 }
 
 /**
+ * Start the MCP server
+ */
+async function serveHandler(options: McpServeOptions): Promise<void> {
+  const { spawn } = await import("node:child_process");
+
+  const args: string[] = [];
+
+  if (options.http) {
+    args.push("--http");
+    if (options.port) {
+      args.push("--port", String(options.port));
+    }
+  }
+
+  if (!options.json) {
+    if (options.http) {
+      info(`Starting Enact MCP server in HTTP mode on port ${options.port || 3000}...`);
+    } else {
+      info("Starting Enact MCP server in stdio mode...");
+    }
+    newline();
+  }
+
+  // Spawn the MCP server process
+  const child = spawn("bunx", ["-y", "@enactprotocol/mcp-server", ...args], {
+    stdio: "inherit",
+    env: process.env,
+  });
+
+  child.on("error", (err) => {
+    error(`Failed to start MCP server: ${err.message}`);
+    process.exit(1);
+  });
+
+  child.on("exit", (code) => {
+    process.exit(code ?? 0);
+  });
+}
+
+/**
  * Configure the mcp command
  */
 export function configureMcpCommand(program: Command): void {
   const mcp = program.command("mcp").description("Manage MCP-exposed tools and toolsets");
+
+  // enact mcp serve
+  mcp
+    .command("serve")
+    .description("Start the Enact MCP server")
+    .option("--http", "Run in HTTP mode instead of stdio")
+    .option("-p, --port <port>", "Port for HTTP mode (default: 3000)", Number.parseInt)
+    .action(async (options: McpServeOptions) => {
+      try {
+        await serveHandler(options);
+      } catch (err) {
+        error(formatError(err));
+        process.exit(1);
+      }
+    });
 
   // enact mcp install
   mcp
