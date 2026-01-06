@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/shared",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Core business logic and utilities for Enact",
   "type": "module",
   "main": "./dist/index.js",
