@@ -182,10 +182,10 @@ describe("manifest validator", () => {
       }
     });
 
-    test("fails for description over 500 characters", () => {
+    test("fails for description over 1024 characters", () => {
       const manifest = {
         name: "org/tool",
-        description: "a".repeat(501),
+        description: "a".repeat(1025),
       };
 
       const result = validateManifest(manifest);
