@@ -24,7 +24,7 @@ Every tool registry deserves at least one Brainfuck program. So we built one.
 
 ## What is Enact?
 
-Before diving into Brainfuck, a quick primer: [Enact](https://enact.tools) is a verified, portable protocol for defining, discovering, and safely executing AI-ready tools. Think of it as **npm for AI agents**.
+Before diving into Brainfuck, a quick primer: [Enact](https://enact.tools) is a verified, portable standard for defining, discovering, and safely executing AI-ready tools. Think of it as **npm for AI agents**.
 
 ## The SKILL.md Manifest
 
