@@ -11,6 +11,207 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    id: "11",
+    title: "Building an MCP Tool in Brainfuck: Because We Can",
+    excerpt:
+      "We built a working MCP tool using only Brainfuck - the esoteric language with just 8 commands. Here is the journey, including a sneaky interpreter bug that took hours to find.",
+    date: "2026-01-06",
+    author: "Enact Team",
+    slug: "brainfuck-mcp-tool",
+    tags: ["tutorial", "brainfuck", "mcp", "esoteric", "tools"],
+    content: `
+Every tool registry deserves at least one Brainfuck program. So we built one.
+
+Brainfuck is the famously minimalist esoteric programming language created by Urban Müller in 1993. It has only 8 commands:
+
+| Command | Description |
+|---------|-------------|
+| \`>\` | Move pointer right |
+| \`<\` | Move pointer left |
+| \`+\` | Increment cell |
+| \`-\` | Decrement cell |
+| \`.\` | Output cell as ASCII |
+| \`,\` | Input to cell |
+| \`[\` | Jump past \`]\` if cell is zero |
+| \`]\` | Jump back to \`[\` if cell is non-zero |
+
+Everything else (including comments) is ignored. Or so we thought.
+
+## The Goal
+
+Create an Enact tool that outputs valid JSON using pure Brainfuck. The output:
+
+\`\`\`json
+{"message":"Hello from Brainfuck!"}
+\`\`\`
+
+This means generating each ASCII character: \`{\`, \`"\`, \`m\`, \`e\`, \`s\`, etc. In Brainfuck. By hand.
+
+## The Multiplication Loop Trick
+
+Brainfuck starts with an array of zero-initialized cells. To print \`H\` (ASCII 72), you could do 72 \`+\` operations. But that is tedious. Instead, use multiplication:
+
+\`\`\`brainfuck
+++++++++[>+++++++++<-]>.[-]<
+\`\`\`
+
+This creates 8 in cell 0, then loops 8 times adding 9 to cell 1 each iteration (8 × 9 = 72). The \`>\` moves to cell 1, \`.\` prints it, and \`[-]<\` cleans up.
+
+## The SKILL.md Manifest
+
+\`\`\`yaml
+---
+name: enact/hello-brainfuck
+version: 1.0.0
+description: A greeting tool written entirely in Brainfuck
+enact: "2.0"
+
+from: debian:bookworm-slim
+
+build:
+  - apt-get update && apt-get install -y beef
+
+command: beef /workspace/hello.bf
+
+timeout: 30s
+
+inputSchema:
+  type: object
+  properties: {}
+  additionalProperties: false
+
+outputSchema:
+  type: object
+  properties:
+    message:
+      type: string
+      description: A greeting message from Brainfuck
+---
+\`\`\`
+
+Simple enough. Use Debian \`beef\` Brainfuck interpreter, run the \`.bf\` file, get JSON output.
+
+## The Bug That Took Hours
+
+Local testing with the \`brainfuck\` npm package worked perfectly:
+
+\`\`\`bash
+npx brainfuck hello.bf
+# {"message":"Hello from Brainfuck!"}
+\`\`\`
+
+But in the container with \`beef\`? Nothing. Exit code 0, zero output. The program just... stopped.
+
+We tried everything:
+- Piping to \`cat\`
+- Writing to a file first
+- Different output redirection
+- Checking stderr
+
+Nothing worked.
+
+## The Culprit: An Exclamation Point
+
+After digging through the \`beef\` man page, we found this:
+
+> "The symbol \`!\` has a special meaning to Beef: it marks the end of a programs code and the beginning of its input."
+
+Our Brainfuck file had comments like this at the top:
+
+\`\`\`brainfuck
+Outputs: {"message":"Hello from Brainfuck!"}
+\`\`\`
+
+That \`!\` in the comment? Beef interpreted it as "stop reading code here." The entire program was being treated as input data.
+
+## The Fix
+
+Remove all \`!\` characters from comments:
+
+\`\`\`brainfuck
+Print exclamation (33)
+++++[>++++++++<-]>+.[-]<
+\`\`\`
+
+Instead of:
+
+\`\`\`brainfuck
+Print ! (33)
+++++[>++++++++<-]>+.[-]<
+\`\`\`
+
+After this change, the tool worked perfectly in containers.
+
+## The Full Implementation
+
+Here is a snippet of the Brainfuck code generating JSON:
+
+\`\`\`brainfuck
+Print { (123)
+++++++++++++[>++++++++++<-]>+++.[-]<
+
+Print " (34)
+++++[>++++++++<-]>++.[-]<
+
+Print m (109)
++++++++++++[>++++++++++<-]>-.[-]<
+
+Print e (101)
+++++++++++[>++++++++++<-]>+.[-]<
+
+...and so on for each character
+\`\`\`
+
+Each character is computed using multiplication loops (e.g., 123 = 12 × 10 + 3 for \`{\`), then output with \`.\`, then the cell is cleared with \`[-]\`.
+
+## Running It
+
+\`\`\`bash
+enact run enact/hello-brainfuck
+\`\`\`
+
+Output:
+\`\`\`json
+{"message":"Hello from Brainfuck!"}
+\`\`\`
+
+For MCP agents, call \`enact__hello-brainfuck\` with no arguments.
+
+## Why?
+
+Three reasons:
+
+1. **Because we can.** Enact containerized execution means any language with an interpreter can become an MCP tool.
+
+2. **To test edge cases.** This tool found a real bug in our understanding of interpreter quirks.
+
+3. **To prove a point.** If Brainfuck can be an MCP tool, anything can. Your Rust, Python, Go, or even COBOL code can be packaged the same way.
+
+## Lessons Learned
+
+1. **Different interpreters have different quirks.** The same Brainfuck code behaved differently in \`beef\` vs other interpreters.
+
+2. **Comments are not always ignored.** In Brainfuck, everything except the 8 commands is a comment—but some interpreters assign meaning to certain characters anyway.
+
+3. **Container debugging is essential.** Running \`docker run -it image bash\` to poke around inside saved hours of guessing.
+
+## Try It Yourself
+
+The tool is published and ready:
+
+\`\`\`bash
+npm install -g enact-cli
+enact run enact/hello-brainfuck
+\`\`\`
+
+Or browse the source at the [Enact registry](https://enact.tools).
+
+---
+
+*Published on January 6, 2026*
+    `,
+  },
+  {
     id: "10",
     title: "Build an MCP Tool in Rust: A Dice Roller for AI Agents",
     excerpt:

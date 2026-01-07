@@ -27,6 +27,7 @@ import {
   verifyAllAttestations,
 } from "@enactprotocol/api";
 import { DaggerExecutionProvider } from "@enactprotocol/execution";
+import { resolveSecret } from "@enactprotocol/secrets";
 import {
   type ToolManifest,
   addMcpTool,
@@ -67,6 +68,33 @@ function toMcpName(enactName: string): string {
 /** Convert MCP tool name back to Enact format */
 function fromMcpName(mcpName: string): string {
   return mcpName.replace(/__/g, "/");
+}
+
+/**
+ * Resolve secrets from the keyring for a tool's environment variables
+ * Only resolves variables marked with secret: true in the manifest
+ */
+async function resolveManifestSecrets(
+  toolName: string,
+  manifest: ToolManifest
+): Promise<Record<string, string>> {
+  const envOverrides: Record<string, string> = {};
+
+  if (!manifest.env) {
+    return envOverrides;
+  }
+
+  for (const [envName, envDecl] of Object.entries(manifest.env)) {
+    // Only resolve secrets (not regular env vars)
+    if (envDecl && typeof envDecl === "object" && envDecl.secret) {
+      const result = await resolveSecret(toolName, envName);
+      if (result.found && result.value) {
+        envOverrides[envName] = result.value;
+      }
+    }
+  }
+
+  return envOverrides;
 }
 
 /**
@@ -485,13 +513,16 @@ async function handleMetaTool(
 
         const finalInputs = validation.coercedValues ?? inputsWithDefaults;
 
+        // Resolve secrets from keyring
+        const secretOverrides = await resolveManifestSecrets(toolNameArg, manifest);
+
         // Execute the tool
         const provider = new DaggerExecutionProvider({ verbose: false });
         await provider.initialize();
 
         const result = await provider.execute(
           manifest,
-          { params: finalInputs, envOverrides: {} },
+          { params: finalInputs, envOverrides: secretOverrides },
           { mountDirs: { [cachePath]: "/workspace" } }
         );
 
@@ -705,6 +736,9 @@ function createMcpServer(): Server {
 
     const finalInputs = validation.coercedValues ?? inputsWithDefaults;
 
+    // Resolve secrets from keyring
+    const secretOverrides = await resolveManifestSecrets(enactToolName, manifest);
+
     // Execute the tool using Dagger
     const provider = new DaggerExecutionProvider({
       verbose: false,
@@ -717,7 +751,7 @@ function createMcpServer(): Server {
         manifest,
         {
           params: finalInputs,
-          envOverrides: {},
+          envOverrides: secretOverrides,
         },
         {
           mountDirs: {
