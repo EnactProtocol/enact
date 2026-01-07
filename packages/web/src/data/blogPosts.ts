@@ -12,9 +12,9 @@ export interface BlogPost {
 export const blogPosts: BlogPost[] = [
   {
     id: "11",
-    title: "Building an MCP Tool in Brainfuck: Because We Can",
+    title: "Building an MCP Tool in Brainf**k: Because We Can",
     excerpt:
-      "We built a working MCP tool using only Brainfuck - the esoteric language with just 8 commands. Here is the journey, including a sneaky interpreter bug that took hours to find.",
+      "We built a working MCP tool using only Brainf**k - the esoteric language with just 8 commands. Here is the journey, including a sneaky interpreter bug that took hours to find.",
     date: "2026-01-06",
     author: "Enact Team",
     slug: "brainfuck-mcp-tool",
@@ -26,15 +26,23 @@ Every tool registry deserves at least one Brainfuck program. So we built one.
 
 Before diving into Brainfuck, a quick primer: [Enact](https://enact.tools) is a verified, portable protocol for defining, discovering, and safely executing AI-ready tools. Think of it as **npm for AI agents**.
 
-The key insight is that tools run in **containers**. You define a \`SKILL.md\` manifest that specifies:
-- A base Docker image (\`from:\`)
-- Build steps (\`build:\`)
-- The command to run (\`command:\`)
-- Input/output schemas for AI agents
+## The SKILL.md Manifest
 
-Enact handles the rest: building the container, injecting inputs, capturing outputs, and exposing the tool via [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) so AI agents like Claude can discover and use it.
+Enact uses the \`SKILL.md\` manifest format—a superset of the open [Agent Skills standard](https://agentskills.io/specification). The standard Skills format defines tool schemas (inputs, outputs, descriptions) that AI agents can understand. **Enact extends this with containerization fields** that make skills actually runnable in isolated, reproducible environments:
 
-This means **any language with an interpreter can become an MCP tool**. Even Brainfuck.
+**Standard Skills fields:**
+- \`name\`, \`description\`, \`version\`
+- \`inputSchema\`, \`outputSchema\` (JSON Schema for AI agents)
+
+**Enact's container extensions:**
+- \`from:\` — Base Docker image (e.g., \`node:18-alpine\`, \`python:3.11-slim\`)
+- \`build:\` — Build steps run once and cached (compile code, install deps)
+- \`command:\` — The actual execution command with parameter substitution
+- \`timeout:\`, \`env:\`, \`files:\` — Execution controls and environment
+
+This combination is powerful: **the same manifest defines both what the tool does (for AI) and how to run it (for containers)**. Enact handles building the container, injecting inputs as environment variables or files, capturing stdout as JSON, and exposing everything via [Model Context Protocol (MCP)](https://modelcontextprotocol.io/).
+
+The result? **Any language with an interpreter can become an MCP tool**. Even Brainfuck.
 
 ## About Brainfuck
 
@@ -73,9 +81,9 @@ Brainfuck starts with an array of zero-initialized cells. To print \`H\` (ASCII 
 
 This creates 8 in cell 0, then loops 8 times adding 9 to cell 1 each iteration (8 × 9 = 72). The \`>\` moves to cell 1, \`.\` prints it, and \`[-]<\` cleans up.
 
-## The SKILL.md Manifest
+## The Complete Manifest
 
-Here is the complete manifest that turns our Brainfuck code into an MCP tool:
+Here's how we turn Brainfuck code into an MCP tool using the Skills superset format:
 
 \`\`\`yaml
 ---
@@ -115,7 +123,7 @@ The magic here:
 
 When an agent calls \`enact_learn\` on this tool, it receives the schema and knows exactly how to use it.
 
-## The Bug That Took Hours
+## The (Surprising) Bug
 
 Local testing with the \`brainfuck\` npm package worked perfectly:
 
@@ -126,7 +134,7 @@ npx brainfuck hello.bf
 
 But in the container with \`beef\`? Nothing. Exit code 0, zero output. The program just... stopped.
 
-We tried everything:
+We tried a few things:
 - Piping to \`cat\`
 - Writing to a file first
 - Different output redirection
@@ -136,9 +144,9 @@ Nothing worked.
 
 ## The Culprit: An Exclamation Point
 
-After digging through the \`beef\` man page, we found this:
+After reading through the \`beef\` man page (we probably should have done this sooner), we found this:
 
-> "The symbol \`!\` has a special meaning to Beef: it marks the end of a programs code and the beginning of its input."
+> "The symbol \`!\` has a special meaning to Beef: it marks the end of a program's code and the beginning of its input."
 
 Our Brainfuck file had comments like this at the top:
 
@@ -195,7 +203,7 @@ Once published to the Enact registry, any AI agent with MCP access can discover 
 | Tool | Purpose |
 |------|---------|
 | \`enact_search\` | Find tools by keyword |
-| \`enact_learn\` | Get a tools input/output schema and docs |
+| \`enact_learn\` | Get a tool's input/output schema and docs |
 | \`enact_run\` | Execute any tool from the registry |
 | \`enact_install\` | Install for faster subsequent runs |
 

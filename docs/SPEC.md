@@ -14,7 +14,21 @@ All Enact tools are defined in a single **`SKILL.md`** file that combines:
 
 This unified format serves as the single source of truth for both AI models and human developers.
 
-> **Note:** The filename `SKILL.md` aligns with Anthropic's Agent Skills format. For backwards compatibility, Enact also recognizes `enact.md`, `enact.yaml`, and `enact.yml`.
+### Relationship to Agent Skills
+
+Enact's \`SKILL.md\` format is a **superset** of the open [Agent Skills standard](https://agentskills.io/specification). It includes all standard Skills fields (\`name\`, \`description\`, \`inputSchema\`, \`outputSchema\`) that define tool interfaces for AI agents.
+
+**Enact extends this with containerization fields** that enable portable, reproducible execution:
+- \`from:\` — Base Docker image
+- \`build:\` — Build/setup commands (cached by Dagger)
+- \`command:\` — Execution command with parameter substitution
+- \`timeout:\`, \`env:\`, \`files:\` — Runtime controls
+
+This means a single \`SKILL.md\` defines both:
+1. **What the tool does** (standard Skills interface for AI)
+2. **How to run it** (Enact's container extensions for execution)
+
+> **Note:** For backwards compatibility, Enact also recognizes \`enact.md\`, \`enact.yaml\`, and \`enact.yml\`.
 
 ## Package Definition (Optional)
 
