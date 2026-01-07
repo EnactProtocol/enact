@@ -137,15 +137,86 @@ Enact provides native [Model Context Protocol (MCP)](https://modelcontextprotoco
 claude mcp add enact --transport stdio -- npx -y @enactprotocol/mcp-server
 ```
 
-Once connected, Claude can use Enact tools directly. The MCP server provides:
-
-- `enact_search` — Search the registry for tools
-- `enact_learn` — Get tool documentation
-- `enact_run` — Execute any tool from the registry
-
 ### Setup for Other MCP Clients
 
 Run `enact mcp install` for configuration instructions for Claude Desktop, Cursor, VS Code, and other MCP clients.
+
+### MCP Tools
+
+Once connected, AI agents have access to these tools:
+
+| Tool | Description |
+|------|-------------|
+| `enact_search` | Search the registry for tools by keyword or capability |
+| `enact_learn` | Get detailed documentation, schemas, and usage examples |
+| `enact_run` | Execute any tool from the registry |
+| `enact_install` | Install a tool for faster subsequent executions |
+
+### Example: Web Scraping with Firecrawl
+
+```
+User: "Scrape the Anthropic homepage and summarize it"
+
+Claude uses enact_search to find: enact/firecrawl
+Claude uses enact_run with:
+  tool: "enact/firecrawl"
+  args: {"url": "https://anthropic.com", "action": "scrape"}
+
+→ Returns clean markdown content ready for summarization
+```
+
+### Example: Search the Web
+
+```
+User: "Find the latest news about AI agents"
+
+Claude uses enact_run with:
+  tool: "enact/firecrawl"
+  args: {"url": "AI agents news 2025", "action": "search", "limit": 5}
+
+→ Returns scraped content from top search results
+```
+
+### Example: Extract Structured Data
+
+```
+User: "Get the pricing tiers from stripe.com/pricing"
+
+Claude uses enact_run with:
+  tool: "enact/firecrawl"
+  args: {
+    "url": "https://stripe.com/pricing",
+    "action": "extract",
+    "prompt": "Extract all pricing tiers with their names, prices, and features"
+  }
+
+→ Returns structured JSON with pricing data
+```
+
+### Example: Discover and Use Any Tool
+
+```
+User: "I need to scan a website for security info"
+
+Claude uses enact_search: "web scanner security"
+→ Finds: enact/scanner/whatweb
+
+Claude uses enact_learn: "enact/scanner/whatweb"
+→ Gets input schema and documentation
+
+Claude uses enact_run with:
+  tool: "enact/scanner/whatweb"
+  args: {"url": "https://example.com"}
+
+→ Returns CMS, frameworks, servers detected
+```
+
+### Why MCP + Enact?
+
+- **Dynamic Discovery** — Agents find the right tool for any task at runtime
+- **No Pre-configuration** — Tools run on-demand without installation
+- **Sandboxed Execution** — Every tool runs in an isolated container
+- **Verified Tools** — Sigstore-based signing ensures tool authenticity
 
 ---
 
@@ -191,10 +262,9 @@ packages/
 
 * **Getting Started:** [GETTING-STARTED.md](./GETTING-STARTED.md)
 * **Development Setup:** [DEV-SETUP.md](./DEV-SETUP.md)
-* **Deployment Guide:** [DEPLOYMENT.md](./DEPLOYMENT.md)
 * **API Reference:** [docs/API.md](./docs/API.md)
 * **Trust System:** [docs/TRUST.md](./docs/TRUST.md)
-* **Roadmap:** [ROADMAP.md](./ROADMAP.md)
+* **Protocol Spec:** [docs/SPEC.md](./docs/SPEC.md)
 
 ---
 
