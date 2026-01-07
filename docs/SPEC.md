@@ -16,9 +16,11 @@ This unified format serves as the single source of truth for both AI models and 
 
 ### Relationship to Agent Skills
 
-Enact's \`SKILL.md\` format is a **superset** of the open [Agent Skills standard](https://agentskills.io/specification). It includes all standard Skills fields (\`name\`, \`description\`, \`inputSchema\`, \`outputSchema\`) that define tool interfaces for AI agents.
+Enact's \`SKILL.md\` format is a **superset** of the open [Agent Skills standard](https://agentskills.io/specification). The base standard defines a minimal format: a \`SKILL.md\` file with YAML frontmatter (\`name\`, \`description\`) plus Markdown instructions.
 
-**Enact extends this with containerization fields** that enable portable, reproducible execution:
+**Enact extends this with fields that make skills executable:**
+- \`version\` — Semantic versioning for the tool
+- \`inputSchema\`, \`outputSchema\` — JSON Schema definitions for AI agents
 - \`from:\` — Base Docker image
 - \`build:\` — Build/setup commands (cached by Dagger)
 - \`command:\` — Execution command with parameter substitution

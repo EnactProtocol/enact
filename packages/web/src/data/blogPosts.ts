@@ -28,13 +28,15 @@ Before diving into Brainfuck, a quick primer: [Enact](https://enact.tools) is a 
 
 ## The SKILL.md Manifest
 
-Enact uses the \`SKILL.md\` manifest format—a superset of the open [Agent Skills standard](https://agentskills.io/specification). The standard Skills format defines tool schemas (inputs, outputs, descriptions) that AI agents can understand. **Enact extends this with containerization fields** that make skills actually runnable in isolated, reproducible environments:
+Enact uses the \`SKILL.md\` manifest format—a superset of the open [Agent Skills standard](https://agentskills.io/specification). The standard defines a minimal format: a \`SKILL.md\` file with YAML frontmatter (\`name\`, \`description\`) plus Markdown instructions. **Enact extends this with fields that make skills actually executable:**
 
-**Standard Skills fields:**
-- \`name\`, \`description\`, \`version\`
-- \`inputSchema\`, \`outputSchema\` (JSON Schema for AI agents)
+**Standard Agent Skills fields:**
+- \`name\`, \`description\` (required)
+- \`license\`, \`compatibility\`, \`metadata\` (optional)
 
-**Enact's container extensions:**
+**Enact extensions:**
+- \`version\` — Semantic versioning for the tool
+- \`inputSchema\`, \`outputSchema\` — JSON Schema definitions for AI agents
 - \`from:\` — Base Docker image (e.g., \`node:18-alpine\`, \`python:3.11-slim\`)
 - \`build:\` — Build steps run once and cached (compile code, install deps)
 - \`command:\` — The actual execution command with parameter substitution
