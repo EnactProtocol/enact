@@ -22,6 +22,22 @@ export const blogPosts: BlogPost[] = [
     content: `
 Every tool registry deserves at least one Brainfuck program. So we built one.
 
+## What is Enact?
+
+Before diving into Brainfuck, a quick primer: [Enact](https://enact.tools) is a verified, portable protocol for defining, discovering, and safely executing AI-ready tools. Think of it as **npm for AI agents**.
+
+The key insight is that tools run in **containers**. You define a \`SKILL.md\` manifest that specifies:
+- A base Docker image (\`from:\`)
+- Build steps (\`build:\`)
+- The command to run (\`command:\`)
+- Input/output schemas for AI agents
+
+Enact handles the rest: building the container, injecting inputs, capturing outputs, and exposing the tool via [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) so AI agents like Claude can discover and use it.
+
+This means **any language with an interpreter can become an MCP tool**. Even Brainfuck.
+
+## About Brainfuck
+
 Brainfuck is the famously minimalist esoteric programming language created by Urban Müller in 1993. It has only 8 commands:
 
 | Command | Description |
@@ -59,6 +75,8 @@ This creates 8 in cell 0, then loops 8 times adding 9 to cell 1 each iteration (
 
 ## The SKILL.md Manifest
 
+Here is the complete manifest that turns our Brainfuck code into an MCP tool:
+
 \`\`\`yaml
 ---
 name: enact/hello-brainfuck
@@ -89,7 +107,13 @@ outputSchema:
 ---
 \`\`\`
 
-Simple enough. Use Debian \`beef\` Brainfuck interpreter, run the \`.bf\` file, get JSON output.
+The magic here:
+- \`from: debian:bookworm-slim\` — Use Debian as our base image
+- \`build:\` — Install the \`beef\` Brainfuck interpreter
+- \`command:\` — Run our \`.bf\` file
+- \`inputSchema\` / \`outputSchema\` — Tell AI agents what to expect
+
+When an agent calls \`enact_learn\` on this tool, it receives the schema and knows exactly how to use it.
 
 ## The Bug That Took Hours
 
@@ -164,7 +188,29 @@ Print e (101)
 
 Each character is computed using multiplication loops (e.g., 123 = 12 × 10 + 3 for \`{\`), then output with \`.\`, then the cell is cleared with \`[-]\`.
 
+## How AI Agents Use It
+
+Once published to the Enact registry, any AI agent with MCP access can discover and use this tool. The Enact MCP server exposes four meta-tools:
+
+| Tool | Purpose |
+|------|---------|
+| \`enact_search\` | Find tools by keyword |
+| \`enact_learn\` | Get a tools input/output schema and docs |
+| \`enact_run\` | Execute any tool from the registry |
+| \`enact_install\` | Install for faster subsequent runs |
+
+When you ask Claude "give me a greeting from Brainfuck," it:
+1. Searches for relevant tools
+2. Finds \`enact/hello-brainfuck\`
+3. Learns its schema (no inputs required)
+4. Runs it in a sandboxed container
+5. Returns the JSON output
+
+No hardcoded integrations. No API keys. The tool is discovered and executed on-demand.
+
 ## Running It
+
+### CLI
 
 \`\`\`bash
 enact run enact/hello-brainfuck
@@ -175,15 +221,22 @@ Output:
 {"message":"Hello from Brainfuck!"}
 \`\`\`
 
-For MCP agents, call \`enact__hello-brainfuck\` with no arguments.
+### MCP (for AI Agents)
+
+Call \`enact_run\` with:
+\`\`\`json
+{"tool": "enact/hello-brainfuck", "args": {}}
+\`\`\`
+
+Or just ask Claude: "Run the hello-brainfuck tool."
 
 ## Why?
 
 Three reasons:
 
-1. **Because we can.** Enact containerized execution means any language with an interpreter can become an MCP tool.
+1. **Because we can.** Enact containerized execution means any language with an interpreter can become an MCP tool. The \`from:\` field in SKILL.md is your escape hatch to any runtime.
 
-2. **To test edge cases.** This tool found a real bug in our understanding of interpreter quirks.
+2. **To test edge cases.** This tool found a real bug in our understanding of interpreter quirks. Different Brainfuck interpreters have different behaviors.
 
 3. **To prove a point.** If Brainfuck can be an MCP tool, anything can. Your Rust, Python, Go, or even COBOL code can be packaged the same way.
 
@@ -195,6 +248,8 @@ Three reasons:
 
 3. **Container debugging is essential.** Running \`docker run -it image bash\` to poke around inside saved hours of guessing.
 
+4. **Enact makes exotic tools accessible.** Without containerization, sharing a Brainfuck tool would require users to install an interpreter. With Enact, they just run it.
+
 ## Try It Yourself
 
 The tool is published and ready:
@@ -205,6 +260,8 @@ enact run enact/hello-brainfuck
 \`\`\`
 
 Or browse the source at the [Enact registry](https://enact.tools).
+
+Want to build your own tool? Check out our [Rust dice roller tutorial](/blog/rust-dice-roller-mcp-tutorial) for a more practical example.
 
 ---
 
