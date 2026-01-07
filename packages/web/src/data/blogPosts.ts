@@ -14,7 +14,7 @@ export const blogPosts: BlogPost[] = [
     id: "11",
     title: "Building an MCP Tool in Brainf**k: Because We Can",
     excerpt:
-      "We built a working MCP tool using only Brainf**k - the esoteric language with just 8 commands. Here is the journey, including a sneaky interpreter bug that took hours to find.",
+      "We built a working MCP tool using only Brainf**k - the esoteric language with just 8 commands. Here is the journey, including a sneaky interpreter bug.",
     date: "2026-01-06",
     author: "Enact Team",
     slug: "brainfuck-mcp-tool",
