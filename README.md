@@ -408,6 +408,6 @@ Apache-2.0 — see [LICENSE](./LICENSE).
 
 * **Website:** [https://enact.tools](https://enact.tools)
 * **Registry API:** [https://siikwkfgsmouioodghho.supabase.co/functions/v1](https://siikwkfgsmouioodghho.supabase.co/functions/v1)
-* **Issues:** [https://github.com/EnactProtocol/enact-cli-2.0/issues](https://github.com/EnactProtocol/enact-cli-2.0/issues)
-* **Discussions:** [https://github.com/EnactProtocol/enact-cli-2.0/discussions](https://github.com/EnactProtocol/enact-cli-2.0/discussions)
+* **Issues:** [https://github.com/EnactProtocol/enact/issues](https://github.com/EnactProtocol/enact-cli-2.0/issues)
+* **Discussions:** [https://github.com/EnactProtocol/enact-cli/discussions](https://github.com/EnactProtocol/enact-cli-2.0/discussions)
 
