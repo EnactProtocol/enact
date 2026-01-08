@@ -408,5 +408,5 @@ Apache-2.0 — see [LICENSE](./LICENSE).
 
 * **Website:** [https://enact.tools](https://enact.tools)
 * **Discord:** [https://discord.gg/mMfxvMtHyS](https://discord.gg/mMfxvMtHyS)
-* **Issues:** [https://github.com/EnactProtocol/enact/issues](https://github.com/EnactProtocol/enact-cli-2.0/issues)
+* **Issues:** [https://github.com/EnactProtocol/enact/issues](https://github.com/EnactProtocol/enact/issues)
 

@@ -25,8 +25,8 @@ npm install -g supabase
 ### 1. Clone and Install Dependencies
 
 ```bash
-git clone https://github.com/EnactProtocol/enact-cli-2.0.git
-cd enact-cli-2.0
+git clone https://github.com/EnactProtocol/enact.git
+cd enact
 bun install
 ```
 
@@ -205,7 +205,7 @@ bun run clean
 ## Project Structure
 
 ```
-enact-cli-2.0/
+enact/
 ├── packages/
 │   ├── cli/           # Command-line interface
 │   ├── api/           # Registry API client

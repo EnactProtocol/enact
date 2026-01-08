@@ -19,7 +19,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/EnactProtocol/enact-cli-2.0.git",
+    "url": "https://github.com/EnactProtocol/enact.git",
     "directory": "packages/cli"
   },
   "scripts": {

@@ -341,9 +341,9 @@ enact install --help
 
 ### Resources
 
-- **Documentation**: [github.com/EnactProtocol/enact-cli-2.0](https://github.com/EnactProtocol/enact-cli-2.0)
+- **Documentation**: [github.com/EnactProtocol/enact](https://github.com/EnactProtocol/enact)
 - **Registry**: [enact.tools](https://enact.tools)
-- **Issues**: [github.com/EnactProtocol/enact-cli-2.0/issues](https://github.com/EnactProtocol/enact-cli-2.0/issues)
+- **Issues**: [github.com/EnactProtocol/enact/issues](https://github.com/EnactProtocol/enact/issues)
 
 ## Next Steps
 

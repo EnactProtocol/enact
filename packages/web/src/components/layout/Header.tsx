@@ -7,7 +7,7 @@ import UserMenu from "./UserMenu";
 const navLinks = [
   { to: "/browse", label: "Browse Tools", external: false },
   { to: "/docs", label: "Docs", external: false },
-  { to: "https://github.com/EnactProtocol", label: "GitHub", external: true },
+  { to: "https://github.com/EnactProtocol/enact", label: "GitHub", external: true },
   { to: "/blog", label: "Blog", external: false },
   { to: "https://discord.gg/mMfxvMtHyS", label: "Discord", external: true },
 ];
