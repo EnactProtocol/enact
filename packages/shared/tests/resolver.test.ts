@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { addAlias, addToolToRegistry, removeAlias } from "../src/registry";
 import {
   ToolResolveError,
   getToolPath,
@@ -267,6 +268,85 @@ Documentation here.
       expect(error.message).toBe("Test error");
       expect(error.toolPath).toBe("test/tool");
       expect(error.searchedLocations).toEqual(["/path/1", "/path/2"]);
+    });
+  });
+
+  describe("alias resolution", () => {
+    test("resolves tool via alias", () => {
+      // Set up an alias for the project tool
+      addToolToRegistry("test/project-tool", "1.0.0", "project", PROJECT_DIR);
+      addAlias("pt", "test/project-tool", "project", PROJECT_DIR);
+
+      try {
+        // Resolve using the alias (no slashes = potential alias)
+        const result = resolveTool("pt", { startDir: PROJECT_DIR });
+        expect(result.manifest.name).toBe("test/project-tool");
+        expect(result.location).toBe("project");
+      } finally {
+        // Clean up
+        removeAlias("pt", "project", PROJECT_DIR);
+        rmSync(join(PROJECT_ENACT_DIR, "tools.json"), { force: true });
+      }
+    });
+
+    test("alias resolution is case-insensitive (normalized to lowercase)", () => {
+      addToolToRegistry("test/project-tool", "1.0.0", "project", PROJECT_DIR);
+      addAlias("mytool", "test/project-tool", "project", PROJECT_DIR);
+
+      try {
+        // Lowercase alias should work
+        const result = resolveTool("mytool", { startDir: PROJECT_DIR });
+        expect(result.manifest.name).toBe("test/project-tool");
+
+        // Uppercase alias should also work (normalized to lowercase)
+        const upperResult = resolveTool("MYTOOL", { startDir: PROJECT_DIR });
+        expect(upperResult.manifest.name).toBe("test/project-tool");
+
+        // Mixed case should also work
+        const mixedResult = resolveTool("MyTool", { startDir: PROJECT_DIR });
+        expect(mixedResult.manifest.name).toBe("test/project-tool");
+      } finally {
+        removeAlias("mytool", "project", PROJECT_DIR);
+        rmSync(join(PROJECT_ENACT_DIR, "tools.json"), { force: true });
+      }
+    });
+
+    test("full tool names bypass alias resolution", () => {
+      addToolToRegistry("test/project-tool", "1.0.0", "project", PROJECT_DIR);
+      // Create an alias that would conflict if checked
+      addAlias("test/project-tool", "some/other/tool", "project", PROJECT_DIR);
+
+      try {
+        // Full name with slashes should resolve directly, not via alias
+        const result = resolveTool("test/project-tool", { startDir: PROJECT_DIR });
+        expect(result.manifest.name).toBe("test/project-tool");
+      } finally {
+        removeAlias("test/project-tool", "project", PROJECT_DIR);
+        rmSync(join(PROJECT_ENACT_DIR, "tools.json"), { force: true });
+      }
+    });
+
+    test("tryResolveTool works with aliases", () => {
+      addToolToRegistry("test/project-tool", "1.0.0", "project", PROJECT_DIR);
+      addAlias("try-alias", "test/project-tool", "project", PROJECT_DIR);
+
+      try {
+        const result = tryResolveTool("try-alias", { startDir: PROJECT_DIR });
+        expect(result).not.toBeNull();
+        expect(result?.manifest.name).toBe("test/project-tool");
+      } finally {
+        removeAlias("try-alias", "project", PROJECT_DIR);
+        rmSync(join(PROJECT_ENACT_DIR, "tools.json"), { force: true });
+      }
+    });
+
+    test("non-existent alias returns null from tryResolveTool", () => {
+      const result = tryResolveTool("nonexistent-alias", {
+        startDir: PROJECT_DIR,
+        skipUser: true,
+        skipCache: true,
+      });
+      expect(result).toBeNull();
     });
   });
 });

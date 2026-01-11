@@ -11,6 +11,163 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    id: "12",
+    title: "The Evolution of Skills",
+    excerpt:
+      "Skills started as static instructions. They're becoming dynamic agent components with their own lifecycle, execution context, and middleware.",
+    date: "2026-01-07",
+    author: "Enact Team",
+    slug: "evolution-of-skills",
+    tags: ["skills", "agents", "claude-code", "architecture"],
+    content: `
+When we first wrote about skills, we described them as "onboarding guides for new team members"—bundles of context, instructions, and tools packaged together. That metaphor still holds. But Claude Code's recent releases reveal where skills are headed: **first-class, composable agent components with their own lifecycle, execution context, and middleware.**
+
+The skill spec started simple. A \`SKILL.md\` file with some YAML frontmatter. Name, description, maybe an \`allowed-tools\` list. Enough to tell an agent what the skill does and when to use it.
+
+That simplicity was intentional. Skills needed to be easy to write, easy to share, easy to understand. But as agents become more sophisticated, skills need to keep up.
+
+## What Changed
+
+Claude Code's [Agent Skills documentation](https://docs.anthropic.com/en/docs/claude-code/skills) now shows the full scope of what's possible. Here's what skills can do now.
+
+### Execution Context: \`context: fork\`
+
+Skills can run in an **isolated sub-agent context** with their own conversation history:
+
+\`\`\`yaml
+---
+name: code-analysis
+description: Analyze code quality and generate detailed reports
+context: fork
+---
+\`\`\`
+
+Why this matters: the skill runs in isolation. It can perform complex multi-step operations without cluttering the main conversation. If it goes off the rails, the context is separate. This makes skills safer to experiment with and easier to compose.
+
+### Agent Selection: \`agent\`
+
+When using \`context: fork\`, skills can specify which agent type executes them:
+
+\`\`\`yaml
+---
+name: security-audit
+description: Deep security analysis
+context: fork
+agent: Explore
+---
+\`\`\`
+
+The \`agent\` field accepts built-in agents like \`Explore\`, \`Plan\`, or \`general-purpose\`, or custom agents you define in \`.claude/agents/\`. Different agents have different tool access and reasoning styles. A security audit skill might use \`Explore\` for thorough codebase analysis; a refactoring skill might use \`Plan\` for step-by-step implementation.
+
+### Lifecycle Hooks
+
+Skills can define hooks that run at specific points in their lifecycle:
+
+\`\`\`yaml
+---
+name: secure-operations
+description: Perform operations with additional security checks
+hooks:
+  PreToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: "./scripts/security-check.sh $TOOL_INPUT"
+          once: true
+---
+\`\`\`
+
+This turns skills into middleware. Before a Bash command runs, execute a security check. The \`once: true\` option ensures the hook runs only once per session, not on every tool call. Skills can define \`PreToolUse\`, \`PostToolUse\`, and \`Stop\` hooks—all scoped to the skill's execution and automatically cleaned up when the skill finishes.
+
+### Better Tool Permissions
+
+The \`allowed-tools\` field now supports YAML-style lists (cleaner than space-delimited strings):
+
+\`\`\`yaml
+allowed-tools:
+  - Read
+  - Grep
+  - Glob
+  - Bash(python:*)
+\`\`\`
+
+When a skill is active, Claude can only use the specified tools without asking permission. This is powerful for read-only skills that shouldn't modify files, or security-sensitive workflows where you want to restrict capabilities.
+
+### Visibility Control: \`user-invocable\`
+
+Skills can opt out of the slash command menu while still being available to Claude:
+
+\`\`\`yaml
+---
+name: internal-review-standards
+description: Apply internal code review standards when reviewing pull requests
+user-invocable: false
+---
+\`\`\`
+
+With this setting, users won't see the skill in the \`/\` menu, but Claude can still invoke it via the Skill tool or discover it automatically based on context. This is perfect for building-block skills that other skills depend on but that users wouldn't invoke directly.
+
+There's also \`disable-model-invocation: true\` for the opposite case: skills you want users to invoke explicitly but not have Claude invoke programmatically.
+
+## The Pattern
+
+Look at these changes together and a clear pattern emerges: **skills are becoming agents themselves**.
+
+A skill can now:
+- Run in its own isolated context (\`context: fork\`)
+- Choose its own agent type (\`agent: Explore\`)
+- Define its own lifecycle hooks (\`hooks\`)
+- Declare its own permissions (\`allowed-tools\`)
+- Control its own visibility (\`user-invocable\`, \`disable-model-invocation\`)
+
+This isn't just "more YAML fields." It's a shift in what a skill *is*. Skills started as static instruction bundles. They're becoming dynamic, self-describing agent components.
+
+## Why This Matters for Enact
+
+Enact already treats skills as first-class executables. A skill isn't just instructions—it's a containerized runtime with inputs, outputs, and a trust chain. The Enact registry is npm for agent tools.
+
+But Enact skills and Claude Code skills have been cousins, not siblings. Enact focuses on **execution**: containers, sandboxing, signing. Claude Code focuses on **orchestration**: when to invoke, how to chain, what context to provide.
+
+These changes bring them closer together.
+
+Consider a skill that:
+1. Runs in a forked context (\`context: fork\`)
+2. Uses a specialized agent (\`agent: Explore\`)
+3. Runs security checks before operations (\`hooks.PreToolUse\`)
+4. Executes in an Enact container (sandboxed, signed)
+5. Is restricted to read-only tools (\`allowed-tools: Read, Grep, Glob\`)
+
+That's not a "prompt template." That's a **secure, auditable, self-contained unit of agent capability**.
+
+## The Convergence
+
+The skill ecosystem is converging on a model where:
+
+- **Discovery** happens through registries (find the right skill for the task)
+- **Trust** happens through signatures (verify who wrote it)
+- **Isolation** happens through containers (sandbox the execution)
+- **Orchestration** happens through frontmatter (context, agent, hooks)
+
+Enact provides the first three. Claude Code provides the fourth. Together, they point toward a future where agents don't just *use* tools—they *compose* them, *verify* them, and *orchestrate* them.
+
+## What's Next
+
+Hot-reload is here (skills update without restarting the session). Lifecycle hooks are here. Subagent integration is here (custom agents in \`.claude/agents/\` can declare which skills they have access to via the \`skills\` field).
+
+The next frontier is **skill composition**: skills that invoke other skills, with proper context isolation and trust propagation. A "full security audit" skill that chains a secret scanner, a dependency checker, and a static analyzer—each running in its own forked context, each signed by different trusted publishers.
+
+The primitives are landing.
+
+---
+
+Skills started as instructions. They're becoming components. The line between "prompt" and "program" continues to blur—and that's exactly where the interesting work happens.
+
+---
+
+*Published on January 7, 2026*
+    `,
+  },
+  {
     id: "11",
     title: "Building an MCP Tool in Brainf**k: Because We Can",
     excerpt:

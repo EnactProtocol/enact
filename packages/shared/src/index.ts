@@ -140,6 +140,12 @@ export {
   listInstalledTools,
   getInstalledToolInfo,
   getToolsJsonPath,
+  // Alias management
+  addAlias,
+  removeAlias,
+  resolveAlias,
+  getAliasesForTool,
+  removeAliasesForTool,
   type ToolsRegistry,
   type RegistryScope,
   type InstalledToolInfo,

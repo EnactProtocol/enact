@@ -8,7 +8,11 @@
  * All tools are stored in ~/.enact/cache/{tool}/{version}/
  */
 
-import { listInstalledTools, tryLoadManifestFromDir } from "@enactprotocol/shared";
+import {
+  getAliasesForTool,
+  listInstalledTools,
+  tryLoadManifestFromDir,
+} from "@enactprotocol/shared";
 import type { Command } from "commander";
 import type { CommandContext, GlobalOptions } from "../../types";
 import {
@@ -33,6 +37,7 @@ interface ToolInfo {
   version: string;
   location: string;
   scope: string;
+  alias: string;
   [key: string]: string; // Index signature for table compatibility
 }
 
@@ -46,12 +51,15 @@ function listToolsFromRegistry(scope: "global" | "project", cwd?: string): ToolI
   for (const tool of installedTools) {
     // Load manifest from cache to get description
     const loaded = tryLoadManifestFromDir(tool.cachePath);
+    // Get aliases for this tool
+    const aliases = getAliasesForTool(tool.name, scope, cwd);
     tools.push({
       name: tool.name,
       description: loaded?.manifest.description ?? "-",
       version: tool.version,
       location: tool.cachePath,
       scope,
+      alias: aliases.length > 0 ? aliases.join(", ") : "-",
     });
   }
 
@@ -96,7 +104,8 @@ async function listHandler(options: ListOptions, ctx: CommandContext): Promise<v
 
   const columns: TableColumn[] = [
     { key: "name", header: "Name", width: 28 },
-    { key: "description", header: "Description", width: 50 },
+    { key: "alias", header: "Alias", width: 12 },
+    { key: "description", header: "Description", width: 40 },
   ];
 
   if (options.verbose) {

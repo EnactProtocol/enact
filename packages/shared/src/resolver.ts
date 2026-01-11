@@ -17,7 +17,7 @@ import {
   loadManifest,
 } from "./manifest/loader";
 import { getCacheDir, getProjectEnactDir } from "./paths";
-import { getInstalledVersion, getToolCachePath } from "./registry";
+import { getInstalledVersion, getToolCachePath, resolveAlias } from "./registry";
 import type { ToolLocation, ToolResolution } from "./types/manifest";
 
 /**
@@ -174,14 +174,25 @@ export function resolveToolFromPath(filePath: string): ToolResolution {
 /**
  * Resolve a tool by name, searching through standard locations
  *
- * @param toolName - Tool name (e.g., "acme/utils/greeter")
+ * @param toolName - Tool name (e.g., "acme/utils/greeter") or alias (e.g., "firebase")
  * @param options - Resolution options
  * @returns ToolResolution
  * @throws ToolResolveError if not found
  */
 export function resolveTool(toolName: string, options: ResolveOptions = {}): ToolResolution {
-  const normalizedName = normalizeToolName(toolName);
+  let normalizedName = normalizeToolName(toolName);
   const searchedLocations: string[] = [];
+
+  // Check if this might be an alias (no slashes = not a full tool name)
+  if (!normalizedName.includes("/")) {
+    // Try project-level alias first, then global
+    const aliasedName =
+      resolveAlias(normalizedName, "project", options.startDir) ??
+      resolveAlias(normalizedName, "global");
+    if (aliasedName) {
+      normalizedName = normalizeToolName(aliasedName);
+    }
+  }
 
   // 1. Try project tools (.enact/tools/{name}/)
   if (!options.skipProject) {

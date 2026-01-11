@@ -22,6 +22,7 @@ import {
   verifyAllAttestations,
 } from "@enactprotocol/api";
 import {
+  addAlias,
   addMcpTool,
   addToolToRegistry,
   getCacheDir,
@@ -64,6 +65,7 @@ interface InstallOptions extends GlobalOptions {
   global?: boolean;
   force?: boolean;
   allowYanked?: boolean;
+  alias?: string;
 }
 
 /**
@@ -444,6 +446,11 @@ async function installFromRegistry(
     addMcpTool(toolName, targetVersion!);
   }
 
+  // Add alias if specified
+  if (options.alias) {
+    addAlias(options.alias, toolName, scope, isGlobal ? undefined : ctx.cwd);
+  }
+
   // Output result
   if (options.json) {
     json({
@@ -455,6 +462,7 @@ async function installFromRegistry(
       hash: bundleResult.hash,
       size: bundleResult.size,
       verified: true,
+      alias: options.alias,
     });
     return;
   }
@@ -466,6 +474,9 @@ async function installFromRegistry(
   keyValue("Scope", isGlobal ? "global (~/.enact/tools.json)" : "project (.enact/tools.json)");
   keyValue("Size", formatBytes(bundleResult.size));
   keyValue("Hash", `${bundleResult.hash.substring(0, 20)}...`);
+  if (options.alias) {
+    keyValue("Alias", options.alias);
+  }
   newline();
   success(`Installed ${colors.bold(toolName)}@${targetVersion}`);
 }
@@ -544,6 +555,11 @@ async function installFromPath(
     addMcpTool(manifest.name, version);
   }
 
+  // Add alias if specified
+  if (options.alias) {
+    addAlias(options.alias, manifest.name, scope, isGlobal ? undefined : ctx.cwd);
+  }
+
   if (options.json) {
     json({
       installed: true,
@@ -551,6 +567,7 @@ async function installFromPath(
       version: manifest.version,
       location: cachePath,
       scope,
+      alias: options.alias,
     });
     return;
   }
@@ -560,6 +577,9 @@ async function installFromPath(
   keyValue("Version", manifest.version ?? "unversioned");
   keyValue("Location", cachePath);
   keyValue("Scope", isGlobal ? "global (~/.enact/tools.json)" : "project (.enact/tools.json)");
+  if (options.alias) {
+    keyValue("Alias", options.alias);
+  }
   newline();
   success(`Installed ${colors.bold(manifest.name)}`);
 }
@@ -685,6 +705,7 @@ export function configureInstallCommand(program: Command): void {
     .argument("[tool]", "Tool to install (name[@version], path, or '.' for current directory)")
     .option("-g, --global", "Install globally (adds to ~/.enact/tools.json)")
     .option("-f, --force", "Overwrite existing installation")
+    .option("-a, --alias <name>", "Create a short alias for this tool")
     .option("--allow-yanked", "Allow installing yanked versions")
     .option("-v, --verbose", "Show detailed output")
     .option("--json", "Output result as JSON")

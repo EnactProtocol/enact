@@ -19,6 +19,8 @@ import { getCacheDir, getEnactHome, getProjectEnactDir } from "./paths";
 export interface ToolsRegistry {
   /** Map of tool name to installed version */
   tools: Record<string, string>;
+  /** Map of alias to full tool name */
+  aliases?: Record<string, string>;
 }
 
 /**
@@ -56,7 +58,7 @@ export function loadToolsRegistry(scope: RegistryScope, startDir?: string): Tool
   const registryPath = getToolsJsonPath(scope, startDir);
 
   if (!registryPath || !existsSync(registryPath)) {
-    return { tools: {} };
+    return { tools: {}, aliases: {} };
   }
 
   try {
@@ -64,10 +66,11 @@ export function loadToolsRegistry(scope: RegistryScope, startDir?: string): Tool
     const parsed = JSON.parse(content);
     return {
       tools: parsed.tools ?? {},
+      aliases: parsed.aliases ?? {},
     };
   } catch {
     // Return empty registry on parse error
-    return { tools: {} };
+    return { tools: {}, aliases: {} };
   }
 }
 
@@ -216,4 +219,130 @@ export function getInstalledToolInfo(
     scope,
     cachePath,
   };
+}
+
+/**
+ * Add an alias for a tool
+ * @param alias - Short name for the tool (e.g., "firebase")
+ * @param toolName - Full tool name (e.g., "user/api/firebase")
+ * @param scope - Registry scope (global or project)
+ * @param startDir - Starting directory for project scope
+ * @throws Error if alias already exists for a different tool
+ */
+export function addAlias(
+  alias: string,
+  toolName: string,
+  scope: RegistryScope,
+  startDir?: string
+): void {
+  const registry = loadToolsRegistry(scope, startDir);
+
+  // Initialize aliases if not present
+  if (!registry.aliases) {
+    registry.aliases = {};
+  }
+
+  // Check if alias already exists for a different tool
+  const existingTarget = registry.aliases[alias];
+  if (existingTarget && existingTarget !== toolName) {
+    throw new Error(
+      `Alias "${alias}" already exists for tool "${existingTarget}". Remove it first with 'enact alias --remove ${alias}'.`
+    );
+  }
+
+  registry.aliases[alias] = toolName;
+  saveToolsRegistry(registry, scope, startDir);
+}
+
+/**
+ * Remove an alias
+ * @param alias - Alias to remove
+ * @param scope - Registry scope
+ * @param startDir - Starting directory for project scope
+ * @returns true if alias was removed, false if it didn't exist
+ */
+export function removeAlias(alias: string, scope: RegistryScope, startDir?: string): boolean {
+  const registry = loadToolsRegistry(scope, startDir);
+
+  if (!registry.aliases || !(alias in registry.aliases)) {
+    return false;
+  }
+
+  delete registry.aliases[alias];
+  saveToolsRegistry(registry, scope, startDir);
+  return true;
+}
+
+/**
+ * Resolve an alias to its full tool name
+ * @param alias - Alias to resolve
+ * @param scope - Registry scope
+ * @param startDir - Starting directory for project scope
+ * @returns Full tool name or null if alias doesn't exist
+ */
+export function resolveAlias(
+  alias: string,
+  scope: RegistryScope,
+  startDir?: string
+): string | null {
+  const registry = loadToolsRegistry(scope, startDir);
+  return registry.aliases?.[alias] ?? null;
+}
+
+/**
+ * Get all aliases for a specific tool
+ * @param toolName - Full tool name
+ * @param scope - Registry scope
+ * @param startDir - Starting directory for project scope
+ * @returns Array of aliases for the tool
+ */
+export function getAliasesForTool(
+  toolName: string,
+  scope: RegistryScope,
+  startDir?: string
+): string[] {
+  const registry = loadToolsRegistry(scope, startDir);
+  const aliases: string[] = [];
+
+  if (registry.aliases) {
+    for (const [alias, target] of Object.entries(registry.aliases)) {
+      if (target === toolName) {
+        aliases.push(alias);
+      }
+    }
+  }
+
+  return aliases;
+}
+
+/**
+ * Remove all aliases for a specific tool
+ * Useful when uninstalling a tool
+ * @param toolName - Full tool name
+ * @param scope - Registry scope
+ * @param startDir - Starting directory for project scope
+ * @returns Number of aliases removed
+ */
+export function removeAliasesForTool(
+  toolName: string,
+  scope: RegistryScope,
+  startDir?: string
+): number {
+  const registry = loadToolsRegistry(scope, startDir);
+  let removed = 0;
+
+  if (registry.aliases) {
+    for (const [alias, target] of Object.entries(registry.aliases)) {
+      if (target === toolName) {
+        delete registry.aliases[alias];
+        removed++;
+      }
+    }
+
+    if (removed > 0) {
+      saveToolsRegistry(registry, scope, startDir);
+    }
+  }
+
+  return removed;
 }

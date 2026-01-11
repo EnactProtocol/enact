@@ -6,14 +6,19 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  addAlias,
   addToolToRegistry,
+  getAliasesForTool,
   getInstalledVersion,
   getToolCachePath,
   getToolsJsonPath,
   isToolInstalled,
   listInstalledTools,
   loadToolsRegistry,
+  removeAlias,
+  removeAliasesForTool,
   removeToolFromRegistry,
+  resolveAlias,
   saveToolsRegistry,
 } from "../src/registry";
 
@@ -226,6 +231,196 @@ describe("registry", () => {
     test("returns empty list when no tools installed", () => {
       const tools = listInstalledTools("project", PROJECT_DIR);
       expect(tools.length).toBe(0);
+    });
+  });
+
+  describe("addAlias", () => {
+    test("adds alias to registry", () => {
+      addToolToRegistry("test/aliased-tool", "1.0.0", "project", PROJECT_DIR);
+      addAlias("mytool", "test/aliased-tool", "project", PROJECT_DIR);
+
+      const registry = loadToolsRegistry("project", PROJECT_DIR);
+      expect(registry.aliases?.mytool).toBe("test/aliased-tool");
+
+      // Clean up
+      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+    });
+
+    test("throws error when alias already exists for different tool", () => {
+      addToolToRegistry("test/tool1", "1.0.0", "project", PROJECT_DIR);
+      addToolToRegistry("test/tool2", "1.0.0", "project", PROJECT_DIR);
+      addAlias("shared", "test/tool1", "project", PROJECT_DIR);
+
+      expect(() => {
+        addAlias("shared", "test/tool2", "project", PROJECT_DIR);
+      }).toThrow('Alias "shared" already exists for tool "test/tool1"');
+
+      // Clean up
+      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+    });
+
+    test("allows adding same alias for same tool (idempotent)", () => {
+      addToolToRegistry("test/same-tool", "1.0.0", "project", PROJECT_DIR);
+      addAlias("same", "test/same-tool", "project", PROJECT_DIR);
+
+      // Should not throw
+      expect(() => {
+        addAlias("same", "test/same-tool", "project", PROJECT_DIR);
+      }).not.toThrow();
+
+      // Clean up
+      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+    });
+  });
+
+  describe("removeAlias", () => {
+    test("removes existing alias", () => {
+      addToolToRegistry("test/removable", "1.0.0", "project", PROJECT_DIR);
+      addAlias("removeme", "test/removable", "project", PROJECT_DIR);
+
+      const removed = removeAlias("removeme", "project", PROJECT_DIR);
+      expect(removed).toBe(true);
+
+      const registry = loadToolsRegistry("project", PROJECT_DIR);
+      expect(registry.aliases?.removeme).toBeUndefined();
+
+      // Clean up
+      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+    });
+
+    test("returns false for non-existent alias", () => {
+      const removed = removeAlias("nonexistent", "project", PROJECT_DIR);
+      expect(removed).toBe(false);
+    });
+  });
+
+  describe("resolveAlias", () => {
+    test("resolves existing alias to tool name", () => {
+      addToolToRegistry("org/category/full-name", "1.0.0", "project", PROJECT_DIR);
+      addAlias("short", "org/category/full-name", "project", PROJECT_DIR);
+
+      const resolved = resolveAlias("short", "project", PROJECT_DIR);
+      expect(resolved).toBe("org/category/full-name");
+
+      // Clean up
+      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+    });
+
+    test("returns null for non-existent alias", () => {
+      const resolved = resolveAlias("unknown", "project", PROJECT_DIR);
+      expect(resolved).toBeNull();
+    });
+  });
+
+  describe("getAliasesForTool", () => {
+    test("returns all aliases for a tool", () => {
+      addToolToRegistry("test/multi-alias", "1.0.0", "project", PROJECT_DIR);
+      addAlias("alias1", "test/multi-alias", "project", PROJECT_DIR);
+      addAlias("alias2", "test/multi-alias", "project", PROJECT_DIR);
+
+      const aliases = getAliasesForTool("test/multi-alias", "project", PROJECT_DIR);
+      expect(aliases).toContain("alias1");
+      expect(aliases).toContain("alias2");
+      expect(aliases.length).toBe(2);
+
+      // Clean up
+      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+    });
+
+    test("returns empty array for tool without aliases", () => {
+      addToolToRegistry("test/no-alias", "1.0.0", "project", PROJECT_DIR);
+
+      const aliases = getAliasesForTool("test/no-alias", "project", PROJECT_DIR);
+      expect(aliases).toEqual([]);
+
+      // Clean up
+      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+    });
+  });
+
+  describe("removeAliasesForTool", () => {
+    test("removes all aliases for a tool", () => {
+      addToolToRegistry("test/cleanup", "1.0.0", "project", PROJECT_DIR);
+      addAlias("cleanup1", "test/cleanup", "project", PROJECT_DIR);
+      addAlias("cleanup2", "test/cleanup", "project", PROJECT_DIR);
+
+      const removed = removeAliasesForTool("test/cleanup", "project", PROJECT_DIR);
+      expect(removed).toBe(2);
+
+      const registry = loadToolsRegistry("project", PROJECT_DIR);
+      expect(registry.aliases?.cleanup1).toBeUndefined();
+      expect(registry.aliases?.cleanup2).toBeUndefined();
+
+      // Clean up
+      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+    });
+
+    test("returns 0 for tool without aliases", () => {
+      addToolToRegistry("test/no-aliases-to-remove", "1.0.0", "project", PROJECT_DIR);
+
+      const removed = removeAliasesForTool("test/no-aliases-to-remove", "project", PROJECT_DIR);
+      expect(removed).toBe(0);
+
+      // Clean up
+      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+    });
+
+    test("does not remove aliases for other tools", () => {
+      addToolToRegistry("test/keep", "1.0.0", "project", PROJECT_DIR);
+      addToolToRegistry("test/remove", "1.0.0", "project", PROJECT_DIR);
+      addAlias("keepme", "test/keep", "project", PROJECT_DIR);
+      addAlias("removeme", "test/remove", "project", PROJECT_DIR);
+
+      removeAliasesForTool("test/remove", "project", PROJECT_DIR);
+
+      const registry = loadToolsRegistry("project", PROJECT_DIR);
+      expect(registry.aliases?.keepme).toBe("test/keep");
+      expect(registry.aliases?.removeme).toBeUndefined();
+
+      // Clean up
+      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+    });
+  });
+
+  describe("loadToolsRegistry with aliases", () => {
+    test("loads existing registry with aliases", () => {
+      const registryPath = join(PROJECT_ENACT_DIR, "tools.json");
+      writeFileSync(
+        registryPath,
+        JSON.stringify({
+          tools: {
+            "test/tool": "1.0.0",
+          },
+          aliases: {
+            t: "test/tool",
+          },
+        })
+      );
+
+      const registry = loadToolsRegistry("project", PROJECT_DIR);
+      expect(registry.tools["test/tool"]).toBe("1.0.0");
+      expect(registry.aliases?.t).toBe("test/tool");
+
+      // Clean up
+      rmSync(registryPath);
+    });
+
+    test("returns empty aliases when not present in file", () => {
+      const registryPath = join(PROJECT_ENACT_DIR, "tools.json");
+      writeFileSync(
+        registryPath,
+        JSON.stringify({
+          tools: {
+            "test/tool": "1.0.0",
+          },
+        })
+      );
+
+      const registry = loadToolsRegistry("project", PROJECT_DIR);
+      expect(registry.aliases).toEqual({});
+
+      // Clean up
+      rmSync(registryPath);
     });
   });
 });
