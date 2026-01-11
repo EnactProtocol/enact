@@ -26,6 +26,7 @@ import {
   configureReportCommand,
   configureRunCommand,
   configureSearchCommand,
+  configureSetCommand,
   configureSetupCommand,
   configureSignCommand,
   configureTrustCommand,
@@ -54,6 +55,7 @@ async function main() {
     .version(version, "-v, --version", "output the version number");
 
   // Configure all commands
+
   configureSetupCommand(program);
   configureInitCommand(program);
   configureRunCommand(program);
@@ -85,6 +87,9 @@ async function main() {
   configureVisibilityCommand(program);
   // MCP integration commands
   configureMcpCommand(program);
+
+  // Set active toolset command
+  configureSetCommand(program);
 
   // Validation command
   configureValidateCommand(program);

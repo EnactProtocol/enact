@@ -26,6 +26,7 @@ export { configureCacheCommand } from "./cache";
 export { configureSignCommand } from "./sign";
 export { configureReportCommand } from "./report";
 export { configureInspectCommand } from "./inspect";
+export { configureSetCommand } from "./set";
 
 // API v2 migration commands
 export { configureYankCommand } from "./yank";
