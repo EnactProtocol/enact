@@ -75,7 +75,7 @@ interface LocalToolInfo {
   version: string;
   description: string;
   location: string;
-  scope: "project" | "global";
+  scope: "project" | "global" | "toolset";
 }
 
 /**
@@ -83,13 +83,13 @@ interface LocalToolInfo {
  */
 function searchLocalTools(
   query: string,
-  scope: "project" | "global",
+  scope: "project" | "global" | "toolset",
   cwd: string
 ): LocalToolInfo[] {
   const tools: LocalToolInfo[] = [];
   const queryLower = query.toLowerCase();
 
-  if (scope === "global") {
+  if (scope === "global" || scope === "toolset") {
     // Search global tools via tools.json
     const installedTools = listInstalledTools("global");
 
@@ -109,7 +109,7 @@ function searchLocalTools(
           version: tool.version,
           description: loaded?.manifest.description ?? "-",
           location: tool.cachePath,
-          scope: "global",
+          scope: scope,
         });
       }
     }
@@ -151,7 +151,7 @@ function searchLocalTools(
               version: manifest.version ?? "-",
               description: manifest.description ?? "-",
               location: entryPath,
-              scope: "project",
+              scope: scope,
             });
           }
         } else {
@@ -177,9 +177,41 @@ async function searchHandler(
   ctx: CommandContext
 ): Promise<void> {
   // Handle local search (--local or -g)
-  if (options.local || options.global) {
-    const scope = options.global ? "global" : "project";
-    const results = searchLocalTools(query, scope, ctx.cwd);
+  let activeToolsetAvailable = false;
+  let restrictToToolset: string[] | undefined = undefined;
+
+  try {
+    const fs = require("node:fs");
+    const path = require("node:path");
+    const os = require("node:os");
+    const homeDir = os.homedir();
+    const toolsJsonPath = path.join(homeDir, ".enact", "tools.json");
+    if (fs.existsSync(toolsJsonPath)) {
+      const toolsJson = JSON.parse(fs.readFileSync(toolsJsonPath, "utf-8"));
+      const activeToolset = toolsJson.activeToolset;
+      if (activeToolset && toolsJson.toolsets && Array.isArray(toolsJson.toolsets[activeToolset])) {
+        restrictToToolset = toolsJson.toolsets[activeToolset].map((t: string) =>
+          t.toLowerCase().replace(/\\/g, "/").trim()
+        );
+        activeToolsetAvailable = true;
+      }
+    }
+  } catch (_err) {
+    // Ignore errors on loading toolsets for filter
+  }
+
+  if (options.local || options.global || activeToolsetAvailable) {
+    let scope: "project" | "global" | "toolset" = options.global ? "global" : "project";
+    if (activeToolsetAvailable) {
+      scope = "toolset";
+    }
+
+    let results = searchLocalTools(query, scope, ctx.cwd);
+    if (restrictToToolset) {
+      results = results.filter((tool) =>
+        restrictToToolset!.includes(tool.name.toLowerCase().replace(/\\/g, "/").trim())
+      );
+    }
 
     // JSON output
     if (options.json) {

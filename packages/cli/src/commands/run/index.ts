@@ -772,6 +772,47 @@ function displayResult(result: ExecutionResult, options: RunOptions): void {
  * Run command handler
  */
 async function runHandler(tool: string, options: RunOptions, ctx: CommandContext): Promise<void> {
+  // === Active toolset restriction logic (global ~/.enact/tools.json) ===
+  // Only applies if resolving by name (not by path)
+  const isPath =
+    tool.startsWith("/") ||
+    tool.startsWith("./") ||
+    tool.startsWith("../") ||
+    tool.includes("\\") ||
+    existsSync(tool);
+
+  if (!isPath && !options.remote) {
+    try {
+      const fs = require("node:fs");
+      const path = require("node:path");
+      const os = require("node:os");
+      const homeDir = os.homedir();
+      const toolsJsonPath = path.join(homeDir, ".enact", "tools.json");
+      if (fs.existsSync(toolsJsonPath)) {
+        const toolsJson = JSON.parse(fs.readFileSync(toolsJsonPath, "utf-8"));
+        const activeToolset = toolsJson.activeToolset;
+        if (
+          activeToolset &&
+          toolsJson.toolsets &&
+          Array.isArray(toolsJson.toolsets[activeToolset])
+        ) {
+          const allowedTools = toolsJson.toolsets[activeToolset].map((t: string) =>
+            t.toLowerCase().replace(/\\/g, "/").trim()
+          );
+          const requestedTool = tool.toLowerCase().replace(/\\/g, "/").trim();
+          if (!allowedTools.includes(requestedTool)) {
+            error(
+              `Tool '${tool}' is not in the active toolset '${activeToolset}'. Allowed: ${allowedTools.join(", ")}`
+            );
+            process.exit(EXIT_EXECUTION_ERROR);
+          }
+        }
+      }
+    } catch (_err) {
+      // Ignore errors in toolset restriction logic, fallback to normal resolution
+    }
+  }
+
   let resolution: ToolResolution | null = null;
   let resolveResult: ReturnType<typeof tryResolveToolDetailed> | null = null;
 
