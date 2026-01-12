@@ -1,6 +1,6 @@
 # Enact
 
-[![Discord](https://img.shields.io/discord/1330956752403001386?color=5865F2&logo=discord&logoColor=white&label=Discord)](https://discord.gg/mMfxvMtHyS)
+[![Discord](https://img.shields.io/discord/1312642330502627348?color=5865F2&logo=discord&logoColor=white&label=Discord)](https://discord.com/invite/mMfxvMtHyS)
 
 Everything you need to run your own AI tool registry. See it live: **[enact.tools](https://enact.tools)**
 
