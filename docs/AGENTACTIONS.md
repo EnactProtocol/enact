@@ -12,9 +12,39 @@
 
 This proposal introduces **Agent Actions** - a standard for defining executable actions that AI agents can discover, understand, and invoke. It extends the existing Skills specification with execution semantics, enabling skills to become directly runnable tools.
 
-The proposal introduces:
-1. **SKILL.md** - Agent-facing metadata and documentation (existing, unchanged)
+This specification builds on:
+1. **SKILL.md** - Agent-facing metadata and documentation (from [Agent Skills](https://agentskills.io))
 2. **ACTIONS.yaml** - Execution configuration for runnable actions (new)
+
+## Quick Example
+
+A skill with actions lets clients execute tools directly:
+
+```bash
+# Discover what a skill can do
+client learn mendable/firecrawl
+
+# Run an action with typed, validated inputs
+client run mendable/firecrawl/scrape '{"url": "https://example.com"}'
+```
+
+Behind the scenes, the skill defines:
+
+```yaml
+# ACTIONS.yaml
+actions:
+  - name: scrape
+    description: Scrape a URL to markdown
+    command: ["python", "main.py", "scrape", "{{url}}"]
+    inputSchema:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+```
+
+No parsing prose instructions. Just structured, executable actions.
 
 ## Motivation
 
@@ -25,13 +55,15 @@ Current skills are documentation that agents interpret. This works, but has limi
 - **No secret management** - Credentials handled ad-hoc
 - **No portability** - "Works on my machine" problems when sharing
 
-By adding structured execution semantics, skills become **actions** - tools that clients can execute directly, with typed inputs, validated parameters, and secure credential handling.
+By adding structured execution semantics, skills can define **actions** - tools that clients can execute directly, with typed inputs, validated parameters, and secure credential handling.
 
 ## Proposed Changes
 
-### 1. SKILL.md (Existing, Unchanged)
+### 1. SKILL.md
 
-The skill manifest remains as-is, serving as agent-facing documentation:
+The skill manifest serves as agent-facing documentation[^1]:
+
+[^1]: This specification extends the base [Agent Skills](https://agentskills.io) format with namespaced identifiers (`owner/skill`) and a top-level `version` field.
 
 ```yaml
 ---
