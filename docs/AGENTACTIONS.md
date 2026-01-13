@@ -1,6 +1,6 @@
 # Agent Actions Specification
 
-**Version: 0.1.0**
+**Version: 0.1.1**
 
 **Status: DRAFT**
 
@@ -20,7 +20,7 @@ The proposal introduces:
 
 Current skills are documentation that agents interpret. This works, but has limitations:
 
-- **No execution contract** - Agents guess at CLI syntax, argument formats, and expected outputs
+- **No execution contract** - Agents rely on prose instructions for CLI syntax, argument formats, and expected outputs
 - **No input validation** - Invalid parameters only fail at runtime
 - **No secret management** - Credentials handled ad-hoc
 - **No portability** - "Works on my machine" problems when sharing
