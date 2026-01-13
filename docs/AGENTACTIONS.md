@@ -25,7 +25,7 @@ Current skills are documentation that agents interpret. This works, but has limi
 - **No secret management** - Credentials handled ad-hoc
 - **No portability** - "Works on my machine" problems when sharing
 
-By adding structured execution semantics, skills become **actions** - tools that runtimes can execute directly, with typed inputs, validated parameters, and secure credential handling.
+By adding structured execution semantics, skills become **actions** - tools that clients can execute directly, with typed inputs, validated parameters, and secure credential handling.
 
 ## Proposed Changes
 
@@ -38,9 +38,6 @@ The skill manifest remains as-is, serving as agent-facing documentation:
 name: mendable/firecrawl
 version: 1.0.0
 description: Web scraping toolkit for AI agents
-tags:
-  - web-scraping
-  - markdown
 ---
 
 # Firecrawl
@@ -175,12 +172,12 @@ command: ["python", "main.py", "scrape", "{{url}}"]
 
 **Template Substitution Requirements**
 
-Runtimes MUST follow these rules when processing `{{}}` templates:
+Clients MUST follow these rules when processing `{{}}` templates:
 
 1. **Single argument substitution**: Each `{{var}}` MUST be replaced with the literal value as a single argument, regardless of content (spaces, quotes, metacharacters)
 2. **No shell interpolation**: Template values MUST NOT be passed through a shell interpreter
 3. **No argument splitting**: Values MUST NOT be split on whitespace or shell metacharacters
-4. **String-form rejection**: Runtimes MUST reject string-form commands containing `{{}}` templates
+4. **String-form rejection**: Clients MUST reject string-form commands containing `{{}}` templates
 
 This prevents injection attacks where malicious input like `https://evil.com; rm -rf /` could be exploited.
 
@@ -188,7 +185,7 @@ This prevents injection attacks where malicious input like `https://evil.com; rm
 
 When a template variable references a property with a `default` value in the `inputSchema`:
 
-1. Runtimes MUST apply defaults before template substitution
+1. Clients MUST apply defaults before template substitution
 2. If a required property is missing and has no default, execution MUST fail with a validation error
 3. If an optional property is missing and has no default, the template `{{var}}` MUST be replaced with an empty string
 
@@ -209,9 +206,9 @@ command: ["node", "cli.js", "--input", "{{file}}", "--format", "{{format}}"]
 
 ### 4. Execution Modes
 
-**Containerized Execution (Recommended)**: If a `Containerfile` (or `Dockerfile`) is present, runtimes SHOULD execute commands inside a container. This provides isolation, portability, and security by default.
+**Containerized Execution (Recommended)**: If a `Containerfile` (or `Dockerfile`) is present, clients SHOULD execute commands inside a container. This provides isolation, portability, and security by default.
 
-**Local Execution**: Commands run directly on the host system without sandboxing. This is inherently dangerous—actions have full access to the filesystem, network, and system resources. Runtimes SHOULD:
+**Local Execution**: Commands run directly on the host system without sandboxing. This is inherently dangerous—actions have full access to the filesystem, network, and system resources. Clients SHOULD:
 - Warn users before executing actions locally
 - Require explicit user consent for local execution
 - Provide sandboxing options (e.g., OS-level sandboxing, restricted permissions) when containerization isn't available
@@ -243,7 +240,7 @@ Actions return results following MCP's tool result conventions.
 
 #### Structured Content
 
-Actions MUST output a JSON object to stdout conforming to `outputSchema`. Runtimes translate this to MCP's `structuredContent` field:
+Actions MUST output a JSON object to stdout conforming to `outputSchema`. Clients translate this to MCP's `structuredContent` field:
 
 ```json
 {
@@ -257,7 +254,7 @@ Actions MUST output a JSON object to stdout conforming to `outputSchema`. Runtim
 #### Output Validation
 
 If `outputSchema` is provided:
-- Runtimes MUST validate results against the schema
+- Clients MUST validate results against the schema
 - Results that don't conform MUST be treated as errors
 
 #### Error Handling
@@ -296,7 +293,7 @@ Use for: Unknown actions, schema validation failures, missing required secrets.
 #### Stderr and Logging
 
 - Stderr is captured as logs, not included in the result
-- Runtimes MAY surface stderr separately for debugging purposes
+- Clients MAY surface stderr separately for debugging purposes
 
 ### 6. File Structure
 
@@ -341,21 +338,45 @@ This enables automatic exposure of actions as MCP tools without additional confi
 
 ### 8. Secret Management
 
-The `env` field with `secret: true` integrates with secure credential storage:
+The `env` field with `secret: true` integrates with secure credential storage. Clients are responsible for securely storing and injecting secrets at execution time.
 
-```bash
-# Store secret in OS keyring
-enact env set API_KEY "sk-xxx" --secret
+Secrets should be:
+- Stored securely (e.g., OS keyring, encrypted vault)
+- Never written to disk in plaintext or logged
+- Validated before execution (if `required: true`)
+- Injected into the environment at runtime
 
-# Runtime retrieves from keyring, injects into execution
-enact run scrape --args '{"url": "https://example.com"}'
+### 9. Namespacing and Discovery
+
+Skills use namespaced identifiers (`owner/skill`) to enable discovery and installation from registries. Actions within a skill are referenced as `owner/skill/action`.
+
+Examples:
+```
+mendable/firecrawl           # The skill
+mendable/firecrawl/scrape    # A specific action
+mendable/firecrawl/crawl     # Another action
 ```
 
-Secrets are:
-- Stored in OS keyring (macOS Keychain, Windows Credential Manager, Linux Secret Service)
-- Never written to disk or logged
-- Validated before execution (if `required: true`)
-- Injected securely at runtime
+This enables clients to:
+- **Discover** skills and their available actions
+- **Install** skills from a registry for local or containerized execution
+- **Run** specific actions by fully-qualified name
+
+Example using [Enact](https://github.com/EnactProtocol/enact), a reference runtime:
+
+```bash
+# Learn about a skill and its actions
+enact learn mendable/firecrawl
+
+# Install a skill for execution
+enact install mendable/firecrawl
+
+# Run a specific action
+enact run mendable/firecrawl/scrape --args '{"url": "https://example.com"}'
+
+# Store secrets securely
+enact env set FIRECRAWL_API_KEY "sk-xxx" --secret
+```
 
 ## Backwards Compatibility
 
