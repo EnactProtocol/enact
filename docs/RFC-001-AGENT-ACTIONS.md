@@ -210,13 +210,13 @@ inputSchema:
       type: integer
       default: 2            # Optional - has default value
     format:
-      type: string          # Optional - no default, will be empty string
+      type: string          # Optional - no default, argument omitted if not provided
 ```
 
 **Resolution rules:**
 1. **Required fields** (in `required` array): Must be provided. Missing values cause validation error before execution.
 2. **Optional fields with `default`**: Use the default value if not provided.
-3. **Optional fields without `default`**: Resolve to empty string in template substitution.
+3. **Optional fields without `default`**: The argument is omitted entirely from the command. Empty strings are only allowed if explicitly provided.
 
 #### Command Syntax
 
@@ -249,7 +249,7 @@ When a template variable references a property with a `default` value in the `in
 
 1. Clients MUST apply defaults before template substitution
 2. If a required property is missing and has no default, execution MUST fail with a validation error
-3. If an optional property is missing and has no default, the template `{{var}}` MUST be replaced with an empty string
+3. If an optional property is missing and has no default, the argument containing `{{var}}` MUST be omitted entirely from the command
 
 Examples:
 ```yaml
@@ -423,7 +423,43 @@ Secrets should be:
 - Validated before execution (if `required: true`)
 - Injected into the environment at runtime
 
-### 9. Namespacing and Discovery
+### 9. Action Composition
+
+Because actions have typed inputs and outputs, clients can compose them into pipelines. The `outputSchema` of one action can feed the `inputSchema` of another.
+
+**Example: Scrape → Extract with jq**
+
+```bash
+# Scrape returns JSON: { content: string, metadata: { title: string, ... } }
+# Use jq to extract just the title
+
+client run mendable/firecrawl/scrape '{"url": "https://example.com"}' \
+  | jq -r '.metadata.title'
+```
+
+**Example: Scrape → Summarize pipeline**
+
+```bash
+# Chain two actions together
+client run mendable/firecrawl/scrape '{"url": "https://example.com"}' \
+  | client run ai-tools/summarize --stdin
+```
+
+Since actions output structured JSON, they compose naturally with standard Unix tools like `jq`, `grep`, and other actions.
+
+Clients MAY also provide built-in support for chaining:
+
+```bash
+client pipe mendable/firecrawl/scrape ai-tools/summarize \
+  --args '{"url": "https://example.com"}'
+```
+
+The structured schemas enable clients to:
+- Validate compatibility between action outputs and inputs
+- Auto-map fields when names match
+- Provide clear errors when schemas are incompatible
+
+### 10. Namespacing and Discovery
 
 Skills use namespaced identifiers (`owner/skill`) to enable discovery and installation from registries. Actions within a skill are referenced as `owner/skill/action`.
 
@@ -540,15 +576,17 @@ All changes are backwards compatible:
 - **ACTIONS.yaml** is optional - skills without it remain documentation-only
 - **Containerization** is optional - actions can execute locally without Docker
 
+## Design Decisions
+
+### Action Versioning
+
+Actions inherit their version from the skill's `version` field in SKILL.md. Actions do not have independent versions—when any action changes, the skill version should be bumped. This keeps versioning simple and matches how most package ecosystems work.
+
 ## Open Questions
 
-1. **Empty optional values**: Should missing optional properties with no default result in an empty string, or should the entire argument be omitted?
+1. **Array/object parameters**: How should complex types be passed to commands? Options include JSON serialization (`{{urls | json}}`), repeated flags, or stdin.
 
-2. **Array/object parameters**: How should complex types be passed to commands? Options include JSON serialization (`{{urls | json}}`), repeated flags, or stdin.
-
-3. **Streaming output**: Should there be a standard for actions that stream results (e.g., long-running crawls)?
-
-4. **Action versioning**: Should actions have independent versions, or inherit from the skill version?
+2. **Streaming output**: Should there be a standard for actions that stream results (e.g., long-running crawls)?
 
 ## Prior Art
 
