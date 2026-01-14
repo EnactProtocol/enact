@@ -52,8 +52,8 @@ Current skills are documentation that agents interpret. This works, but has limi
 
 - **No execution contract** - Agents rely on prose instructions for CLI syntax, argument formats, and expected outputs
 - **No input validation** - Invalid parameters only fail at runtime
-- **No secret management** - Credentials handled ad-hoc
-- **No portability** - "Works on my machine" problems when sharing
+- **Secret management** - Credentials handled ad-hoc
+- **Portability** - "Works on my machine" problems when sharing
 
 By adding structured execution semantics, skills can define **actions** - tools that clients can execute directly, with typed inputs, validated parameters, and secure credential handling.
 
