@@ -1,20 +1,17 @@
-# Agent Actions Specification
+# RFC-001: Agent Actions
 
-**Version: 0.1.1**
+| Field | Value |
+|-------|-------|
+| RFC | 001 |
+| Title | Agent Actions |
+| Author | Keith Groves |
+| Status | Draft |
+| Created | 2025-01-13 |
+| Updated | 2025-01-13 |
 
-**Status: DRAFT**
+## Abstract
 
-*This specification is a work in progress and open for feedback.*
-
----
-
-## Summary
-
-This proposal introduces **Agent Actions** - a standard for defining executable actions that AI agents can discover, understand, and invoke. It extends the existing Skills specification with execution semantics, enabling skills to become directly runnable tools.
-
-This specification builds on:
-1. **SKILL.md** - Agent-facing metadata and documentation (from [Agent Skills](https://agentskills.io))
-2. **ACTIONS.yaml** - Execution configuration for runnable actions (new)
+Agent Actions extends the [Agent Skills](https://agentskills.io) specification with structured execution semantics, enabling skills to define executable actions with typed inputs, validated outputs, and secure credential handling. This RFC proposes ACTIONS.yaml as a companion file to SKILL.md that transforms documentation-only skills into directly executable tools.
 
 ## Quick Example
 
@@ -48,22 +45,22 @@ No parsing prose instructions. Just structured, executable actions.
 
 ## Motivation
 
-Current skills are documentation that agents interpret. This works, but has limitations:
+Current skills are documentation that agents interpret. This works great, but has limitations:
 
 - **No execution contract** - Agents rely on prose instructions for CLI syntax, argument formats, and expected outputs
 - **No input validation** - Invalid parameters only fail at runtime
 - **Secret management** - Credentials handled ad-hoc
-- **Portability** - "Works on my machine" problems when sharing
+- **Portability** - Lack of reproducibility when sharing
 
 By adding structured execution semantics, skills can define **actions** - tools that clients can execute directly, with typed inputs, validated parameters, and secure credential handling.
 
-## Proposed Changes
+## Specification
 
 ### 1. SKILL.md
 
 The skill manifest serves as agent-facing documentation[^1]:
 
-[^1]: This specification extends the base [Agent Skills](https://agentskills.io) format with namespaced identifiers (`owner/skill`) and a top-level `version` field.
+
 
 ```yaml
 ---
@@ -89,7 +86,7 @@ A suite of tools for scraping, crawling, and searching the web.
 - Use `crawl` with low depth (2-3) to avoid rate limits
 ```
 
-### 2. ACTIONS.yaml (New)
+### 2. ACTIONS.yaml
 
 A new file that defines how to execute actions. Contains an array of MCP-compatible tool definitions plus execution semantics:
 
@@ -124,7 +121,7 @@ actions:
         metadata:
           type: object
     annotations:
-      anything: true
+      readOnlyHint: true
 
   - name: crawl
     description: Crawl a site recursively
@@ -362,7 +359,7 @@ Use for: Unknown actions, schema validation failures, missing required secrets.
 
 ### 6. File Structure
 
-#### Simple Skill (Single Action)
+#### Simple Skill
 ```
 my-skill/
 ├── SKILL.md         # Documentation
@@ -370,7 +367,7 @@ my-skill/
 └── main.py          # Implementation
 ```
 
-#### Multi-Action Skill
+#### Large Multi-Action Skill
 ```
 my-toolkit/
 ├── SKILL.md           # Skill documentation
@@ -394,7 +391,7 @@ ACTIONS.yaml → MCP Server → MCP Tools
 
 Each action becomes an MCP tool with:
 - `name` → tool name
-- `description` → tool description  
+- `description` → tool description
 - `inputSchema` → tool parameters
 - `outputSchema` → expected response shape
 - `annotations` → behavioral hints
@@ -405,7 +402,7 @@ This enables automatic exposure of actions as MCP tools without additional confi
 
 The `env` field with `secret: true` integrates with secure credential storage. Clients are responsible for securely storing and injecting secrets at execution time.
 
-**Key benefit:** ACTIONS.yaml declares requirements upfront. Clients can check `env` and tell users exactly what's needed before attempting execution.
+**Key benefit:** Unlike traditional skills where you discover missing credentials at runtime when the script fails, ACTIONS.yaml declares requirements upfront. Clients can check `env` and tell users exactly what's needed before attempting execution.
 
 ```yaml
 env:
@@ -442,7 +439,135 @@ This enables clients to:
 - **Install** skills from a registry for local or containerized execution
 - **Run** specific actions by fully-qualified name
 
-Example using [Enact](https://github.com/EnactProtocol/enact), a reference runtime:
+## Security Considerations
+
+### Command Injection
+
+Template substitution is a potential attack vector. The specification requires:
+- Array-form commands for any templates
+- No shell interpolation of values
+- Values passed as single arguments regardless of content
+
+Clients MUST NOT pass user-provided values through shell expansion.
+
+### Local Execution Risks
+
+Local execution grants actions full access to the host system. Clients SHOULD:
+- Default to containerized execution when a Containerfile is present
+- Require explicit user consent for local execution
+- Provide clear warnings about the risks
+- Offer sandboxing alternatives when available
+
+### Secret Handling
+
+Secrets MUST be:
+- Stored in secure storage (OS keyring, encrypted vault)
+- Never logged or written to disk in plaintext
+- Masked in any debug output
+- Validated before execution begins
+
+## Rationale
+
+### Why ACTIONS.yaml instead of extending SKILL.md?
+
+Separation of concerns:
+- **SKILL.md** is for agents and humans to read—documentation
+- **ACTIONS.yaml** is for clients to parse—execution config
+
+This keeps SKILL.md clean and human-readable while providing machine-parseable execution semantics in a dedicated file.
+
+### Why JSON Schema for input/output?
+
+- Industry standard
+- Excellent tooling support
+- Already used by MCP
+- Enables validation before execution
+
+### Why array-form commands?
+
+Shell string parsing is error-prone and dangerous. Array form:
+- Prevents injection attacks (e.g., `; rm -rf /` in a URL)
+- Makes argument boundaries explicit
+- Matches how `execve()` actually works
+- Follows Docker/OCI precedent
+
+**We acknowledge this syntax is tedious to write.** However, the alternative—shell string interpolation—creates security vulnerabilities that are difficult to close. A malicious input like `https://evil.com; rm -rf /` could exploit string-form commands. The array form is annoying but safe by construction.
+
+### Why MCP alignment?
+
+MCP is gaining adoption for agent-tool communication. Aligning with MCP's tool schema means:
+- Actions can be exposed as MCP tools with zero translation
+- Existing MCP tooling works out of the box
+- Reduced cognitive load for developers familiar with MCP
+
+### When NOT to use Actions
+
+Actions work best for tools with **bounded, well-defined inputs**. They are not ideal for:
+
+- **Complex CLIs with massive flag spaces** (e.g., FFMPEG, ImageMagick) — These tools have hundreds of flags with complex interactions. Defining actions for every combination is impractical.
+- **Highly dynamic interfaces** — Tools where the input shape varies significantly based on context.
+- **Interactive tools** — Tools that require back-and-forth prompting.
+
+For these cases, **traditional skills** (prose instructions in SKILL.md) may be more appropriate. Agents can interpret flexible instructions better than rigid schemas can accommodate every edge case.
+
+**Recommended pattern for complex CLIs:** Create focused actions for common use cases rather than exposing the full CLI surface.
+
+```yaml
+# Instead of one "ffmpeg" action with every possible flag...
+actions:
+  - name: convert-to-mp4
+    description: Convert video to MP4 format
+    command: ["ffmpeg", "-i", "{{input}}", "-c:v", "h264", "{{output}}"]
+    inputSchema:
+      properties:
+        input: { type: string }
+        output: { type: string }
+
+  - name: extract-audio
+    description: Extract audio track from video
+    command: ["ffmpeg", "-i", "{{input}}", "-vn", "-acodec", "mp3", "{{output}}"]
+    inputSchema:
+      properties:
+        input: { type: string }
+        output: { type: string }
+```
+
+## Backwards Compatibility
+
+All changes are backwards compatible:
+
+- **SKILL.md** remains unchanged - existing skills continue to work
+- **ACTIONS.yaml** is optional - skills without it remain documentation-only
+- **Containerization** is optional - actions can execute locally without Docker
+
+## Open Questions
+
+1. **Empty optional values**: Should missing optional properties with no default result in an empty string, or should the entire argument be omitted?
+
+2. **Array/object parameters**: How should complex types be passed to commands? Options include JSON serialization (`{{urls | json}}`), repeated flags, or stdin.
+
+3. **Streaming output**: Should there be a standard for actions that stream results (e.g., long-running crawls)?
+
+4. **Action versioning**: Should actions have independent versions, or inherit from the skill version?
+
+## Prior Art
+
+- **[Agent Skills](https://agentskills.io/)** - The skills specification this proposal extends
+- **[MCP Tools](https://modelcontextprotocol.io/)** - Action schema aligns with MCP tool definitions
+- **Containerfile/Dockerfile** - Standard container format for execution environment
+- **OCI Annotations** - Inspiration for metadata conventions
+- **just/make** - Task runner patterns for local execution
+
+## Reference Implementation
+
+[Enact](https://github.com/EnactProtocol/enact) implements this specification with:
+- CLI for running actions locally and in containers
+- MCP server for exposing actions to AI agents
+- Registry for publishing and discovering actions
+- Secure credential storage via OS keyring
+- Sigstore-based signing and verification
+
+Example using Enact:
 
 ```bash
 # Learn about a skill and its actions
@@ -458,15 +583,7 @@ enact run mendable/firecrawl/scrape --args '{"url": "https://example.com"}'
 enact env set FIRECRAWL_API_KEY "sk-xxx" --secret
 ```
 
-## Backwards Compatibility
-
-All changes are backwards compatible:
-
-- **SKILL.md** remains unchanged - existing skills continue to work
-- **ACTIONS.yaml** is optional - skills without it remain documentation-only
-- **Containerization** is optional - actions can execute locally without Docker
-
-## Examples
+## Appendix: Full Examples
 
 ### Example 1: Simple Local Skill
 
@@ -586,89 +703,8 @@ actions:
           type: string
 ```
 
-## Comparison: Before and After
+[^1]: This specification extends the base Agent Skills format with namespaced identifiers (`owner/skill`) and a top-level `version` field.
 
-| Capability | SKILL.md Only | SKILL.md + ACTIONS.yaml |
-|------------|---------------|-------------------------|
-| Agent reads docs | ✓ | ✓ |
-| Typed inputs | ✗ | ✓ |
-| Input validation | ✗ | ✓ |
-| Structured output | ✗ | ✓ |
-| Secret management | ✗ | ✓ |
-| Direct execution | ✗ | ✓ |
-| MCP tool generation | ✗ | ✓ |
-| Containerization | ✗ | ✓ |
+## Changelog
 
-## The Progression
-
-```
-1. Start simple
-   └── SKILL.md only (document your scripts)
-
-2. Add execution
-   └── SKILL.md + ACTIONS.yaml (typed inputs, direct execution)
-
-3. Add portability  
-   └── SKILL.md + ACTIONS.yaml + Containerfile (containerized)
-
-4. Share publicly
-   └── Publish to registry
-```
-
-## When NOT to Use Actions
-
-Actions work best for tools with **bounded, well-defined inputs**. They are not ideal for:
-
-- **Complex CLIs with massive flag spaces** (e.g., FFMPEG, ImageMagick) — These tools have hundreds of flags with complex interactions. Defining actions for every combination is impractical.
-- **Highly dynamic interfaces** — Tools where the input shape varies significantly based on context.
-- **Interactive tools** — Tools that require back-and-forth prompting.
-
-For these cases, **traditional skills** (prose instructions in SKILL.md) may be more appropriate. Agents can interpret flexible instructions better than rigid schemas can accommodate every edge case.
-
-**Recommended pattern for complex CLIs:** Create focused actions for common use cases rather than exposing the full CLI surface.
-
-```yaml
-# Instead of one "ffmpeg" action with every possible flag...
-actions:
-  - name: convert-to-mp4
-    description: Convert video to MP4 format
-    command: ["ffmpeg", "-i", "{{input}}", "-c:v", "h264", "{{output}}"]
-    inputSchema:
-      properties:
-        input: { type: string }
-        output: { type: string }
-
-  - name: extract-audio
-    description: Extract audio track from video
-    command: ["ffmpeg", "-i", "{{input}}", "-vn", "-acodec", "mp3", "{{output}}"]
-    inputSchema:
-      properties:
-        input: { type: string }
-        output: { type: string }
-```
-
-## Prior Art
-
-- **[Agent Skills](https://agentskills.io/)** - The skills specification this proposal extends
-- **[MCP Tools](https://modelcontextprotocol.io/)** - Action schema aligns with MCP tool definitions
-- **Containerfile/Dockerfile** - Standard container format for execution environment
-- **OCI Annotations** - Inspiration for metadata conventions
-- **just/make** - Task runner patterns for local execution
-
-## Reference Implementation
-
-[Enact](https://github.com/EnactProtocol/enact) implements this specification with:
-- CLI for running actions locally and in containers
-- MCP server for exposing actions to AI agents
-- Registry for publishing and discovering actions
-- Secure credential storage via OS keyring
-- Sigstore-based signing and verification
-
-## Feedback Welcome
-
-This proposal aims to make skills executable without breaking existing functionality. We welcome feedback on:
-
-- Field naming and structure
-- MCP alignment
-- Execution semantics
-- Container integration
+- **2025-01-13**: Initial draft
