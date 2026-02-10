@@ -71,7 +71,7 @@ describe("Attestations (v2)", () => {
     test("fetches attestations for a tool version", async () => {
       const client = createApiClient({ baseUrl: DEFAULT_REGISTRY_URL });
 
-      const result = await getAttestations(client, "alice/utils/greeter", "1.2.0");
+      const result = await getAttestations(client, "alice/greeter", "1.2.0");
 
       expect(result).toBeDefined();
       expect(result.attestations).toBeArray();
@@ -83,7 +83,7 @@ describe("Attestations (v2)", () => {
     test("supports pagination options", async () => {
       const client = createApiClient({ baseUrl: DEFAULT_REGISTRY_URL });
 
-      const result = await getAttestations(client, "alice/utils/greeter", "1.2.0", {
+      const result = await getAttestations(client, "alice/greeter", "1.2.0", {
         limit: 5,
         offset: 10,
       });
@@ -95,7 +95,7 @@ describe("Attestations (v2)", () => {
     test("caps limit at 100", async () => {
       const client = createApiClient({ baseUrl: DEFAULT_REGISTRY_URL });
 
-      const result = await getAttestations(client, "alice/utils/greeter", "1.2.0", {
+      const result = await getAttestations(client, "alice/greeter", "1.2.0", {
         limit: 200,
       });
 
@@ -134,12 +134,7 @@ describe("Attestations (v2)", () => {
         },
       };
 
-      const result = await submitAttestation(
-        client,
-        "alice/utils/greeter",
-        "1.2.0",
-        sigstoreBundle
-      );
+      const result = await submitAttestation(client, "alice/greeter", "1.2.0", sigstoreBundle);
 
       expect(result).toBeDefined();
       expect(result.auditor).toBeTruthy();
@@ -163,7 +158,7 @@ describe("Attestations (v2)", () => {
       };
 
       try {
-        await submitAttestation(client, "alice/utils/greeter", "1.2.0", sigstoreBundle);
+        await submitAttestation(client, "alice/greeter", "1.2.0", sigstoreBundle);
         expect.unreachable("Should have thrown");
       } catch (error: unknown) {
         expect(error).toBeDefined();
@@ -180,7 +175,7 @@ describe("Attestations (v2)", () => {
 
       const result = await revokeAttestation(
         client,
-        "alice/utils/greeter",
+        "alice/greeter",
         "1.2.0",
         "security@example.com"
       );
@@ -199,7 +194,7 @@ describe("Attestations (v2)", () => {
 
       const result = await revokeAttestation(
         client,
-        "alice/utils/greeter",
+        "alice/greeter",
         "1.2.0",
         "user+test@example.com"
       );
@@ -212,7 +207,7 @@ describe("Attestations (v2)", () => {
       const client = createApiClient({ baseUrl: DEFAULT_REGISTRY_URL });
 
       try {
-        await revokeAttestation(client, "alice/utils/greeter", "1.2.0", "security@example.com");
+        await revokeAttestation(client, "alice/greeter", "1.2.0", "security@example.com");
         expect.unreachable("Should have thrown");
       } catch (error: unknown) {
         expect(error).toBeDefined();
@@ -224,7 +219,7 @@ describe("Attestations (v2)", () => {
     test("checks if tool has attestation from trusted auditors", async () => {
       const client = createApiClient({ baseUrl: DEFAULT_REGISTRY_URL });
 
-      const result = await hasAttestation(client, "alice/utils/greeter", "1.2.0", [
+      const result = await hasAttestation(client, "alice/greeter", "1.2.0", [
         "security@example.com",
       ]);
 
@@ -234,7 +229,7 @@ describe("Attestations (v2)", () => {
     test("returns false for no matching auditors", async () => {
       const client = createApiClient({ baseUrl: DEFAULT_REGISTRY_URL });
 
-      const result = await hasAttestation(client, "alice/utils/greeter", "1.2.0", [
+      const result = await hasAttestation(client, "alice/greeter", "1.2.0", [
         "nonexistent@example.com",
       ]);
 
@@ -244,7 +239,7 @@ describe("Attestations (v2)", () => {
     test("checks multiple trusted auditors", async () => {
       const client = createApiClient({ baseUrl: DEFAULT_REGISTRY_URL });
 
-      const result = await hasAttestation(client, "alice/utils/greeter", "1.2.0", [
+      const result = await hasAttestation(client, "alice/greeter", "1.2.0", [
         "security@example.com",
         "audit@example.com",
         "review@example.com",
@@ -260,7 +255,7 @@ describe("Attestations (v2)", () => {
 
       const bundle = await getAttestationBundle(
         client,
-        "alice/utils/greeter",
+        "alice/greeter",
         "1.2.0",
         "security@example.com"
       );
@@ -277,7 +272,7 @@ describe("Attestations (v2)", () => {
       // Should handle special characters in email
       const bundle = await getAttestationBundle(
         client,
-        "alice/utils/greeter",
+        "alice/greeter",
         "1.2.0",
         "user+test@example.com"
       );
@@ -304,7 +299,7 @@ describe("Attestations (v2)", () => {
         },
       });
 
-      const attestations = await getAttestations(client, "alice/utils/greeter", "1.2.0");
+      const attestations = await getAttestations(client, "alice/greeter", "1.2.0");
       const attestation = attestations.attestations[0];
 
       if (!attestation) {
@@ -313,7 +308,7 @@ describe("Attestations (v2)", () => {
 
       const isValid = await verifyAttestationLocally(
         client,
-        "alice/utils/greeter",
+        "alice/greeter",
         "1.2.0",
         attestation,
         "sha256:abc123def456"
@@ -340,7 +335,7 @@ describe("Attestations (v2)", () => {
         },
       });
 
-      const attestations = await getAttestations(client, "alice/utils/greeter", "1.2.0");
+      const attestations = await getAttestations(client, "alice/greeter", "1.2.0");
       const attestation = attestations.attestations[0];
 
       if (!attestation) {
@@ -349,7 +344,7 @@ describe("Attestations (v2)", () => {
 
       const isValid = await verifyAttestationLocally(
         client,
-        "alice/utils/greeter",
+        "alice/greeter",
         "1.2.0",
         attestation,
         "sha256:abc123def456"
@@ -365,7 +360,7 @@ describe("Attestations (v2)", () => {
       mockVerifyBundle.mockReset();
       mockVerifyBundle.mockRejectedValue(new Error("Network error"));
 
-      const attestations = await getAttestations(client, "alice/utils/greeter", "1.2.0");
+      const attestations = await getAttestations(client, "alice/greeter", "1.2.0");
       const attestation = attestations.attestations[0];
 
       if (!attestation) {
@@ -374,7 +369,7 @@ describe("Attestations (v2)", () => {
 
       const isValid = await verifyAttestationLocally(
         client,
-        "alice/utils/greeter",
+        "alice/greeter",
         "1.2.0",
         attestation,
         "sha256:abc123def456"
@@ -399,7 +394,7 @@ describe("Attestations (v2)", () => {
         },
       });
 
-      const attestations = await getAttestations(client, "alice/utils/greeter", "1.2.0");
+      const attestations = await getAttestations(client, "alice/greeter", "1.2.0");
       const attestation = attestations.attestations[0];
 
       if (!attestation) {
@@ -408,7 +403,7 @@ describe("Attestations (v2)", () => {
 
       await verifyAttestationLocally(
         client,
-        "alice/utils/greeter",
+        "alice/greeter",
         "1.2.0",
         attestation,
         "sha256:abc123def456"
@@ -443,7 +438,7 @@ describe("Attestations (v2)", () => {
 
       const verifiedAuditors = await verifyAllAttestations(
         client,
-        "alice/utils/greeter",
+        "alice/greeter",
         "1.2.0",
         "sha256:abc123def456"
       );
@@ -468,7 +463,7 @@ describe("Attestations (v2)", () => {
 
       const verifiedAuditors = await verifyAllAttestations(
         client,
-        "alice/utils/greeter",
+        "alice/greeter",
         "1.2.0",
         "sha256:abc123def456"
       );
@@ -509,7 +504,7 @@ describe("Attestations (v2)", () => {
 
       const isTrusted = await hasTrustedAttestation(
         client,
-        "alice/utils/greeter",
+        "alice/greeter",
         "1.2.0",
         "sha256:abc123def456",
         ["security@example.com"]
@@ -529,7 +524,7 @@ describe("Attestations (v2)", () => {
 
       const isTrusted = await hasTrustedAttestation(
         client,
-        "alice/utils/greeter",
+        "alice/greeter",
         "1.2.0",
         "sha256:abc123def456",
         ["nonexistent@example.com"]
@@ -557,7 +552,7 @@ describe("Attestations (v2)", () => {
 
       const isTrusted = await hasTrustedAttestation(
         client,
-        "alice/utils/greeter",
+        "alice/greeter",
         "1.2.0",
         "sha256:abc123def456",
         ["security@example.com"]
@@ -584,7 +579,7 @@ describe("Attestations (v2)", () => {
 
       const isTrusted = await hasTrustedAttestation(
         client,
-        "alice/utils/greeter",
+        "alice/greeter",
         "1.2.0",
         "sha256:abc123def456",
         ["security@example.com", "audit@example.com", "review@example.com"]

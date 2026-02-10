@@ -33,17 +33,28 @@ import {
   getToolVersion,
   verifyAllAttestations,
 } from "@enactprotocol/api";
-import { DaggerExecutionProvider, type ExecutionResult } from "@enactprotocol/execution";
+import {
+  DaggerExecutionProvider,
+  DockerExecutionProvider,
+  type ExecutionResult,
+  ExecutionRouter,
+  LocalExecutionProvider,
+} from "@enactprotocol/execution";
 import { resolveSecrets, resolveToolEnv } from "@enactprotocol/secrets";
 import {
+  type Action,
+  type ActionsManifest,
   type ToolManifest,
   type ToolResolution,
   applyDefaults,
   getCacheDir,
+  getEffectiveInputSchema,
   getMinimumAttestations,
   getTrustPolicy,
   getTrustedAuditors,
   loadConfig,
+  parseActionSpecifier,
+  prepareActionCommand,
   prepareCommand,
   toolNameToPath,
   tryResolveTool,
@@ -85,6 +96,7 @@ interface RunOptions extends GlobalOptions {
   output?: string;
   apply?: boolean;
   debug?: boolean;
+  action?: string;
 }
 
 /**
@@ -635,7 +647,6 @@ function displayDryRun(
  * Display debug information about parameter resolution
  */
 function displayDebugInfo(
-  manifest: ToolManifest,
   rawInputs: Record<string, unknown>,
   inputsWithDefaults: Record<string, unknown>,
   finalInputs: Record<string, unknown>,
@@ -646,21 +657,7 @@ function displayDebugInfo(
   info(colors.bold("Debug: Parameter Resolution"));
   newline();
 
-  // Show schema information
-  if (manifest.inputSchema?.properties) {
-    info("Schema Properties:");
-    const required = new Set(manifest.inputSchema.required || []);
-    for (const [name, prop] of Object.entries(manifest.inputSchema.properties)) {
-      const propSchema = prop as { type?: string; default?: unknown; description?: string };
-      const isRequired = required.has(name);
-      const hasDefault = propSchema.default !== undefined;
-      const status = isRequired ? colors.error("required") : colors.dim("optional");
-      dim(
-        `  ${name}: ${propSchema.type || "any"} [${status}]${hasDefault ? ` (default: ${JSON.stringify(propSchema.default)})` : ""}`
-      );
-    }
-    newline();
-  }
+  // Schema information is available per-script via action.inputSchema
 
   // Show raw inputs (what was provided)
   info("Raw Inputs (provided by user):");
@@ -769,14 +766,64 @@ function displayResult(result: ExecutionResult, options: RunOptions): void {
 }
 
 /**
+ * Check if a specifier looks like a file path
+ */
+function isFilePathSpecifier(specifier: string): boolean {
+  return (
+    specifier.startsWith("/") ||
+    specifier.startsWith("./") ||
+    specifier.startsWith("../") ||
+    specifier === "."
+  );
+}
+
+/**
+ * For file paths like /tmp/skill/action, try to parse the last segment as an action
+ * Returns { parentPath, actionName } or null if not applicable
+ */
+function tryParseFilePathAction(
+  specifier: string
+): { parentPath: string; actionName: string } | null {
+  if (!isFilePathSpecifier(specifier)) {
+    return null;
+  }
+
+  const normalized = specifier.replace(/\\/g, "/");
+  const lastSlash = normalized.lastIndexOf("/");
+
+  // Need at least one slash and something after it
+  if (lastSlash <= 0 || lastSlash === normalized.length - 1) {
+    return null;
+  }
+
+  const parentPath = normalized.slice(0, lastSlash);
+  const actionName = normalized.slice(lastSlash + 1);
+
+  // Action name shouldn't look like a file extension
+  if (actionName.includes(".")) {
+    return null;
+  }
+
+  return { parentPath, actionName };
+}
+
+/**
  * Run command handler
  */
 async function runHandler(tool: string, options: RunOptions, ctx: CommandContext): Promise<void> {
   let resolution: ToolResolution | null = null;
   let resolveResult: ReturnType<typeof tryResolveToolDetailed> | null = null;
 
+  // Parse the tool specifier to check for action (owner/skill/action format)
+  const { skillName, actionName: parsedActionName } = parseActionSpecifier(tool);
+
+  // Use --action flag if provided, otherwise use parsed action name
+  let actionName = options.action ?? parsedActionName;
+  let hasActionSpecifier = actionName !== undefined;
+
   // Check if --remote flag is valid (requires namespace/name format)
-  const isRegistryFormat = tool.includes("/") && !tool.startsWith("/") && !tool.startsWith(".");
+  const isRegistryFormat =
+    skillName.includes("/") && !skillName.startsWith("/") && !skillName.startsWith(".");
   if (options.remote && !isRegistryFormat) {
     throw new ValidationError(
       `--remote requires a registry tool name (e.g., user/tool), got: ${tool}`
@@ -786,18 +833,41 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
   // Skip local resolution if --remote is set
   if (!options.remote) {
     // First, try to resolve locally (project → user → cache)
+    // Use the skill name (without action) for initial resolution
     if (!options.verbose) {
-      resolveResult = tryResolveToolDetailed(tool, { startDir: ctx.cwd });
+      resolveResult = tryResolveToolDetailed(skillName, { startDir: ctx.cwd });
       resolution = resolveResult.resolution;
     } else {
       const spinner = clack.spinner();
-      spinner.start(`Resolving tool: ${tool}`);
-      resolveResult = tryResolveToolDetailed(tool, { startDir: ctx.cwd });
+      spinner.start(
+        `Resolving tool: ${skillName}${hasActionSpecifier ? ` (action: ${actionName})` : ""}`
+      );
+      resolveResult = tryResolveToolDetailed(skillName, { startDir: ctx.cwd });
       resolution = resolveResult.resolution;
       if (resolution) {
-        spinner.stop(`${symbols.success} Resolved: ${tool}`);
+        spinner.stop(`${symbols.success} Resolved: ${skillName}`);
       } else {
         spinner.stop(`${symbols.info} Checking registry...`);
+      }
+    }
+
+    // If resolution failed and this is a file path, try treating the last segment as an action
+    // e.g., /tmp/skill/hello -> try /tmp/skill with action "hello"
+    if (!resolution && isFilePathSpecifier(tool) && !options.action) {
+      const parsed = tryParseFilePathAction(tool);
+      if (parsed) {
+        const parentResult = tryResolveToolDetailed(parsed.parentPath, { startDir: ctx.cwd });
+        if (parentResult.resolution?.actionsManifest) {
+          // Found a skill with actions at the parent path
+          resolution = parentResult.resolution;
+          resolveResult = parentResult;
+          actionName = parsed.actionName;
+          hasActionSpecifier = true;
+
+          if (options.verbose) {
+            info(`Detected action from path: ${parsed.actionName}`);
+          }
+        }
       }
     }
 
@@ -816,29 +886,59 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
     // Check if this looks like a tool name (namespace/name format)
     if (isRegistryFormat) {
       resolution = !options.verbose
-        ? await fetchAndCacheTool(tool, options, ctx)
+        ? await fetchAndCacheTool(skillName, options, ctx)
         : await withSpinner(
-            `Fetching ${tool} from registry...`,
-            async () => fetchAndCacheTool(tool, options, ctx),
-            `${symbols.success} Cached: ${tool}`
+            `Fetching ${skillName} from registry...`,
+            async () => fetchAndCacheTool(skillName, options, ctx),
+            `${symbols.success} Cached: ${skillName}`
           );
     }
   }
 
   if (!resolution) {
     if (options.local) {
-      throw new ToolNotFoundError(tool, {
+      throw new ToolNotFoundError(skillName, {
         localOnly: true,
         ...(resolveResult?.searchedLocations && {
           searchedLocations: resolveResult.searchedLocations,
         }),
       });
     }
-    throw new ToolNotFoundError(tool, {
+    throw new ToolNotFoundError(skillName, {
       ...(resolveResult?.searchedLocations && {
         searchedLocations: resolveResult.searchedLocations,
       }),
     });
+  }
+
+  // If a script was specified via colon syntax, resolve it from the manifest's scripts
+  let resolvedAction: Action | undefined;
+  let actionsManifest: ActionsManifest | undefined;
+
+  // Use resolved skill identifier for error messages (manifest name or source directory)
+  const resolvedSkillId = resolution.manifest.name ?? resolution.sourceDir;
+
+  if (hasActionSpecifier) {
+    if (!resolution.actionsManifest) {
+      throw new ValidationError(
+        `Skill "${resolvedSkillId}" does not define any scripts. Cannot execute script "${actionName}".`
+      );
+    }
+
+    actionsManifest = resolution.actionsManifest;
+    // Map lookup - action name is the key
+    resolvedAction = actionsManifest.actions[actionName!];
+
+    if (!resolvedAction) {
+      const availableActions = Object.keys(actionsManifest.actions).join(", ");
+      throw new ValidationError(
+        `Action "${actionName}" not found in skill "${resolvedSkillId}". Available actions: ${availableActions}`
+      );
+    }
+
+    if (options.verbose) {
+      info(`Using action: ${actionName}`);
+    }
   }
 
   const manifest = resolution.manifest;
@@ -852,13 +952,16 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
   // Merge inputs: path params override other inputs
   const inputs = { ...otherInputs, ...pathParams };
 
+  // Use action's inputSchema if executing an action, otherwise no schema
+  const effectiveInputSchema = resolvedAction ? getEffectiveInputSchema(resolvedAction) : undefined;
+
   // Apply defaults from schema
-  const inputsWithDefaults = manifest.inputSchema
-    ? applyDefaults(inputs, manifest.inputSchema)
+  const inputsWithDefaults = effectiveInputSchema
+    ? applyDefaults(inputs, effectiveInputSchema)
     : inputs;
 
   // Validate inputs against schema
-  const validation = validateInputs(inputsWithDefaults, manifest.inputSchema);
+  const validation = validateInputs(inputsWithDefaults, effectiveInputSchema);
   if (!validation.valid) {
     const errors = validation.errors.map((err) => `${err.path}: ${err.message}`).join(", ");
     throw new ValidationError(`Input validation failed: ${errors}`);
@@ -905,8 +1008,8 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
     }
   }
 
-  // Check if this is an instruction-based tool (no command)
-  if (!manifest.command) {
+  // Check if this is an instruction-based tool (no command) - but actions always have commands
+  if (!manifest.command && !resolvedAction) {
     // For instruction tools, just display the markdown body
     let instructions: string | undefined;
 
@@ -947,15 +1050,25 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
     return;
   }
 
-  // Prepare command - only substitute ${...} patterns that match inputSchema properties
-  const knownParameters = manifest.inputSchema?.properties
-    ? new Set(Object.keys(manifest.inputSchema.properties))
-    : undefined;
-  const command = prepareCommand(
-    manifest.command,
-    finalInputs,
-    knownParameters ? { knownParameters } : {}
-  );
+  // Prepare command
+  // For actions: use {{param}} template system (array form, no shell)
+  // For regular tools: use ${param} template system (shell interpolation)
+  let command: string[];
+
+  if (resolvedAction) {
+    // Action execution: use prepareActionCommand for {{param}} templates
+    const actionCommand = resolvedAction.command;
+    if (typeof actionCommand === "string") {
+      // String form (no templates allowed by validation)
+      command = actionCommand.split(/\s+/).filter((s) => s.length > 0);
+    } else {
+      // Array form with {{param}} templates
+      command = prepareActionCommand(actionCommand, finalInputs, resolvedAction.inputSchema);
+    }
+  } else {
+    // Regular tool execution: use prepareCommand for ${param} templates
+    command = prepareCommand(manifest.command!, finalInputs);
+  }
 
   // Resolve environment variables (non-secrets)
   const { resolved: envResolved } = resolveToolEnv(manifest.env ?? {}, ctx.cwd);
@@ -1016,7 +1129,7 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
 
   // Debug mode - show detailed parameter resolution info
   if (options.debug) {
-    displayDebugInfo(manifest, inputs, inputsWithDefaults, finalInputs, envVars, command);
+    displayDebugInfo(inputs, inputsWithDefaults, finalInputs, envVars, command);
   }
 
   // Dry run mode
@@ -1033,7 +1146,7 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
     return;
   }
 
-  // Execute the tool
+  // Execute the tool — select backend via execution router
   const providerConfig: { defaultTimeout?: number; verbose?: boolean } = {};
   if (options.timeout) {
     providerConfig.defaultTimeout = parseTimeout(options.timeout);
@@ -1042,7 +1155,20 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
     providerConfig.verbose = true;
   }
 
-  const provider = new DaggerExecutionProvider(providerConfig);
+  const config = loadConfig();
+  const router = new ExecutionRouter({
+    default: config.execution?.default,
+    fallback: config.execution?.fallback,
+    trusted_scopes: config.execution?.trusted_scopes,
+  });
+  router.registerProvider("local", new LocalExecutionProvider(providerConfig));
+  router.registerProvider("docker", new DockerExecutionProvider(providerConfig));
+  router.registerProvider("dagger", new DaggerExecutionProvider(providerConfig));
+
+  const provider = await router.selectProvider(manifest.name, {
+    forceLocal: options.local,
+    forceRemote: options.remote,
+  });
 
   // For --apply, we export to a temp directory first, then atomically replace
   let tempOutputDir: string | undefined;
@@ -1070,6 +1196,21 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
         execOptions.outputPath = resolve(options.output);
       }
 
+      // Use executeAction for actions, execute for regular tools
+      if (resolvedAction && actionsManifest && actionName) {
+        return provider.executeAction(
+          manifest,
+          actionsManifest,
+          actionName,
+          resolvedAction,
+          {
+            params: finalInputs,
+            envOverrides: envVars,
+          },
+          execOptions
+        );
+      }
+
       return provider.execute(
         manifest,
         {
@@ -1082,7 +1223,9 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
 
     // Build a descriptive message - container may need to be pulled
     const containerImage = manifest.from ?? "node:18-alpine";
-    const spinnerMessage = `Running ${manifest.name} (${containerImage})...`;
+    const toolDisplayName =
+      resolvedAction && actionName ? `${manifest.name}:${actionName}` : manifest.name;
+    const spinnerMessage = `Running ${toolDisplayName} (${containerImage})...`;
 
     const result = !options.verbose
       ? await executeTask()
@@ -1153,8 +1296,11 @@ function parseTimeout(timeout: string): number {
 export function configureRunCommand(program: Command): void {
   program
     .command("run")
-    .description("Execute a tool with its manifest-defined command")
-    .argument("<tool>", "Tool to run (name, path, or '.' for current directory)")
+    .description("Execute a tool or action with its manifest-defined command")
+    .argument(
+      "<tool>",
+      "Tool or action to run (name, owner/skill/action, path, or '.' for current directory)"
+    )
     .option("-a, --args <json>", "Input arguments as JSON string (recommended)")
     .option("-f, --input-file <path>", "Load input arguments from JSON file")
     .option(
@@ -1172,6 +1318,7 @@ export function configureRunCommand(program: Command): void {
     .option("-r, --remote", "Skip local resolution and fetch from registry")
     .option("--dry-run", "Show what would be executed without running")
     .option("--debug", "Show detailed parameter and environment variable resolution")
+    .option("--action <name>", "Script to execute (alternative to colon syntax: tool:script)")
     .option("-v, --verbose", "Show progress spinners and detailed output")
     .option("--json", "Output result as JSON")
     .action(async (tool: string, options: RunOptions) => {

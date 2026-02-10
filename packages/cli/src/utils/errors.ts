@@ -84,7 +84,7 @@ export class ManifestError extends CliError {
     super(
       fullMessage,
       EXIT_MANIFEST_ERROR,
-      "Ensure the directory contains a valid enact.yaml or enact.md file."
+      "Ensure the directory contains a valid skill.yaml or SKILL.md file."
     );
     this.name = "ManifestError";
   }
@@ -377,7 +377,7 @@ export const ErrorMessages = {
     message: `No manifest found in ${dir}`,
     suggestions: [
       `Create a manifest: ${colors.command("enact init")}`,
-      "Ensure the directory contains enact.yaml or enact.md",
+      "Ensure the directory contains skill.yaml or SKILL.md",
     ],
   }),
 

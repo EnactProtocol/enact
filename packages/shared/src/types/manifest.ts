@@ -1,6 +1,6 @@
 /**
  * TypeScript types for Enact tool manifests
- * These types define the structure of SKILL.md (and legacy enact.yaml/enact.md) frontmatter
+ * These types define the structure of SKILL.md (and skill.yaml/legacy enact.yaml/enact.md) frontmatter
  */
 
 import type { JSONSchema7 } from "json-schema";
@@ -13,6 +13,8 @@ export interface EnvVariable {
   description: string;
   /** If true, stored in OS keyring; if false, stored in .env files */
   secret?: boolean;
+  /** If true, must be set before execution (no default fallback) */
+  required?: boolean;
   /** Default value if not set (only for non-secrets) */
   default?: string;
 }
@@ -51,6 +53,32 @@ export interface ToolAnnotations {
 }
 
 /**
+ * Lifecycle hooks for tool installation and management
+ */
+export interface ToolHooks {
+  /** Command(s) to run after the tool is installed/extracted (e.g., "npm install", "pip install -r requirements.txt") */
+  postinstall?: string | string[];
+  /** Build command(s) to run before execution (e.g., "pip install -r requirements.txt") */
+  build?: string | string[];
+}
+
+/**
+ * Script definition — either a simple command string or an expanded object
+ *
+ * Simple form: "python main.py {{url}}"
+ * Expanded form: { command: "python main.py {{url}}", description: "Scrape a URL" }
+ */
+export type ScriptDefinition =
+  | string
+  | {
+      command: string;
+      description?: string;
+      inputSchema?: JSONSchema7;
+      outputSchema?: JSONSchema7;
+      annotations?: ToolAnnotations;
+    };
+
+/**
  * Resource requirements for tool execution
  */
 export interface ResourceRequirements {
@@ -76,7 +104,7 @@ export interface ToolExample {
 
 /**
  * Complete tool manifest structure
- * This represents the YAML frontmatter in SKILL.md (or legacy enact.md/enact.yaml)
+ * This represents the YAML frontmatter in SKILL.md (or skill.yaml/legacy enact.md/enact.yaml)
  */
 export interface ToolManifest {
   // ==================== Required Fields ====================
@@ -115,9 +143,6 @@ export interface ToolManifest {
 
   // ==================== Schema Fields ====================
 
-  /** JSON Schema defining input parameters */
-  inputSchema?: JSONSchema7;
-
   /** JSON Schema defining output structure */
   outputSchema?: JSONSchema7;
 
@@ -133,6 +158,28 @@ export interface ToolManifest {
 
   /** Resource limits and requirements */
   resources?: ResourceRequirements;
+
+  // ==================== Lifecycle Hooks ====================
+
+  /** Lifecycle hooks (e.g., postinstall build step) */
+  hooks?: ToolHooks;
+
+  // ==================== Scripts ====================
+
+  /**
+   * Inline executable scripts (each becomes an MCP tool via colon syntax)
+   *
+   * Scripts replace the need for a separate ACTIONS.yaml file.
+   * Each script maps a name to a command with {{param}} template syntax.
+   *
+   * @example
+   * scripts:
+   *   scrape: python scripts/scrape.py {{url}}
+   *   crawl:
+   *     command: python scripts/crawl.py {{url}} {{depth}}
+   *     description: Crawl a website to specified depth
+   */
+  scripts?: Record<string, ScriptDefinition>;
 
   // ==================== Agent Skills Spec Fields ====================
 
@@ -252,14 +299,28 @@ export interface ToolResolution {
   manifestPath: string;
   /** Tool version (if available) */
   version?: string | undefined;
+  /** The resolved script (if a script was specified via colon syntax) */
+  action?: import("./actions").Action | undefined;
+  /** The requested script name (if specified via colon syntax) */
+  actionName?: string | undefined;
+  /** The scripts manifest (converted from inline scripts) */
+  actionsManifest?: import("./actions").ActionsManifest | undefined;
 }
 
 /**
  * Supported manifest file names
  * SKILL.md is the primary format (aligned with Anthropic Agent Skills)
+ * skill.yaml/yml is the package manifest
  * enact.md/yaml/yml are supported for backwards compatibility
  */
-export const MANIFEST_FILES = ["SKILL.md", "enact.md", "enact.yaml", "enact.yml"] as const;
+export const MANIFEST_FILES = [
+  "SKILL.md",
+  "skill.yaml",
+  "skill.yml",
+  "enact.md",
+  "enact.yaml",
+  "enact.yml",
+] as const;
 export type ManifestFileName = (typeof MANIFEST_FILES)[number];
 
 /**

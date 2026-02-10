@@ -37,3 +37,15 @@ export {
   type LoadedManifest,
   type LoadManifestOptions,
 } from "./loader";
+
+// Manifest with scripts
+export {
+  loadManifestWithActions,
+  type LoadedManifestWithActions,
+} from "./actions-loader";
+
+// Scripts (inline scripts → Action bridge)
+export {
+  scriptToAction,
+  manifestScriptsToActionsManifest,
+} from "./scripts";

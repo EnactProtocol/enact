@@ -79,14 +79,17 @@ export default function Tool() {
     enabled: !isCodeView && !!tool?.latestVersion,
   });
 
-  // Find the manifest file (SKILL.md preferred, with fallback to legacy formats)
-  const enactFile = filesData?.files.find(
-    (f) =>
-      f.path === "SKILL.md" ||
-      f.path === "enact.md" ||
-      f.path === "enact.yaml" ||
-      f.path === "enact.yml"
-  );
+  // Find the documentation file with explicit priority order
+  // SKILL.md is preferred, then skill.yaml, then legacy formats as last resort
+  const enactFile = (() => {
+    if (!filesData) return undefined;
+    const priority = ["SKILL.md", "skill.yaml", "skill.yml", "enact.md", "enact.yaml", "enact.yml"];
+    for (const name of priority) {
+      const match = filesData.files.find((f) => f.path === name);
+      if (match) return match;
+    }
+    return undefined;
+  })();
 
   // Fetch enact file content
   const { data: enactContent } = useQuery<FileContentResponse>({

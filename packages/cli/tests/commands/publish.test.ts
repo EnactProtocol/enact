@@ -107,11 +107,19 @@ describe("publish command", () => {
   });
 
   describe("manifest file detection", () => {
-    test("identifies enact.yaml as manifest", () => {
+    test("identifies manifest files", () => {
       const isManifest = (filename: string): boolean => {
-        return filename === "enact.yaml" || filename === "enact.yml" || filename === "enact.md";
+        return (
+          filename === "skill.yaml" ||
+          filename === "skill.yml" ||
+          filename === "enact.yaml" ||
+          filename === "enact.yml" ||
+          filename === "enact.md"
+        );
       };
 
+      expect(isManifest("skill.yaml")).toBe(true);
+      expect(isManifest("skill.yml")).toBe(true);
       expect(isManifest("enact.yaml")).toBe(true);
       expect(isManifest("enact.yml")).toBe(true);
       expect(isManifest("enact.md")).toBe(true);
@@ -124,6 +132,8 @@ describe("publish command", () => {
         return lastDot === -1 ? "" : filename.slice(lastDot + 1);
       };
 
+      expect(getExtension("skill.yaml")).toBe("yaml");
+      expect(getExtension("skill.yml")).toBe("yml");
       expect(getExtension("enact.yaml")).toBe("yaml");
       expect(getExtension("enact.yml")).toBe("yml");
       expect(getExtension("enact.md")).toBe("md");

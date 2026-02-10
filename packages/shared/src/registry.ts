@@ -165,12 +165,12 @@ export function getInstalledVersion(
 }
 
 /**
- * Get the cache path for an installed tool
+ * Get the install path for a skill
+ * Skills are stored at ~/.agent/skills/{name}/ (flat, no version subdirectory)
  */
-export function getToolCachePath(toolName: string, version: string): string {
-  const cacheDir = getCacheDir();
-  const normalizedVersion = version.startsWith("v") ? version.slice(1) : version;
-  return join(cacheDir, toolName, `v${normalizedVersion}`);
+export function getToolCachePath(toolName: string, _version: string): string {
+  const skillsDir = getCacheDir();
+  return join(skillsDir, toolName);
 }
 
 /**

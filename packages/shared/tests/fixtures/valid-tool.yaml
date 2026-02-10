@@ -1,22 +1,15 @@
 enact: "2.0.0"
-name: acme/utils/greeter
+name: acme/greeter
 description: Greets users by name
 version: "1.0.0"
 from: node:18-alpine
-command: "echo 'Hello ${name}!'"
 timeout: 30s
 license: MIT
 tags:
   - greeting
   - utility
-inputSchema:
-  type: object
-  properties:
-    name:
-      type: string
-      description: The name to greet
-  required:
-    - name
+scripts:
+  greet: "echo 'Hello {{name}}!'"
 outputSchema:
   type: object
   properties:

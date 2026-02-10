@@ -29,7 +29,7 @@ describe("manifest types", () => {
 
     test("accepts full manifest with all fields", () => {
       const manifest: ToolManifest = {
-        name: "acme/utils/greeter",
+        name: "acme/greeter",
         description: "Greets users by name",
         enact: "2.0.0",
         version: "1.0.0",
@@ -38,12 +38,8 @@ describe("manifest types", () => {
         timeout: "30s",
         license: "MIT",
         tags: ["greeting", "utility"],
-        inputSchema: {
-          type: "object",
-          properties: {
-            name: { type: "string" },
-          },
-          required: ["name"],
+        scripts: {
+          greet: "echo 'Hello {{name}}'",
         },
         outputSchema: {
           type: "object",
@@ -90,7 +86,7 @@ describe("manifest types", () => {
         "x-custom-field": "custom value",
       };
 
-      expect(manifest.name).toBe("acme/utils/greeter");
+      expect(manifest.name).toBe("acme/greeter");
       expect(manifest.enact).toBe("2.0.0");
       expect(manifest.env?.API_KEY?.secret).toBe(true);
       expect(manifest.annotations?.readOnlyHint).toBe(true);
@@ -314,7 +310,7 @@ describe("manifest types", () => {
         },
         sourceDir: "/home/user/.enact/tools/org/tool",
         location: "user",
-        manifestPath: "/home/user/.enact/tools/org/tool/enact.yaml",
+        manifestPath: "/home/user/.enact/tools/org/tool/skill.yaml",
         version: "1.0.0",
       };
 
@@ -336,7 +332,7 @@ describe("manifest types", () => {
           manifest: { name: "test", description: "test" },
           sourceDir: "/test",
           location: loc,
-          manifestPath: "/test/enact.yaml",
+          manifestPath: "/test/skill.yaml",
         };
         expect(resolution.location).toBe(loc);
       }
@@ -346,10 +342,12 @@ describe("manifest types", () => {
   describe("constants", () => {
     test("MANIFEST_FILES contains expected files", () => {
       expect(MANIFEST_FILES).toContain("SKILL.md");
+      expect(MANIFEST_FILES).toContain("skill.yaml");
+      expect(MANIFEST_FILES).toContain("skill.yml");
       expect(MANIFEST_FILES).toContain("enact.md");
       expect(MANIFEST_FILES).toContain("enact.yaml");
       expect(MANIFEST_FILES).toContain("enact.yml");
-      expect(MANIFEST_FILES.length).toBe(4);
+      expect(MANIFEST_FILES.length).toBe(6);
     });
 
     test("PACKAGE_MANIFEST_FILE is correct", () => {

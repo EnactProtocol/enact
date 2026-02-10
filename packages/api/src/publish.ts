@@ -180,8 +180,8 @@ export async function publishTool(
     formData.append("sigstore_bundle", JSON.stringify(sigstoreBundle));
   }
 
-  // Make multipart request (v2 endpoint is POST /tools/{name})
-  const response = await fetch(`${client.getBaseUrl()}/tools/${name}`, {
+  // Make multipart request (v2 endpoint is POST /tools/{name}/versions)
+  const response = await fetch(`${client.getBaseUrl()}/tools/${name}/versions`, {
     method: "POST",
     headers: {
       Authorization: client.getAuthToken() ? `Bearer ${client.getAuthToken()}` : "",

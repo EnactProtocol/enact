@@ -170,7 +170,7 @@ bun run storage:test
 # TODO: Once publish endpoint is integrated with storage
 curl -X POST http://localhost:54321/functions/v1/tools \
   -H "Content-Type: multipart/form-data" \
-  -F "manifest=@enact.yaml" \
+  -F "manifest=@skill.yaml" \
   -F "bundle=@test.tar.gz"
 ```
 

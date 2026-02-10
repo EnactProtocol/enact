@@ -534,13 +534,16 @@ describe("configuration manager", () => {
       expect(existsSync(enactHome)).toBe(true);
     });
 
-    test("creates ~/.enact/cache/ directory", () => {
+    test("creates ~/.agent/skills/ directory", () => {
       const enactHome = getEnactHome();
       const cacheDir = getCacheDir();
 
       // Clean up first
       if (existsSync(enactHome)) {
         rmSync(enactHome, { recursive: true, force: true });
+      }
+      if (existsSync(cacheDir)) {
+        rmSync(cacheDir, { recursive: true, force: true });
       }
 
       ensureGlobalSetup();

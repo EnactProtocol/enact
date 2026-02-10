@@ -17,7 +17,7 @@ describe("sign command", () => {
 
     // Create a test manifest
     writeFileSync(
-      join(FIXTURES_DIR, "enact.yaml"),
+      join(FIXTURES_DIR, "skill.yaml"),
       `enact: "2.0.0"
 name: "test/sign-tool"
 version: "1.0.0"

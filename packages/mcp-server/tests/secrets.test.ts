@@ -417,20 +417,14 @@ describe("Secret Resolution Integration", () => {
       version: "1.2.1",
       description: "Scrape websites using Firecrawl API",
       from: "node:20",
-      command: "node /work/firecrawl.js",
       env: {
         FIRECRAWL_API_KEY: {
           description: "Your Firecrawl API key from firecrawl.dev",
           secret: true,
         },
       },
-      inputSchema: {
-        type: "object",
-        properties: {
-          url: { type: "string" },
-          action: { type: "string" },
-        },
-        required: ["url"],
+      scripts: {
+        scrape: "node /work/firecrawl.js {{url}}",
       },
     };
 
@@ -448,12 +442,8 @@ describe("Secret Resolution Integration", () => {
       version: "1.0.0",
       description: "A simple greeting tool",
       from: "node:20",
-      command: "node /work/greet.js",
-      inputSchema: {
-        type: "object",
-        properties: {
-          name: { type: "string" },
-        },
+      scripts: {
+        greet: "node /work/greet.js {{name}}",
       },
     };
 

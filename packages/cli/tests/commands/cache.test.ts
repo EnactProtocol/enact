@@ -271,14 +271,14 @@ describe("cache command", () => {
       }
 
       const info: CacheInfo = {
-        path: "/Users/test/.enact/cache",
+        path: "/Users/test/.agent/skills",
         totalSize: 10_485_760, // 10 MB
         toolCount: 25,
         oldestEntry: "2024-01-01T00:00:00Z",
         newestEntry: "2024-01-20T12:00:00Z",
       };
 
-      expect(info.path).toContain(".enact");
+      expect(info.path).toContain(".agent");
       expect(info.totalSize).toBeGreaterThan(0);
       expect(info.toolCount).toBeGreaterThanOrEqual(0);
     });

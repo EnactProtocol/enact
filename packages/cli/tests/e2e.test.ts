@@ -17,7 +17,9 @@ import {
   type ToolManifest,
   applyDefaults,
   loadManifestFromDir,
+  prepareActionCommand,
   prepareCommand,
+  scriptToAction,
   toolNameToPath,
   tryResolveTool,
   validateInputs,
@@ -77,7 +79,7 @@ describe("E2E: Fixture Validation", () => {
     expect(loaded?.manifest.name).toBe("test/greeter");
     expect(loaded?.manifest.version).toBe("1.0.0");
     expect(loaded?.manifest.from).toBe("alpine:latest");
-    expect(loaded?.manifest.command).toContain("echo");
+    expect(loaded?.manifest.scripts?.greet).toBeDefined();
   });
 
   test("echo-tool fixture has valid Markdown manifest", () => {
@@ -88,15 +90,12 @@ describe("E2E: Fixture Validation", () => {
     expect(loaded?.format).toBe("md");
   });
 
-  test("calculator fixture has valid manifest with complex schema", () => {
+  test("calculator fixture has valid manifest with scripts", () => {
     const loaded = loadManifestFromDir(CALCULATOR_TOOL);
     expect(loaded).not.toBeNull();
     expect(loaded?.manifest.name).toBe("test/calculator");
     expect(loaded?.manifest.from).toBe("python:3.12-alpine");
-    expect(loaded?.manifest.inputSchema?.properties?.operation).toBeDefined();
-    expect(loaded?.manifest.inputSchema?.required).toContain("operation");
-    expect(loaded?.manifest.inputSchema?.required).toContain("a");
-    expect(loaded?.manifest.inputSchema?.required).toContain("b");
+    expect(loaded?.manifest.scripts?.calculate).toBeDefined();
   });
 
   test("invalid-tool fixture is missing required fields", () => {
@@ -126,7 +125,9 @@ describe("E2E: Tool Installation Flow", () => {
 
     expect(manifest.name).toBe("test/greeter");
     expect(existsSync(destPath)).toBe(true);
-    expect(existsSync(join(destPath, "enact.yaml"))).toBe(true);
+    expect(
+      existsSync(join(destPath, "enact.yaml")) || existsSync(join(destPath, "skill.yaml"))
+    ).toBe(true);
 
     // Verify installed manifest can be loaded
     const reloaded = loadManifestFromDir(destPath);
@@ -243,39 +244,41 @@ describe("E2E: Input Validation Flow", () => {
   });
 
   test("validates greeter with default input", () => {
-    // Apply defaults first, then validate
-    const withDefaults = applyDefaults({}, greeterManifest.inputSchema);
-    const result = validateInputs(withDefaults, greeterManifest.inputSchema);
+    // Convert script to action to get its inputSchema
+    const action = scriptToAction("greet", greeterManifest.scripts!.greet!);
+    const withDefaults = applyDefaults({}, action.inputSchema);
+    const result = validateInputs(withDefaults, action.inputSchema);
     expect(result.valid).toBe(true);
     // Should have default applied
     expect(withDefaults.name).toBe("World");
   });
 
   test("validates greeter with custom input", () => {
-    const result = validateInputs({ name: "Alice" }, greeterManifest.inputSchema);
+    const action = scriptToAction("greet", greeterManifest.scripts!.greet!);
+    const result = validateInputs({ name: "Alice" }, action.inputSchema);
     expect(result.valid).toBe(true);
     expect(result.coercedValues?.name).toBe("Alice");
   });
 
   test("validates calculator with all required inputs", () => {
-    const result = validateInputs({ operation: "add", a: 5, b: 3 }, calculatorManifest.inputSchema);
+    const action = scriptToAction("calculate", calculatorManifest.scripts!.calculate!);
+    const result = validateInputs({ operation: "add", a: 5, b: 3 }, action.inputSchema);
     expect(result.valid).toBe(true);
   });
 
   test("fails validation when required input is missing", () => {
+    const action = scriptToAction("calculate", calculatorManifest.scripts!.calculate!);
     const result = validateInputs(
       { operation: "add", a: 5 }, // missing 'b'
-      calculatorManifest.inputSchema
+      action.inputSchema
     );
     expect(result.valid).toBe(false);
     expect(result.errors.length).toBeGreaterThan(0);
   });
 
   test("fails validation with invalid enum value", () => {
-    const result = validateInputs(
-      { operation: "invalid", a: 5, b: 3 },
-      calculatorManifest.inputSchema
-    );
+    const action = scriptToAction("calculate", calculatorManifest.scripts!.calculate!);
+    const result = validateInputs({ operation: "invalid", a: 5, b: 3 }, action.inputSchema);
     expect(result.valid).toBe(false);
   });
 });
@@ -291,11 +294,15 @@ describe("E2E: Command Preparation Flow", () => {
     expect(preparedStr).not.toContain("${name}");
   });
 
-  test("prepares calculator command with multiple inputs", () => {
+  test("prepares calculator command with multiple inputs (scripts)", () => {
     const loaded = loadManifestFromDir(CALCULATOR_TOOL);
-    const command = loaded?.manifest.command!;
+    const action = scriptToAction("calculate", loaded!.manifest.scripts!.calculate!);
 
-    const prepared = prepareCommand(command, { operation: "add", a: 5, b: 3 });
+    const prepared = prepareActionCommand(
+      action.command as string[],
+      { operation: "add", a: 5, b: 3 },
+      action.inputSchema
+    );
     const preparedStr = prepared.join(" ");
 
     expect(preparedStr).toContain("add");
@@ -472,7 +479,7 @@ describe("E2E: Full Workflow", () => {
     }
   });
 
-  test("complete install -> resolve -> validate -> prepare flow", () => {
+  test("complete install -> resolve -> validate -> prepare flow (scripts)", () => {
     // 1. Install tool
     const destBase = join(tempDir, ".enact", "tools");
     const { manifest } = installTool(GREETER_TOOL, destBase);
@@ -482,18 +489,23 @@ describe("E2E: Full Workflow", () => {
     const resolution = tryResolveTool("test/greeter", { startDir: tempDir });
     expect(resolution).not.toBeNull();
 
-    // 3. Validate inputs
-    const validation = validateInputs({ name: "TestUser" }, manifest.inputSchema);
+    // 3. Convert script to action and validate
+    const action = scriptToAction("greet", manifest.scripts!.greet!);
+    const validation = validateInputs({ name: "TestUser" }, action.inputSchema);
     expect(validation.valid).toBe(true);
 
-    // 4. Prepare command
-    const prepared = prepareCommand(manifest.command!, validation.coercedValues!);
+    // 4. Prepare action command
+    const prepared = prepareActionCommand(
+      action.command as string[],
+      validation.coercedValues!,
+      action.inputSchema
+    );
     const preparedStr = prepared.join(" ");
     expect(preparedStr).toContain("TestUser");
     expect(preparedStr).toContain("Hello");
   });
 
-  test("complete calculator workflow", () => {
+  test("complete calculator workflow (scripts)", () => {
     // 1. Install tool
     const destBase = join(tempDir, ".enact", "tools");
     const { manifest } = installTool(CALCULATOR_TOOL, destBase);
@@ -502,7 +514,9 @@ describe("E2E: Full Workflow", () => {
     const resolution = tryResolveTool("test/calculator", { startDir: tempDir });
     expect(resolution).not.toBeNull();
 
-    // 3. Validate multiple operations
+    // 3. Convert script to action and validate multiple operations
+    const action = scriptToAction("calculate", manifest.scripts!.calculate!);
+
     const operations = [
       { operation: "add", a: 10, b: 5 },
       { operation: "subtract", a: 10, b: 5 },
@@ -511,10 +525,14 @@ describe("E2E: Full Workflow", () => {
     ];
 
     for (const inputs of operations) {
-      const validation = validateInputs(inputs, manifest.inputSchema);
+      const validation = validateInputs(inputs, action.inputSchema);
       expect(validation.valid).toBe(true);
 
-      const prepared = prepareCommand(manifest.command!, validation.coercedValues!);
+      const prepared = prepareActionCommand(
+        action.command as string[],
+        validation.coercedValues!,
+        action.inputSchema
+      );
       const preparedStr = prepared.join(" ");
       expect(preparedStr).toContain(inputs.operation);
       expect(preparedStr).toContain(String(inputs.a));
@@ -522,7 +540,7 @@ describe("E2E: Full Workflow", () => {
     }
   });
 
-  test("handles markdown tool workflow", () => {
+  test("handles markdown tool workflow (scripts)", () => {
     // Install markdown-based tool
     const destBase = join(tempDir, ".enact", "tools");
     const { manifest } = installTool(ECHO_TOOL, destBase);
@@ -532,12 +550,16 @@ describe("E2E: Full Workflow", () => {
     const resolution = tryResolveTool("test/echo-tool", { startDir: tempDir });
     expect(resolution).not.toBeNull();
 
-    // Validate
-    const validation = validateInputs({ text: "Hello from markdown tool!" }, manifest.inputSchema);
+    // Convert script to action, validate, prepare
+    const action = scriptToAction("echo", manifest.scripts!.echo!);
+    const validation = validateInputs({ text: "Hello from markdown tool!" }, action.inputSchema);
     expect(validation.valid).toBe(true);
 
-    // Prepare
-    const prepared = prepareCommand(manifest.command!, validation.coercedValues!);
+    const prepared = prepareActionCommand(
+      action.command as string[],
+      validation.coercedValues!,
+      action.inputSchema
+    );
     const preparedStr = prepared.join(" ");
     expect(preparedStr).toContain("Hello from markdown tool!");
   });

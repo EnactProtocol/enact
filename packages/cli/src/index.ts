@@ -26,6 +26,7 @@ import {
   configureReportCommand,
   configureRunCommand,
   configureSearchCommand,
+  configureServeCommand,
   configureSetupCommand,
   configureSignCommand,
   configureTrustCommand,
@@ -88,6 +89,9 @@ async function main() {
 
   // Validation command
   configureValidateCommand(program);
+
+  // Self-hosted registry
+  configureServeCommand(program);
 
   // Global error handler - handle Commander's help/version exits gracefully
   program.exitOverride((err) => {

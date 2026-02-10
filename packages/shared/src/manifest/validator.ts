@@ -20,6 +20,7 @@ import type {
 const EnvVariableSchema = z.object({
   description: z.string().min(1, "Description is required"),
   secret: z.boolean().optional(),
+  required: z.boolean().optional(),
   default: z.string().optional(),
 });
 
@@ -83,15 +84,16 @@ const SEMVER_REGEX =
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
 
 /**
- * Tool name regex - hierarchical path format (required for publishing)
+ * Tool name regex - @scope/name format (required for publishing)
+ * Exactly 2 segments with optional @ prefix: "org/tool" or "@org/tool"
  */
-const TOOL_NAME_REGEX = /^[a-z0-9_-]+(?:\/[a-z0-9_-]+)+$/;
+const TOOL_NAME_REGEX = /^@?[a-z0-9_-]+\/[a-z0-9_-]+$/;
 
 /**
  * Tool name regex - simple format (allowed for local tools)
- * Allows both hierarchical (org/tool) and simple (my-tool) names
+ * Allows simple names ("my-tool") or scope/name ("org/tool", "@org/tool")
  */
-const TOOL_NAME_REGEX_LOCAL = /^[a-z0-9_-]+(?:\/[a-z0-9_-]+)*$/;
+const TOOL_NAME_REGEX_LOCAL = /^@?[a-z0-9_-]+(?:\/[a-z0-9_-]+)?$/;
 
 /**
  * Go duration regex (used for timeout)
@@ -105,7 +107,7 @@ function createToolManifestSchema(allowSimpleNames: boolean) {
   const nameRegex = allowSimpleNames ? TOOL_NAME_REGEX_LOCAL : TOOL_NAME_REGEX;
   const nameMessage = allowSimpleNames
     ? "Tool name must contain only lowercase letters, numbers, hyphens, and underscores"
-    : "Tool name must be hierarchical path format (e.g., 'org/tool' or 'org/category/tool')";
+    : "Tool name must be scope/name format (e.g., 'org/tool' or '@org/tool')";
 
   return z
     .object({
@@ -133,7 +135,6 @@ function createToolManifestSchema(allowSimpleNames: boolean) {
       tags: z.array(z.string()).optional(),
 
       // Schema fields
-      inputSchema: JsonSchemaSchema.optional(),
       outputSchema: JsonSchemaSchema.optional(),
 
       // Environment variables
@@ -223,14 +224,6 @@ function generateWarnings(manifest: ToolManifest): ValidationWarning[] {
     });
   }
 
-  if (!manifest.inputSchema && manifest.command) {
-    warnings.push({
-      path: "inputSchema",
-      message: "Input schema is recommended for tools with parameters",
-      code: "MISSING_RECOMMENDED",
-    });
-  }
-
   if (!manifest.outputSchema) {
     warnings.push({
       path: "outputSchema",
@@ -247,6 +240,14 @@ function generateWarnings(manifest: ToolManifest): ValidationWarning[] {
           path: `env.${key}`,
           message: "Secret variables should not have default values",
           code: "SECRET_WITH_DEFAULT",
+        });
+      }
+      if (value.required && value.default !== undefined) {
+        warnings.push({
+          path: `env.${key}`,
+          message:
+            "Required variables with a default value are always satisfied — 'required' has no effect",
+          code: "REQUIRED_WITH_DEFAULT",
         });
       }
     }

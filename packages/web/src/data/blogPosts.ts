@@ -191,15 +191,14 @@ Enact uses the \`SKILL.md\` manifest format—a superset of the open [Agent Skil
 - \`name\`, \`description\` (required)
 - \`license\`, \`compatibility\`, \`metadata\` (optional)
 
-**Enact extensions:**
+**Enact extensions (in \`skill.yaml\`):**
 - \`version\` — Semantic versioning for the tool
-- \`inputSchema\`, \`outputSchema\` — JSON Schema definitions for AI agents
-- \`from:\` — Base Docker image (e.g., \`node:18-alpine\`, \`python:3.11-slim\`)
-- \`build:\` — Build steps run once and cached (compile code, install deps)
-- \`command:\` — The actual execution command with parameter substitution
-- \`timeout:\`, \`env:\`, \`files:\` — Execution controls and environment
+- \`scripts\` — Named executable commands with \`{{param}}\` template substitution
+- \`from:\` — Base Docker image (e.g., \`node:18-alpine\`, \`python:3.12-slim\`)
+- \`hooks.build:\` — Build steps run once and cached (compile code, install deps)
+- \`timeout:\`, \`env:\` — Execution controls and environment
 
-This combination is powerful: **the same manifest defines both what the tool does (for AI) and how to run it (for containers)**. Enact handles building the container, injecting inputs as environment variables or files, capturing stdout as JSON, and exposing everything via [Model Context Protocol (MCP)](https://modelcontextprotocol.io/).
+This combination is powerful: **the SKILL.md defines what the tool does (for AI) and the skill.yaml defines how to run it (for containers)**. Enact handles building the container, injecting inputs as environment variables or files, capturing stdout as JSON, and exposing everything via [Model Context Protocol (MCP)](https://modelcontextprotocol.io/).
 
 The result? **Any language with an interpreter can become an MCP tool**. Even Brainfuck.
 
@@ -253,10 +252,12 @@ enact: "2.0"
 
 from: debian:bookworm-slim
 
-build:
-  - apt-get update && apt-get install -y beef
+hooks:
+  build:
+    - apt-get update && apt-get install -y beef
 
-command: beef /workspace/hello.bf
+scripts:
+  run: beef /workspace/hello.bf
 
 timeout: 30s
 
@@ -276,8 +277,8 @@ outputSchema:
 
 The magic here:
 - \`from: debian:bookworm-slim\` — Use Debian as our base image
-- \`build:\` — Install the \`beef\` Brainfuck interpreter
-- \`command:\` — Run our \`.bf\` file
+- \`hooks.build:\` — Install the \`beef\` Brainfuck interpreter
+- \`scripts:\` — Run our \`.bf\` file
 - \`inputSchema\` / \`outputSchema\` — Tell AI agents what to expect
 
 When an agent calls \`enact_learn\` on this tool, it receives the schema and knows exactly how to use it.
@@ -569,10 +570,12 @@ enact: "2.0"
 
 from: rust:1.75-slim
 
-build:
-  - rustc -o /workspace/dice /workspace/dice.rs
+hooks:
+  build:
+    - rustc -o /workspace/dice /workspace/dice.rs
 
-command: /workspace/dice \${sides} \${count}
+scripts:
+  roll: "/workspace/dice {{sides}} {{count}}"
 
 timeout: 60s
 
@@ -813,7 +816,7 @@ Every one of these is a silent failure waiting to happen.
 The solution is not to write more defensive shell scripts. We already know this from years of experience with DevOps and scripting.
 It's to **stop depending on the host environment entirely**.
 
-This is where Enact comes in. Enact extends the [SKILL.md standard](https://github.com/anthropics/skills/issues/157) with fields for containerized execution (\`from\`, \`build\`, and \`command\`) so skills can define their own runtime. Think of it as npm for AI: a registry to share tools, plus a runtime to execute them in containers.
+This is where Enact comes in. Enact extends the [SKILL.md standard](https://github.com/anthropics/skills/issues/157) with a \`skill.yaml\` file for containerized execution (\`from\`, \`hooks.build\`, and \`scripts\`) so skills can define their own runtime. Think of it as npm for AI: a registry to share tools, plus a runtime to execute them in containers.
 
 Instead of skills being just instructions that hope the right tools exist, an Enact skill specifies everything needed to run. We just published \`enact/firecrawl\`, a full-featured Firecrawl tool that handles scraping, crawling, searching, and AI-powered extraction:
 
@@ -823,13 +826,15 @@ name: enact/firecrawl
 version: 1.1.0
 description: Scrape, crawl, search, and extract structured data from websites
 from: python:3.12-slim
-build:
-  - pip install requests
+hooks:
+  build:
+    - pip install requests
 env:
   FIRECRAWL_API_KEY:
     description: Your Firecrawl API key
     secret: true
-command: python /workspace/firecrawl.py \${action} \${url} \${formats} \${limit} \${only_main_content} \${prompt} \${schema}
+scripts:
+  scrape: "python /workspace/firecrawl.py {{action}} {{url}} {{formats}} {{limit}} {{only_main_content}} {{prompt}} {{schema}}"
 inputSchema:
   type: object
   properties:
@@ -1177,7 +1182,7 @@ Every one of these is a silent failure waiting to happen.
 
 The solution is not to write more defensive shell scripts. It's to **stop depending on the host environment entirely**.
 
-This is where Enact comes in. Enact extends the [SKILL.md standard](https://github.com/anthropics/skills/issues/157) with fields for containerized execution (\`from\`, \`build\`, and \`command\`) so skills can define their own runtime. Think of it as npm for AI: a registry to share tools, plus a runtime to execute them in containers.
+This is where Enact comes in. Enact extends the [SKILL.md standard](https://github.com/anthropics/skills/issues/157) with a \`skill.yaml\` file for containerized execution (\`from\`, \`hooks.build\`, and \`scripts\`) so skills can define their own runtime. Think of it as npm for AI: a registry to share tools, plus a runtime to execute them in containers.
 
 Instead of skills being just instructions that hope the right tools exist, an Enact skill specifies everything needed to run. We just published \`enact/firecrawl\`, a full-featured Firecrawl tool that handles scraping, crawling, searching, and AI-powered extraction:
 
@@ -1187,13 +1192,15 @@ name: enact/firecrawl
 version: 1.1.0
 description: Scrape, crawl, search, and extract structured data from websites
 from: python:3.12-slim
-build:
-  - pip install requests
+hooks:
+  build:
+    - pip install requests
 env:
   FIRECRAWL_API_KEY:
     description: Your Firecrawl API key
     secret: true
-command: python /workspace/firecrawl.py \${action} \${url} \${formats} \${limit} \${only_main_content} \${prompt} \${schema}
+scripts:
+  scrape: "python /workspace/firecrawl.py {{action}} {{url}} {{formats}} {{limit}} {{only_main_content}} {{prompt}} {{schema}}"
 inputSchema:
   type: object
   properties:
@@ -1519,7 +1526,7 @@ secret-scanner/
     └── scan.py        # Implementation code
 \`\`\`
 
-The \`SKILL.md\` file bundles the **contract** (the MCP schema) with the **execution config** (the container image, build steps, and command):
+The \`skill.yaml\` file bundles the **contract** (the MCP schema) with the **execution config** (the container image, build steps, and scripts):
 
 \`\`\`yaml
 ---
@@ -1527,9 +1534,11 @@ name: secops/secret-scanner
 version: 2.1.0
 description: Scans codebases for exposed secrets, API keys, and credentials
 from: python:3.12-slim
-build:
-  - pip install detect-secrets
-command: detect-secrets scan \${path} --all-files
+hooks:
+  build:
+    - pip install detect-secrets
+scripts:
+  scan: "detect-secrets scan {{path}} --all-files"
 inputSchema:
   type: object
   properties:
@@ -1546,7 +1555,7 @@ detect-secrets. Identifies API keys, passwords, private keys,
 and other sensitive data that shouldn't be in version control.
 \`\`\`
 
-When you run this (whether on your MacBook, a Linux server, or inside a CI pipeline), Enact uses [Dagger](https://dagger.io) to spin up the exact container environment defined in the skill. It mounts your code, runs the command, and captures the output.
+When you run this (whether on your MacBook, a Linux server, or inside a CI pipeline), Enact uses [Dagger](https://dagger.io) to spin up the exact container environment defined in the skill. It mounts your code, runs the script, and captures the output.
 
 **No dependency issues. No "works on my machine." Just pure, portable capability.**
 

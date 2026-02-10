@@ -34,7 +34,7 @@ describe("manifest loader", () => {
       const filePath = join(FIXTURES_DIR, "valid-tool.yaml");
       const result = loadManifest(filePath);
 
-      expect(result.manifest.name).toBe("acme/utils/greeter");
+      expect(result.manifest.name).toBe("acme/greeter");
       expect(result.manifest.description).toBe("Greets users by name");
       expect(result.manifest.version).toBe("1.0.0");
       expect(result.format).toBe("yaml");
@@ -46,7 +46,7 @@ describe("manifest loader", () => {
       const filePath = join(FIXTURES_DIR, "valid-tool.md");
       const result = loadManifest(filePath);
 
-      expect(result.manifest.name).toBe("acme/docs/analyzer");
+      expect(result.manifest.name).toBe("acme/analyzer");
       expect(result.manifest.description).toBe("Analyzes documentation for completeness");
       expect(result.format).toBe("md");
       expect(result.body).toBeDefined();
@@ -104,11 +104,11 @@ description: A minimal tool
   });
 
   describe("loadManifestFromDir", () => {
-    test("loads manifest from directory with enact.yaml", () => {
+    test("loads manifest from directory with skill.yaml", () => {
       const testDir = join(TEST_DIR, "yaml-dir");
       mkdirSync(testDir, { recursive: true });
       writeFileSync(
-        join(testDir, "enact.yaml"),
+        join(testDir, "skill.yaml"),
         `
 name: test/yaml
 description: Test YAML manifest
@@ -118,6 +118,22 @@ description: Test YAML manifest
 
       const result = loadManifestFromDir(testDir);
       expect(result.manifest.name).toBe("test/yaml");
+    });
+
+    test("loads manifest from directory with legacy enact.yaml", () => {
+      const testDir = join(TEST_DIR, "legacy-yaml-dir");
+      mkdirSync(testDir, { recursive: true });
+      writeFileSync(
+        join(testDir, "enact.yaml"),
+        `
+name: test/legacy-yaml
+description: Test legacy YAML manifest
+`,
+        "utf-8"
+      );
+
+      const result = loadManifestFromDir(testDir);
+      expect(result.manifest.name).toBe("test/legacy-yaml");
     });
 
     test("loads manifest from directory with enact.md", () => {
@@ -140,31 +156,29 @@ description: Test Markdown manifest
       expect(result.format).toBe("md");
     });
 
-    test("prefers enact.md over enact.yaml", () => {
+    test("prefers skill.yaml over legacy enact.yaml", () => {
       const testDir = join(TEST_DIR, "both-dir");
       mkdirSync(testDir, { recursive: true });
 
-      // Create both files
       writeFileSync(
-        join(testDir, "enact.md"),
-        `---
-name: test/md-preferred
-description: Markdown version
----
+        join(testDir, "skill.yaml"),
+        `
+name: test/skill-preferred
+description: Skill version
 `,
         "utf-8"
       );
       writeFileSync(
         join(testDir, "enact.yaml"),
         `
-name: test/yaml-version
-description: YAML version
+name: test/enact-version
+description: Legacy version
 `,
         "utf-8"
       );
 
       const result = loadManifestFromDir(testDir);
-      expect(result.manifest.name).toBe("test/md-preferred");
+      expect(result.manifest.name).toBe("test/skill-preferred");
     });
 
     test("throws for directory without manifest", () => {
@@ -177,13 +191,13 @@ description: YAML version
   });
 
   describe("findManifestFile", () => {
-    test("finds enact.yaml", () => {
+    test("finds skill.yaml", () => {
       const testDir = join(TEST_DIR, "find-yaml");
       mkdirSync(testDir, { recursive: true });
-      writeFileSync(join(testDir, "enact.yaml"), "name: test/find", "utf-8");
+      writeFileSync(join(testDir, "skill.yaml"), "name: test/find", "utf-8");
 
       const result = findManifestFile(testDir);
-      expect(result).toBe(join(testDir, "enact.yaml"));
+      expect(result).toBe(join(testDir, "skill.yaml"));
     });
 
     test("finds enact.md", () => {
@@ -208,7 +222,7 @@ description: YAML version
     test("returns true when manifest exists", () => {
       const testDir = join(TEST_DIR, "has-manifest");
       mkdirSync(testDir, { recursive: true });
-      writeFileSync(join(testDir, "enact.yaml"), "name: test/has", "utf-8");
+      writeFileSync(join(testDir, "skill.yaml"), "name: test/has", "utf-8");
 
       expect(hasManifest(testDir)).toBe(true);
     });
@@ -227,7 +241,7 @@ description: YAML version
       const result = tryLoadManifest(filePath);
 
       expect(result).not.toBeNull();
-      expect(result?.manifest.name).toBe("acme/utils/greeter");
+      expect(result?.manifest.name).toBe("acme/greeter");
     });
 
     test("returns null on failure", () => {
@@ -250,7 +264,7 @@ description: YAML version
       const testDir = join(TEST_DIR, "try-success");
       mkdirSync(testDir, { recursive: true });
       writeFileSync(
-        join(testDir, "enact.yaml"),
+        join(testDir, "skill.yaml"),
         `
 name: test/try
 description: Test try loading

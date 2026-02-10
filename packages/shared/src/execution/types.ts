@@ -3,6 +3,7 @@
  * Provides interfaces for tool execution, container management, and results
  */
 
+import type { Action, ActionsManifest } from "../types/actions";
 import type { ToolManifest } from "../types/manifest";
 
 // ============================================================================
@@ -302,6 +303,16 @@ export interface ExecutionProvider {
     options?: ExecutionOptions
   ): Promise<ExecutionResult>;
 
+  /** Execute an action from ACTIONS.yaml */
+  executeAction(
+    manifest: ToolManifest,
+    actionsManifest: ActionsManifest,
+    actionName: string,
+    action: Action,
+    input: ExecutionInput,
+    options?: ExecutionOptions
+  ): Promise<ExecutionResult>;
+
   /** Shutdown the provider */
   shutdown(): Promise<void>;
 }
@@ -342,9 +353,9 @@ export interface InterpolationOptions {
   /** Callback for warnings (e.g., potential double-quoting) */
   onWarning?: (warning: CommandWarning) => void;
   /**
-   * Set of known parameter names from the inputSchema.
+   * Set of known parameter names.
    * Only ${...} patterns matching these names will be substituted.
-   * If not provided, ALL ${...} patterns are treated as parameters (legacy behavior).
+   * If not provided, ALL ${...} patterns are treated as parameters.
    */
   knownParameters?: Set<string>;
 }

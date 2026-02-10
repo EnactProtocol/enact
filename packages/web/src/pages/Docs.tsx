@@ -1096,11 +1096,14 @@ function ManifestReference() {
             <span className="text-brand-teal">from</span>
             {`: python:3.12-slim
 `}
-            <span className="text-brand-teal">build</span>
-            {`: pip install requests pandas
+            <span className="text-brand-teal">hooks</span>
+            {`:
+  build:
+    - pip install requests pandas
 `}
-            <span className="text-brand-teal">command</span>
-            {`: python /workspace/main.py \${input}
+            <span className="text-brand-teal">scripts</span>
+            {`:
+  process: "python /workspace/main.py {{input}}"
 `}
             <span className="text-brand-teal">timeout</span>
             {`: 30s
@@ -1195,17 +1198,16 @@ enact run owner/category/tool --args '{"input": "hello"}'
                   </td>
                 </tr>
                 <tr className="border-b border-teal-200">
-                  <td className="px-4 py-3 font-mono text-sm text-teal-600">build</td>
+                  <td className="px-4 py-3 font-mono text-sm text-teal-600">hooks</td>
                   <td className="px-4 py-3 text-sm text-gray-600">
-                    Build commands (string or array, cached by Dagger)
+                    Lifecycle hooks (build commands, postinstall)
                   </td>
                 </tr>
                 <tr className="border-b border-teal-200">
-                  <td className="px-4 py-3 font-mono text-sm text-teal-600">command</td>
+                  <td className="px-4 py-3 font-mono text-sm text-teal-600">scripts</td>
                   <td className="px-4 py-3 text-sm text-gray-600">
-                    Shell command with{" "}
-                    <code className="bg-teal-200 px-1 rounded">$&#123;param&#125;</code>{" "}
-                    substitution
+                    Named commands with{" "}
+                    <code className="bg-teal-200 px-1 rounded">{"{{param}}"}</code> substitution
                   </td>
                 </tr>
                 <tr>
@@ -1412,25 +1414,27 @@ enact run owner/category/tool --args '{"input": "hello"}'
       <div className="bg-primary-100 border border-primary-200 rounded-xl p-6">
         <h3 className="font-semibold text-gray-600 mb-3">Parameter Substitution</h3>
         <p className="text-sm text-gray-500 mb-4">
-          Enact auto-quotes parameters. <strong>Never manually quote:</strong>
+          Use <code className="bg-primary-200 px-1 rounded">{"{{param}}"}</code> syntax in scripts.
+          Each parameter becomes a single argument — no shell escaping needed.
         </p>
         <div className="grid md:grid-cols-2 gap-4">
-          <div className="bg-white border border-brand-red rounded-lg p-3">
-            <div className="text-brand-red font-semibold text-sm mb-1">Wrong</div>
+          <div className="bg-white border border-brand-green rounded-lg p-3">
+            <div className="text-green-600 font-semibold text-sm mb-1">Example</div>
             <code className="text-sm text-gray-700">
-              command: python main.py "$&#123;input&#125;"
+              {"scripts:"}
+              <br />
+              {"  greet: \"echo 'Hello, {{name}}!'\""}
             </code>
           </div>
-          <div className="bg-white border border-brand-green rounded-lg p-3">
-            <div className="text-green-600 font-semibold text-sm mb-1">Correct</div>
+          <div className="bg-white border border-blue-400 rounded-lg p-3">
+            <div className="text-blue-600 font-semibold text-sm mb-1">Auto-inferred</div>
             <code className="text-sm text-gray-700">
-              command: python main.py $&#123;input&#125;
+              Parameters are auto-inferred from {"{{param}}"} patterns when inputSchema is omitted
             </code>
           </div>
         </div>
         <p className="text-sm text-gray-500 mt-4">
-          Use <code className="bg-primary-200 px-1 rounded">$&#123;param:raw&#125;</code> for raw
-          output without quoting (use carefully).
+          Optional parameters without values are omitted entirely from the command.
         </p>
       </div>
 

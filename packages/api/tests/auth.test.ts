@@ -101,20 +101,20 @@ describe("auth module", () => {
       const client = createApiClient({ authToken: "valid-token" });
 
       // Should not throw
-      await submitFeedback(client, "alice/utils/greeter", 5, "1.2.0", "Great tool!");
+      await submitFeedback(client, "alice/greeter", 5, "1.2.0", "Great tool!");
     });
 
     test("works without comment", async () => {
       const client = createApiClient({ authToken: "valid-token" });
 
       // Should not throw
-      await submitFeedback(client, "alice/utils/greeter", 4, "1.2.0");
+      await submitFeedback(client, "alice/greeter", 4, "1.2.0");
     });
 
     test("requires authentication", async () => {
       const client = createApiClient({ baseUrl: "http://localhost" });
 
-      await expect(submitFeedback(client, "alice/utils/greeter", 5, "1.2.0")).rejects.toThrow();
+      await expect(submitFeedback(client, "alice/greeter", 5, "1.2.0")).rejects.toThrow();
     });
   });
 

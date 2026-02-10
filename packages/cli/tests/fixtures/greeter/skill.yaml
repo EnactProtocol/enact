@@ -1,0 +1,22 @@
+enact: "2.0.0"
+name: test/greeter
+version: "1.0.0"
+description: A simple greeting tool for testing
+from: alpine:latest
+
+scripts:
+  greet:
+    command: "echo '{\"message\":\"Hello, {{name}}!\"}'"
+    inputSchema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name to greet
+          default: World
+
+outputSchema:
+  type: object
+  properties:
+    message:
+      type: string

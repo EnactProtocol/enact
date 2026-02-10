@@ -237,7 +237,7 @@ bundles/
 Each bundle is a `.tar.gz` containing:
 ```
 tool-name-version/
-├── enact.md          # or enact.yaml
+├── skill.yaml        # or SKILL.md
 ├── src/              # Tool source code
 ├── package.json      # If applicable
 └── README.md         # Documentation

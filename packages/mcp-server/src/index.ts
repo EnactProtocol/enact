@@ -26,15 +26,21 @@ import {
   searchTools,
   verifyAllAttestations,
 } from "@enactprotocol/api";
-import { DaggerExecutionProvider } from "@enactprotocol/execution";
+import {
+  DaggerExecutionProvider,
+  DockerExecutionProvider,
+  ExecutionRouter,
+  LocalExecutionProvider,
+} from "@enactprotocol/execution";
+import type { ExecutionResult } from "@enactprotocol/execution";
 import { resolveSecret } from "@enactprotocol/secrets";
 import {
+  type ActionsManifest,
   type ToolManifest,
   addMcpTool,
   addToolToRegistry,
   applyDefaults,
   getActiveToolset,
-  getCacheDir,
   getMcpToolInfo,
   getMinimumAttestations,
   getToolCachePath,
@@ -42,7 +48,8 @@ import {
   isIdentityTrusted,
   listMcpTools,
   loadConfig,
-  loadManifestFromDir,
+  loadManifestWithActions,
+  parseActionSpecifier,
   pathExists,
   validateInputs,
 } from "@enactprotocol/shared";
@@ -98,21 +105,6 @@ async function resolveManifestSecrets(
 }
 
 /**
- * Convert Enact JSON Schema to MCP tool input schema
- */
-function convertInputSchema(manifest: ToolManifest): Tool["inputSchema"] {
-  if (!manifest.inputSchema) {
-    return {
-      type: "object",
-      properties: {},
-    };
-  }
-
-  // Return the inputSchema directly - it should already be JSON Schema compatible
-  return manifest.inputSchema as Tool["inputSchema"];
-}
-
-/**
  * Get API client for registry access
  */
 function getApiClient() {
@@ -138,7 +130,8 @@ function getApiClient() {
  * Extract a tar.gz bundle to a directory
  */
 async function extractBundle(bundleData: ArrayBuffer, destPath: string): Promise<void> {
-  const tempFile = join(getCacheDir(), `bundle-${Date.now()}.tar.gz`);
+  const { tmpdir } = await import("node:os");
+  const tempFile = join(tmpdir(), `enact-bundle-${Date.now()}.tar.gz`);
   mkdirSync(dirname(tempFile), { recursive: true });
   writeFileSync(tempFile, Buffer.from(bundleData));
 
@@ -323,10 +316,6 @@ async function handleMetaTool(
         let response = `# ${toolNameArg}@${targetVersion}\n\n`;
         response += `**Description:** ${versionInfo.description}\n\n`;
 
-        if (manifest.inputSchema) {
-          response += `## Input Schema\n\`\`\`json\n${JSON.stringify(manifest.inputSchema, null, 2)}\n\`\`\`\n\n`;
-        }
-
         if (manifest.outputSchema) {
           response += `## Output Schema\n\`\`\`json\n${JSON.stringify(manifest.outputSchema, null, 2)}\n\`\`\`\n\n`;
         }
@@ -340,6 +329,27 @@ async function handleMetaTool(
           const docMatch = doc.match(/---[\s\S]*?---\s*([\s\S]*)/);
           if (docMatch?.[1]?.trim()) {
             response += `## Documentation\n${docMatch[1].trim()}\n`;
+          }
+        }
+
+        // Check for actions in the manifest
+        const actionsManifest = manifest.actions as ActionsManifest | undefined;
+        if (
+          actionsManifest &&
+          typeof actionsManifest.actions === "object" &&
+          Object.keys(actionsManifest.actions).length > 0
+        ) {
+          response += "\n## Available Actions\n\n";
+          response += `This tool supports the following actions. Run with \`enact_run\` using \`${toolNameArg}:<action>\` format.\n\n`;
+
+          for (const [actionName, action] of Object.entries(actionsManifest.actions)) {
+            response += `### ${actionName}\n`;
+            if (action.description) {
+              response += `${action.description}\n\n`;
+            }
+            if (action.inputSchema) {
+              response += `**Input Schema:**\n\`\`\`json\n${JSON.stringify(action.inputSchema, null, 2)}\n\`\`\`\n\n`;
+            }
           }
         }
 
@@ -363,10 +373,14 @@ async function handleMetaTool(
       const toolNameArg = args.tool as string;
       const toolArgs = (args.args as Record<string, unknown>) || {};
 
+      // Parse action specifier (owner/skill/action or owner/skill)
+      const { skillName, actionName } = parseActionSpecifier(toolNameArg);
+
       try {
         // Check if tool is already installed
-        const toolInfo = getMcpToolInfo(toolNameArg);
+        const toolInfo = getMcpToolInfo(skillName);
         let manifest: ToolManifest;
+        let actionsManifest: ActionsManifest | undefined;
         let cachePath: string;
         let bundleHash: string | undefined;
         let toolVersion: string | undefined;
@@ -375,7 +389,7 @@ async function handleMetaTool(
 
         if (toolInfo) {
           // Tool is installed, use cached version
-          const loaded = loadManifestFromDir(toolInfo.cachePath);
+          const loaded = loadManifestWithActions(toolInfo.cachePath);
           if (!loaded) {
             return {
               content: [{ type: "text", text: "Failed to load installed tool manifest" }],
@@ -383,38 +397,39 @@ async function handleMetaTool(
             };
           }
           manifest = loaded.manifest;
+          actionsManifest = loaded.actionsManifest;
           cachePath = toolInfo.cachePath;
           toolVersion = toolInfo.version;
 
           // Get bundle hash for installed tool from registry
           try {
-            const versionInfo = await getToolVersion(apiClient, toolNameArg, toolVersion);
+            const versionInfo = await getToolVersion(apiClient, skillName, toolVersion);
             bundleHash = versionInfo.bundle.hash;
           } catch {
             // Continue without hash - will skip verification
           }
         } else {
           // Tool not installed - fetch and install temporarily
-          const info = await getToolInfo(apiClient, toolNameArg);
+          const info = await getToolInfo(apiClient, skillName);
           toolVersion = info.latestVersion;
 
           // Download bundle
           const bundleResult = await downloadBundle(apiClient, {
-            name: toolNameArg,
+            name: skillName,
             version: info.latestVersion,
             verify: true,
           });
           bundleHash = bundleResult.hash;
 
           // Extract to cache
-          cachePath = getToolCachePath(toolNameArg, info.latestVersion);
+          cachePath = getToolCachePath(skillName, info.latestVersion);
           if (pathExists(cachePath)) {
             rmSync(cachePath, { recursive: true, force: true });
           }
           await extractBundle(bundleResult.data, cachePath);
 
-          // Load manifest
-          const loaded = loadManifestFromDir(cachePath);
+          // Load manifest with actions
+          const loaded = loadManifestWithActions(cachePath);
           if (!loaded) {
             return {
               content: [{ type: "text", text: "Failed to load downloaded tool manifest" }],
@@ -422,6 +437,7 @@ async function handleMetaTool(
             };
           }
           manifest = loaded.manifest;
+          actionsManifest = loaded.actionsManifest;
         }
 
         // Verify attestations before execution
@@ -431,7 +447,7 @@ async function handleMetaTool(
           try {
             const verified = await verifyAllAttestations(
               apiClient,
-              toolNameArg,
+              skillName,
               toolVersion,
               bundleHash
             );
@@ -459,7 +475,7 @@ async function handleMetaTool(
           try {
             const verified = await verifyAllAttestations(
               apiClient,
-              toolNameArg,
+              skillName,
               toolVersion,
               bundleHash
             );
@@ -497,34 +513,74 @@ async function handleMetaTool(
           // policy === 'allow' - continue execution with warning
         }
 
-        // Validate and apply defaults
-        const inputsWithDefaults = manifest.inputSchema
-          ? applyDefaults(toolArgs, manifest.inputSchema)
-          : toolArgs;
-
-        const validation = validateInputs(inputsWithDefaults, manifest.inputSchema);
-        if (!validation.valid) {
-          const errors = validation.errors.map((err) => `${err.path}: ${err.message}`).join(", ");
-          return {
-            content: [{ type: "text", text: `Input validation failed: ${errors}` }],
-            isError: true,
-          };
-        }
-
-        const finalInputs = validation.coercedValues ?? inputsWithDefaults;
-
         // Resolve secrets from keyring
-        const secretOverrides = await resolveManifestSecrets(toolNameArg, manifest);
+        const secretOverrides = await resolveManifestSecrets(skillName, manifest);
 
-        // Execute the tool
-        const provider = new DaggerExecutionProvider({ verbose: false });
+        // Execute the tool or action — select backend via execution router
+        const execConfig = loadConfig();
+        const router = new ExecutionRouter({
+          default: execConfig.execution?.default,
+          fallback: execConfig.execution?.fallback,
+          trusted_scopes: execConfig.execution?.trusted_scopes,
+        });
+        router.registerProvider("local", new LocalExecutionProvider({ verbose: false }));
+        router.registerProvider("docker", new DockerExecutionProvider({ verbose: false }));
+        router.registerProvider("dagger", new DaggerExecutionProvider({ verbose: false }));
+
+        const provider = await router.selectProvider(skillName);
         await provider.initialize();
 
-        const result = await provider.execute(
-          manifest,
-          { params: finalInputs, envOverrides: secretOverrides },
-          { mountDirs: { [cachePath]: "/workspace" } }
-        );
+        let result: ExecutionResult;
+
+        // Check if we need to execute an action
+        if (actionName && actionsManifest) {
+          // Find the action in the manifest (map lookup)
+          const action = actionsManifest.actions[actionName];
+          if (!action) {
+            const availableActions = Object.keys(actionsManifest.actions).join(", ");
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `Action "${actionName}" not found in ${skillName}. Available actions: ${availableActions}`,
+                },
+              ],
+              isError: true,
+            };
+          }
+
+          // Use action's inputSchema for validation (optional, default to empty)
+          const effectiveSchema = action.inputSchema ?? { type: "object" as const, properties: {} };
+          const inputsWithDefaults = applyDefaults(toolArgs, effectiveSchema);
+
+          const validation = validateInputs(inputsWithDefaults, effectiveSchema);
+          if (!validation.valid) {
+            const errors = validation.errors.map((err) => `${err.path}: ${err.message}`).join(", ");
+            return {
+              content: [{ type: "text", text: `Input validation failed: ${errors}` }],
+              isError: true,
+            };
+          }
+
+          const finalInputs = validation.coercedValues ?? inputsWithDefaults;
+
+          // Execute the action
+          result = await provider.executeAction(
+            manifest,
+            actionsManifest,
+            actionName,
+            action,
+            { params: finalInputs, envOverrides: secretOverrides },
+            { mountDirs: { [cachePath]: "/workspace" } }
+          );
+        } else {
+          // Execute the tool normally (no per-script schema — pass params through)
+          result = await provider.execute(
+            manifest,
+            { params: toolArgs, envOverrides: secretOverrides },
+            { mountDirs: { [cachePath]: "/workspace" } }
+          );
+        }
 
         if (result.success) {
           const output = result.output?.stdout || "Tool executed successfully (no output)";
@@ -636,19 +692,43 @@ function createMcpServer(): Server {
     // Start with meta-tools for progressive discovery
     const tools: Tool[] = [...META_TOOLS];
 
-    // Add installed tools
+    // Add installed tools and their actions
     for (const tool of mcpTools) {
-      const loaded = loadManifestFromDir(tool.cachePath);
+      const loaded = loadManifestWithActions(tool.cachePath);
       const manifest = loaded?.manifest;
+      const actionsManifest = loaded?.actionsManifest;
 
-      const description = manifest?.description || `Enact tool: ${tool.name}`;
       const toolsetNote = activeToolset ? ` [toolset: ${activeToolset}]` : "";
 
-      tools.push({
-        name: toMcpName(tool.name),
-        description: description + toolsetNote,
-        inputSchema: manifest ? convertInputSchema(manifest) : { type: "object", properties: {} },
-      });
+      // If the tool has actions, expose each action as a separate MCP tool
+      if (
+        actionsManifest &&
+        typeof actionsManifest.actions === "object" &&
+        Object.keys(actionsManifest.actions).length > 0
+      ) {
+        for (const [actionName, action] of Object.entries(actionsManifest.actions)) {
+          // Action tool name format: owner__skill__action (uses colon internally but double underscore for MCP)
+          const actionMcpName = toMcpName(`${tool.name}:${actionName}`);
+
+          tools.push({
+            name: actionMcpName,
+            description:
+              (action.description || `Action ${actionName} of ${tool.name}`) + toolsetNote,
+            inputSchema: action.inputSchema
+              ? (action.inputSchema as Tool["inputSchema"])
+              : { type: "object", properties: {} },
+          });
+        }
+      } else {
+        // No actions, expose the tool itself
+        const description = manifest?.description || `Enact tool: ${tool.name}`;
+
+        tools.push({
+          name: toMcpName(tool.name),
+          description: description + toolsetNote,
+          inputSchema: { type: "object", properties: {} },
+        });
+      }
     }
 
     return { tools };
@@ -666,8 +746,11 @@ function createMcpServer(): Server {
       return metaResult;
     }
 
+    // Parse action specifier (owner/skill/action or owner/skill)
+    const { skillName, actionName } = parseActionSpecifier(enactToolName);
+
     // Find the tool in MCP registry (respects active toolset)
-    const toolInfo = getMcpToolInfo(enactToolName);
+    const toolInfo = getMcpToolInfo(skillName);
 
     if (!toolInfo) {
       const activeToolset = getActiveToolset();
@@ -678,21 +761,21 @@ function createMcpServer(): Server {
         content: [
           {
             type: "text",
-            text: `Error: Tool "${enactToolName}" not found.${toolsetHint} Use 'enact mcp add <tool>' to add it.`,
+            text: `Error: Tool "${skillName}" not found.${toolsetHint} Use 'enact mcp add <tool>' to add it.`,
           },
         ],
         isError: true,
       };
     }
 
-    // Load manifest
-    const loaded = loadManifestFromDir(toolInfo.cachePath);
+    // Load manifest with actions
+    const loaded = loadManifestWithActions(toolInfo.cachePath);
     if (!loaded) {
       return {
         content: [
           {
             type: "text",
-            text: `Error: Failed to load manifest for "${enactToolName}"`,
+            text: `Error: Failed to load manifest for "${skillName}"`,
           },
         ],
         isError: true,
@@ -700,65 +783,97 @@ function createMcpServer(): Server {
     }
 
     const manifest = loaded.manifest;
-
-    // Check if this is an instruction-based tool (no command)
-    if (!manifest.command) {
-      // Return the documentation/instructions for LLM interpretation
-      const instructions = manifest.doc || manifest.description || "No instructions available.";
-      return {
-        content: [
-          {
-            type: "text",
-            text: `[Instruction Tool: ${enactToolName}]\n\n${instructions}\n\nInputs provided: ${JSON.stringify(args, null, 2)}`,
-          },
-        ],
-      };
-    }
-
-    // Apply defaults and validate inputs
-    const inputsWithDefaults = manifest.inputSchema
-      ? applyDefaults(args, manifest.inputSchema)
-      : args;
-
-    const validation = validateInputs(inputsWithDefaults, manifest.inputSchema);
-    if (!validation.valid) {
-      const errors = validation.errors.map((err) => `${err.path}: ${err.message}`).join(", ");
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Input validation failed: ${errors}`,
-          },
-        ],
-        isError: true,
-      };
-    }
-
-    const finalInputs = validation.coercedValues ?? inputsWithDefaults;
+    const actionsManifest = loaded.actionsManifest;
 
     // Resolve secrets from keyring
-    const secretOverrides = await resolveManifestSecrets(enactToolName, manifest);
+    const secretOverrides = await resolveManifestSecrets(skillName, manifest);
 
-    // Execute the tool using Dagger
-    const provider = new DaggerExecutionProvider({
-      verbose: false,
+    // Execute the tool — select backend via execution router
+    const execConfig2 = loadConfig();
+    const router2 = new ExecutionRouter({
+      default: execConfig2.execution?.default,
+      fallback: execConfig2.execution?.fallback,
+      trusted_scopes: execConfig2.execution?.trusted_scopes,
     });
+    router2.registerProvider("local", new LocalExecutionProvider({ verbose: false }));
+    router2.registerProvider("docker", new DockerExecutionProvider({ verbose: false }));
+    router2.registerProvider("dagger", new DaggerExecutionProvider({ verbose: false }));
+
+    const provider = await router2.selectProvider(skillName);
 
     try {
       await provider.initialize();
 
-      const result = await provider.execute(
-        manifest,
-        {
-          params: finalInputs,
-          envOverrides: secretOverrides,
-        },
-        {
-          mountDirs: {
-            [toolInfo.cachePath]: "/workspace",
-          },
+      let result: ExecutionResult;
+
+      // Check if we need to execute an action
+      if (actionName && actionsManifest) {
+        // Find the action in the manifest (map lookup)
+        const action = actionsManifest.actions[actionName];
+        if (!action) {
+          const availableActions = Object.keys(actionsManifest.actions).join(", ");
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Action "${actionName}" not found in ${skillName}. Available actions: ${availableActions}`,
+              },
+            ],
+            isError: true,
+          };
         }
-      );
+
+        // Use action's inputSchema for validation (optional, default to empty)
+        const effectiveSchema = action.inputSchema ?? { type: "object" as const, properties: {} };
+        const inputsWithDefaults = applyDefaults(args, effectiveSchema);
+
+        const validation = validateInputs(inputsWithDefaults, effectiveSchema);
+        if (!validation.valid) {
+          const errors = validation.errors.map((err) => `${err.path}: ${err.message}`).join(", ");
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Input validation failed: ${errors}`,
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        const finalInputs = validation.coercedValues ?? inputsWithDefaults;
+
+        // Execute the action
+        result = await provider.executeAction(
+          manifest,
+          actionsManifest,
+          actionName,
+          action,
+          { params: finalInputs, envOverrides: secretOverrides },
+          { mountDirs: { [toolInfo.cachePath]: "/workspace" } }
+        );
+      } else {
+        // Check if this is an instruction-based tool (no command)
+        if (!manifest.command) {
+          // Return the documentation/instructions for LLM interpretation
+          const instructions = manifest.doc || manifest.description || "No instructions available.";
+          return {
+            content: [
+              {
+                type: "text",
+                text: `[Instruction Tool: ${skillName}]\n\n${instructions}\n\nInputs provided: ${JSON.stringify(args, null, 2)}`,
+              },
+            ],
+          };
+        }
+
+        // Execute the tool normally (no per-script schema — pass params through)
+        result = await provider.execute(
+          manifest,
+          { params: args, envOverrides: secretOverrides },
+          { mountDirs: { [toolInfo.cachePath]: "/workspace" } }
+        );
+      }
 
       if (result.success) {
         return {

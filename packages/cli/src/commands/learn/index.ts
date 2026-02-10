@@ -18,6 +18,7 @@ import {
   verifyAllAttestations,
 } from "@enactprotocol/api";
 import {
+  type ActionsManifest,
   getMinimumAttestations,
   getTrustPolicy,
   getTrustedAuditors,
@@ -46,6 +47,48 @@ interface LearnOptions extends GlobalOptions {
 }
 
 /**
+ * Display available actions from an ActionsManifest
+ */
+function displayActions(actionsManifest: ActionsManifest): void {
+  newline();
+  header("Available Actions");
+  newline();
+
+  // Iterate over action map (name is the key)
+  for (const [actionName, action] of Object.entries(actionsManifest.actions)) {
+    info(`  ${actionName}`);
+    if (action.description) {
+      dim(`    ${action.description}`);
+    }
+
+    // Show input parameters
+    if (action.inputSchema?.properties) {
+      const required = new Set(
+        Array.isArray(action.inputSchema.required) ? action.inputSchema.required : []
+      );
+      const props = action.inputSchema.properties as Record<
+        string,
+        { type?: string; description?: string }
+      >;
+      const paramNames = Object.keys(props);
+
+      if (paramNames.length > 0) {
+        dim("    Parameters:");
+        for (const paramName of paramNames) {
+          const prop = props[paramName];
+          const isRequired = required.has(paramName);
+          const reqLabel = isRequired ? " (required)" : "";
+          dim(`      - ${paramName}: ${prop?.type ?? "any"}${reqLabel}`);
+        }
+      }
+    }
+    newline();
+  }
+
+  dim("Run an action with: enact run <skill>:<action> --args '{...}'");
+}
+
+/**
  * Learn command handler
  */
 async function learnHandler(
@@ -69,6 +112,13 @@ async function learnHandler(
           version: resolution.manifest.version,
           documentation: content,
           source: "local",
+          actions: resolution.actionsManifest
+            ? Object.entries(resolution.actionsManifest.actions).map(([name, a]) => ({
+                name,
+                description: a.description,
+                inputSchema: a.inputSchema,
+              }))
+            : null,
         });
         return;
       }
@@ -77,6 +127,11 @@ async function learnHandler(
       dim("(installed locally)");
       newline();
       console.log(content);
+
+      // Display actions if available
+      if (resolution.actionsManifest) {
+        displayActions(resolution.actionsManifest);
+      }
       return;
     }
 
@@ -87,6 +142,13 @@ async function learnHandler(
         version: resolution.manifest.version,
         documentation: resolution.manifest.doc ?? resolution.manifest.description ?? null,
         source: "local",
+        actions: resolution.actionsManifest
+          ? Object.entries(resolution.actionsManifest.actions).map(([name, a]) => ({
+              name,
+              description: a.description,
+              inputSchema: a.inputSchema,
+            }))
+          : null,
       });
       return;
     }
@@ -97,6 +159,11 @@ async function learnHandler(
     console.log(
       resolution.manifest.doc ?? resolution.manifest.description ?? "No documentation available."
     );
+
+    // Display actions if available
+    if (resolution.actionsManifest) {
+      displayActions(resolution.actionsManifest);
+    }
     return;
   }
 

@@ -25,6 +25,7 @@ export {
   getEnactHome,
   getProjectEnactDir,
   getToolsDir,
+  getSkillsDir,
   getCacheDir,
   getConfigPath,
   getGlobalEnvPath,
@@ -60,6 +61,7 @@ export {
   type TrustConfig,
   type CacheConfig,
   type ExecutionConfig,
+  type ExecutionBackend,
   type RegistryConfig,
 } from "./config";
 
@@ -80,9 +82,20 @@ export type {
   ToolLocation,
   ToolResolution,
   ManifestFileName,
+  ScriptDefinition,
 } from "./types/manifest";
 
 export { MANIFEST_FILES, PACKAGE_MANIFEST_FILE } from "./types/manifest";
+
+// Actions types (internal — used by scripts bridge and execution pipeline)
+export type {
+  ActionEnvVar,
+  ActionEnvVars,
+  Action,
+  ActionsManifest,
+} from "./types/actions";
+
+export { DEFAULT_INPUT_SCHEMA, getEffectiveInputSchema } from "./types/actions";
 
 // Manifest parsing, validation, and loading
 export {
@@ -110,6 +123,12 @@ export {
   tryLoadManifest,
   tryLoadManifestFromDir,
   type LoadedManifest,
+  // Manifest with scripts
+  loadManifestWithActions,
+  type LoadedManifestWithActions,
+  // Scripts (inline scripts → Action bridge)
+  scriptToAction,
+  manifestScriptsToActionsManifest,
 } from "./manifest";
 
 // Tool resolver
@@ -118,6 +137,9 @@ export {
   resolveTool,
   resolveToolAuto,
   resolveToolFromPath,
+  resolveToolWithAction,
+  resolveAction,
+  parseActionSpecifier,
   tryResolveTool,
   tryResolveToolDetailed,
   normalizeToolName,
@@ -126,6 +148,7 @@ export {
   getToolSearchPaths,
   type ResolveOptions,
   type TryResolveResult,
+  type ParsedActionSpecifier,
 } from "./resolver";
 
 // Local tool registry (tools.json management)
@@ -281,4 +304,18 @@ export {
   applyDefaults,
   getRequiredParams,
   getParamInfo,
+  // Action command ({{param}} templates)
+  parseActionCommand,
+  parseActionArgument,
+  interpolateActionCommand,
+  prepareActionCommand,
+  getMissingRequiredParams,
+  getActionCommandParams,
+  hasActionTemplates,
+  type ActionCommandToken,
+  type ActionCommandLiteralToken,
+  type ActionCommandParamToken,
+  type ParsedArgument,
+  type ParsedActionCommand,
+  type ActionInterpolationOptions,
 } from "./execution";

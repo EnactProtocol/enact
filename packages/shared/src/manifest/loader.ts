@@ -6,9 +6,10 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import yaml from "js-yaml";
 import type { ParsedManifest, ToolManifest, ValidationResult } from "../types/manifest";
 import { MANIFEST_FILES } from "../types/manifest";
-import { ManifestParseError, parseManifestAuto } from "./parser";
+import { ManifestParseError, extractFrontmatter, parseManifestAuto } from "./parser";
 import { type ValidateManifestOptions, validateManifest } from "./validator";
 
 /**
@@ -51,7 +52,7 @@ export interface LoadManifestOptions extends ValidateManifestOptions {
 /**
  * Load a manifest from a file path
  *
- * @param filePath - Path to the manifest file (SKILL.md, enact.md, enact.yaml, or enact.yml)
+ * @param filePath - Path to the manifest file (SKILL.md, skill.yaml, skill.yml, enact.md, enact.yaml, or enact.yml)
  * @param options - Options for loading and validation
  * @returns LoadedManifest with validated manifest and metadata
  * @throws ManifestLoadError if file doesn't exist, parse fails, or validation fails
@@ -117,9 +118,35 @@ export function loadManifest(filePath: string, options: LoadManifestOptions = {}
 }
 
 /**
+ * Load SKILL.md for its body content and frontmatter fields.
+ * Does NOT validate as a full ToolManifest — used only to extract
+ * agent-facing documentation in two-file mode (skill.yaml + SKILL.md).
+ */
+function loadSkillDoc(
+  filePath: string
+): { body: string; frontmatter: Record<string, unknown> } | null {
+  try {
+    const content = readFileSync(filePath, "utf-8");
+    const extracted = extractFrontmatter(content);
+    if (!extracted) return null;
+    const frontmatter = extracted.frontmatter
+      ? ((yaml.load(extracted.frontmatter) as Record<string, unknown>) ?? {})
+      : {};
+    return { body: extracted.body, frontmatter };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Find and load a manifest from a directory
  *
- * Searches for SKILL.md, enact.md, enact.yaml, or enact.yml in the given directory
+ * Supports two modes:
+ * 1. **Two-file model**: If both `skill.yaml` and `SKILL.md` exist, `skill.yaml` is
+ *    the package manifest and `SKILL.md` provides agent-facing documentation (body → `doc`).
+ *    Also supports legacy `enact.yaml` in place of `skill.yaml`.
+ * 2. **Single-file fallback**: Searches for SKILL.md, skill.yaml, skill.yml, enact.md, enact.yaml, or enact.yml
+ *    and uses the first match as the complete manifest.
  *
  * @param dir - Directory to search for manifest
  * @param options - Options for loading and validation
@@ -130,7 +157,53 @@ export function loadManifestFromDir(
   dir: string,
   options: LoadManifestOptions = {}
 ): LoadedManifest {
-  // Try each manifest filename in order of preference
+  const skillMdPath = join(dir, "SKILL.md");
+  const hasSkillMd = existsSync(skillMdPath);
+
+  // Find config file (skill.yaml, skill.yml, or legacy enact.yaml/enact.yml)
+  let enactConfigPath: string | null = null;
+  for (const f of ["skill.yaml", "skill.yml", "enact.yaml", "enact.yml"]) {
+    const p = join(dir, f);
+    if (existsSync(p)) {
+      enactConfigPath = p;
+      break;
+    }
+  }
+
+  // Two-file model: skill.yaml + SKILL.md
+  if (enactConfigPath && hasSkillMd) {
+    const loaded = loadManifest(enactConfigPath, options);
+    const skillDoc = loadSkillDoc(skillMdPath);
+
+    if (skillDoc) {
+      // Merge SKILL.md body into manifest.doc and LoadedManifest.body
+      loaded.manifest = { ...loaded.manifest };
+      if (skillDoc.body) {
+        if (!loaded.manifest.doc) {
+          loaded.manifest.doc = skillDoc.body;
+        }
+        loaded.body = skillDoc.body;
+      }
+      // Use SKILL.md frontmatter as fallbacks for shared fields
+      const fm = skillDoc.frontmatter;
+      if (!loaded.manifest.description && typeof fm.description === "string") {
+        loaded.manifest.description = fm.description;
+      }
+      if (!loaded.manifest.license && typeof fm.license === "string") {
+        loaded.manifest.license = fm.license;
+      }
+      if (!loaded.manifest.compatibility && typeof fm.compatibility === "string") {
+        loaded.manifest.compatibility = fm.compatibility;
+      }
+      if (!loaded.manifest.metadata && fm.metadata && typeof fm.metadata === "object") {
+        loaded.manifest.metadata = fm.metadata as Record<string, string>;
+      }
+    }
+
+    return loaded;
+  }
+
+  // Single-file fallback (existing behavior)
   for (const filename of MANIFEST_FILES) {
     const filePath = join(dir, filename);
     if (existsSync(filePath)) {

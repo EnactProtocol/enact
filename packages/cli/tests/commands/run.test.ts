@@ -38,7 +38,9 @@ describe("run command", () => {
       configureRunCommand(program);
 
       const runCmd = program.commands.find((cmd) => cmd.name() === "run");
-      expect(runCmd?.description()).toBe("Execute a tool with its manifest-defined command");
+      expect(runCmd?.description()).toBe(
+        "Execute a tool or action with its manifest-defined command"
+      );
     });
 
     test("accepts tool argument", () => {

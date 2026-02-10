@@ -10,7 +10,7 @@ enact run <tool> [options]
 
 ## Description
 
-The `run` command executes a tool using the command defined in its manifest (`enact.yaml` or `enact.md`). The tool runs in an isolated container environment with:
+The `run` command executes a tool using the command defined in its manifest (`skill.yaml` or `SKILL.md`). The tool runs in an isolated container environment with:
 
 - Input validation against the tool's JSON Schema
 - Automatic secret resolution from the OS keyring

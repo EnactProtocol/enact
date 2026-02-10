@@ -5,14 +5,14 @@
  *
  * ## Parameter Recognition
  *
- * Only `${...}` patterns that match parameters defined in the tool's inputSchema
- * are substituted. Other `${...}` patterns (like bash variables, arrays, etc.)
- * are passed through unchanged to the shell.
+ * Only `${...}` patterns that match known parameter names are substituted.
+ * Other `${...}` patterns (like bash variables, arrays, etc.) are passed
+ * through unchanged to the shell.
  *
  * This allows natural use of shell syntax:
- * - `${name}` - Substituted if "name" is in inputSchema
- * - `${MY_VAR}` - Passed through to bash (not in inputSchema)
- * - `${array[$i]}` - Passed through to bash (not in inputSchema)
+ * - `${name}` - Substituted if "name" is a known parameter
+ * - `${MY_VAR}` - Passed through to bash (not a known parameter)
+ * - `${array[$i]}` - Passed through to bash (not a known parameter)
  *
  * ## Quoting Behavior
  *
@@ -50,9 +50,9 @@ const PARAM_PATTERN = /\$\{([^}:]+)(?::([^}]+))?\}/g;
  */
 export interface ParseCommandOptions {
   /**
-   * Set of known parameter names from the inputSchema.
+   * Set of known parameter names.
    * Only ${...} patterns matching these names will be treated as parameters.
-   * If not provided, ALL ${...} patterns are treated as parameters (legacy behavior).
+   * If not provided, ALL ${...} patterns are treated as parameters.
    */
   knownParameters?: Set<string>;
 }

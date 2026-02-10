@@ -25,15 +25,15 @@ version: "1.0.0"
     test("parses nested YAML", () => {
       const yaml = `
 name: org/tool
-inputSchema:
+outputSchema:
   type: object
   properties:
     name:
       type: string
 `;
       const result = parseYaml(yaml);
-      expect(result.inputSchema).toBeDefined();
-      const schema = result.inputSchema as Record<string, unknown>;
+      expect(result.outputSchema).toBeDefined();
+      const schema = result.outputSchema as Record<string, unknown>;
       expect(schema.type).toBe("object");
     });
 
@@ -169,27 +169,21 @@ description: A test tool
       test("parses complete YAML manifest", () => {
         const yaml = `
 enact: "2.0.0"
-name: acme/utils/greeter
+name: acme/greeter
 description: Greets users
 version: "1.0.0"
 from: node:18-alpine
-command: "echo 'Hello \${name}'"
 timeout: 30s
 license: MIT
 tags:
   - greeting
   - utility
-inputSchema:
-  type: object
-  properties:
-    name:
-      type: string
-  required:
-    - name
+scripts:
+  greet: "echo 'Hello {{name}}'"
 `;
         const result = parseManifest(yaml, "yaml");
         expect(result.manifest.enact).toBe("2.0.0");
-        expect(result.manifest.name).toBe("acme/utils/greeter");
+        expect(result.manifest.name).toBe("acme/greeter");
         expect(result.manifest.from).toBe("node:18-alpine");
         expect(result.manifest.tags).toContain("greeting");
       });
@@ -266,12 +260,14 @@ Body here.
 
   describe("detectFormat", () => {
     test("detects .yaml extension", () => {
+      expect(detectFormat("skill.yaml")).toBe("yaml");
       expect(detectFormat("enact.yaml")).toBe("yaml");
       expect(detectFormat("tool.yaml")).toBe("yaml");
-      expect(detectFormat("/path/to/enact.yaml")).toBe("yaml");
+      expect(detectFormat("/path/to/skill.yaml")).toBe("yaml");
     });
 
     test("detects .yml extension", () => {
+      expect(detectFormat("skill.yml")).toBe("yaml");
       expect(detectFormat("enact.yml")).toBe("yaml");
       expect(detectFormat("/path/to/tool.yml")).toBe("yaml");
     });
@@ -302,7 +298,7 @@ Body here.
 name: org/tool
 description: Test
 `;
-      const result = parseManifestAuto(yaml, "enact.yaml");
+      const result = parseManifestAuto(yaml, "skill.yaml");
       expect(result.manifest.name).toBe("org/tool");
       expect(result.format).toBe("yaml");
     });

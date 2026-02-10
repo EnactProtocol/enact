@@ -96,7 +96,7 @@ When installing by name, the command searches for the tool in this order:
 
 1. Project tools (`.enact/tools/`)
 2. User tools (`~/.enact/tools/`)
-3. Cache (`~/.enact/cache/`)
+3. Skills directory (`~/.agent/skills/`)
 4. Registry (future)
 
 ## Directory Structure
@@ -112,7 +112,7 @@ After installation, tools are organized by their namespaced name:
 │           └── ...
 └── EnactProtocol/
     └── pdf-extract/
-        ├── enact.yaml
+        ├── skill.yaml
         └── ...
 ```
 

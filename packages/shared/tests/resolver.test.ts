@@ -25,7 +25,7 @@ describe("tool resolver", () => {
 
     // Create a project-level tool
     writeFileSync(
-      join(PROJECT_ENACT_DIR, "tools", "test", "project-tool", "enact.yaml"),
+      join(PROJECT_ENACT_DIR, "tools", "test", "project-tool", "skill.yaml"),
       `
 name: test/project-tool
 description: A project-level test tool
@@ -37,7 +37,7 @@ version: "1.0.0"
     // Create a direct tool directory for path-based resolution
     mkdirSync(join(TEST_DIR, "direct-tool"), { recursive: true });
     writeFileSync(
-      join(TEST_DIR, "direct-tool", "enact.yaml"),
+      join(TEST_DIR, "direct-tool", "skill.yaml"),
       `
 name: test/direct-tool
 description: A directly referenced tool
@@ -74,11 +74,11 @@ Documentation here.
   describe("utility functions", () => {
     describe("normalizeToolName", () => {
       test("lowercases name", () => {
-        expect(normalizeToolName("Acme/Utils/Greeter")).toBe("acme/utils/greeter");
+        expect(normalizeToolName("Acme/Greeter")).toBe("acme/greeter");
       });
 
       test("converts backslashes to forward slashes", () => {
-        expect(normalizeToolName("acme\\utils\\greeter")).toBe("acme/utils/greeter");
+        expect(normalizeToolName("acme\\greeter")).toBe("acme/greeter");
       });
 
       test("trims whitespace", () => {
@@ -88,7 +88,11 @@ Documentation here.
 
     describe("toolNameToPath", () => {
       test("returns path-like string", () => {
-        expect(toolNameToPath("acme/utils/greeter")).toBe("acme/utils/greeter");
+        expect(toolNameToPath("acme/greeter")).toBe("acme/greeter");
+      });
+
+      test("strips @ prefix for disk paths", () => {
+        expect(toolNameToPath("@acme/greeter")).toBe("acme/greeter");
       });
 
       test("normalizes backslashes", () => {
@@ -142,7 +146,7 @@ Documentation here.
     });
 
     test("resolves tool from manifest file directly", () => {
-      const manifestPath = join(TEST_DIR, "direct-tool", "enact.yaml");
+      const manifestPath = join(TEST_DIR, "direct-tool", "skill.yaml");
       const result = resolveToolFromPath(manifestPath);
 
       expect(result.manifest.name).toBe("test/direct-tool");
@@ -314,7 +318,7 @@ Documentation here.
     test("full tool names bypass alias resolution", () => {
       addToolToRegistry("test/project-tool", "1.0.0", "project", PROJECT_DIR);
       // Create an alias that would conflict if checked
-      addAlias("test/project-tool", "some/other/tool", "project", PROJECT_DIR);
+      addAlias("test/project-tool", "some/other-tool", "project", PROJECT_DIR);
 
       try {
         // Full name with slashes should resolve directly, not via alias

@@ -199,18 +199,19 @@ describe("registry", () => {
   });
 
   describe("getToolCachePath", () => {
-    test("returns cache path with version", () => {
+    test("returns skill path under ~/.agent/skills/", () => {
       const path = getToolCachePath("org/tool", "1.0.0");
-      expect(path).toContain(".enact");
-      expect(path).toContain("cache");
+      expect(path).toContain(".agent");
+      expect(path).toContain("skills");
       expect(path).toContain("org/tool");
-      expect(path).toContain("v1.0.0");
+      // No version subdirectory in new layout
+      expect(path).not.toContain("v1.0.0");
     });
 
-    test("normalizes version prefix", () => {
-      const pathWithV = getToolCachePath("org/tool", "v1.0.0");
-      const pathWithoutV = getToolCachePath("org/tool", "1.0.0");
-      expect(pathWithV).toBe(pathWithoutV);
+    test("returns same path regardless of version", () => {
+      const path1 = getToolCachePath("org/tool", "1.0.0");
+      const path2 = getToolCachePath("org/tool", "2.0.0");
+      expect(path1).toBe(path2);
     });
   });
 
@@ -296,11 +297,11 @@ describe("registry", () => {
 
   describe("resolveAlias", () => {
     test("resolves existing alias to tool name", () => {
-      addToolToRegistry("org/category/full-name", "1.0.0", "project", PROJECT_DIR);
-      addAlias("short", "org/category/full-name", "project", PROJECT_DIR);
+      addToolToRegistry("org/full-name", "1.0.0", "project", PROJECT_DIR);
+      addAlias("short", "org/full-name", "project", PROJECT_DIR);
 
       const resolved = resolveAlias("short", "project", PROJECT_DIR);
-      expect(resolved).toBe("org/category/full-name");
+      expect(resolved).toBe("org/full-name");
 
       // Clean up
       rmSync(join(PROJECT_ENACT_DIR, "tools.json"));

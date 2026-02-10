@@ -40,17 +40,17 @@ describe("publish module", () => {
       const bundle = new TextEncoder().encode("mock bundle content");
 
       const result = await publishTool(client, {
-        name: "alice/utils/new-tool",
+        name: "alice/new-tool",
         manifest: {
           enact: "2.0.0",
-          name: "alice/utils/new-tool",
+          name: "alice/new-tool",
           version: "1.0.0",
           description: "A new tool",
         },
         bundle,
       });
 
-      expect(result.name).toBe("alice/utils/new-tool");
+      expect(result.name).toBe("alice/new-tool");
       expect(result.version).toBe("1.0.0");
       expect(result.publishedAt).toBeInstanceOf(Date);
       expect(result.bundleHash).toMatch(/^sha256:/);
@@ -61,17 +61,17 @@ describe("publish module", () => {
       const bundle = new TextEncoder().encode("mock bundle content").buffer;
 
       const result = await publishTool(client, {
-        name: "alice/utils/another-tool",
+        name: "alice/another-tool",
         manifest: {
           enact: "2.0.0",
-          name: "alice/utils/another-tool",
+          name: "alice/another-tool",
           version: "2.0.0",
           description: "Another tool",
         },
         bundle,
       });
 
-      expect(result.name).toBe("alice/utils/another-tool");
+      expect(result.name).toBe("alice/another-tool");
       expect(result.version).toBeDefined(); // Mock returns 1.0.0 since it doesn't parse manifest
       expect(result.publishedAt).toBeInstanceOf(Date);
       expect(result.bundleHash).toBeDefined();
@@ -82,10 +82,10 @@ describe("publish module", () => {
       const bundle = new TextEncoder().encode("mock bundle content");
 
       const result = await publishTool(client, {
-        name: "alice/utils/documented-tool",
+        name: "alice/documented-tool",
         manifest: {
           enact: "2.0.0",
-          name: "alice/utils/documented-tool",
+          name: "alice/documented-tool",
           version: "1.0.0",
           description: "A documented tool",
         },
@@ -102,10 +102,10 @@ describe("publish module", () => {
 
       // Test private visibility (default)
       const privateResult = await publishTool(client, {
-        name: "alice/utils/private-tool",
+        name: "alice/private-tool",
         manifest: {
           enact: "2.0.0",
-          name: "alice/utils/private-tool",
+          name: "alice/private-tool",
           version: "1.0.0",
           description: "A private tool",
         },
@@ -116,10 +116,10 @@ describe("publish module", () => {
 
       // Test public visibility
       const publicResult = await publishTool(client, {
-        name: "alice/utils/public-tool",
+        name: "alice/public-tool",
         manifest: {
           enact: "2.0.0",
-          name: "alice/utils/public-tool",
+          name: "alice/public-tool",
           version: "1.0.0",
           description: "A public tool",
         },
@@ -130,10 +130,10 @@ describe("publish module", () => {
 
       // Test unlisted visibility
       const unlistedResult = await publishTool(client, {
-        name: "alice/utils/unlisted-tool",
+        name: "alice/unlisted-tool",
         manifest: {
           enact: "2.0.0",
-          name: "alice/utils/unlisted-tool",
+          name: "alice/unlisted-tool",
           version: "1.0.0",
           description: "An unlisted tool",
         },
@@ -149,10 +149,10 @@ describe("publish module", () => {
 
       // When visibility is not specified, it should default to private
       const result = await publishTool(client, {
-        name: "alice/utils/default-visibility",
+        name: "alice/default-visibility",
         manifest: {
           enact: "2.0.0",
-          name: "alice/utils/default-visibility",
+          name: "alice/default-visibility",
           version: "1.0.0",
           description: "Default visibility test",
         },
@@ -169,10 +169,10 @@ describe("publish module", () => {
 
       await expect(
         publishTool(client, {
-          name: "alice/utils/new-tool",
+          name: "alice/new-tool",
           manifest: {
             enact: "2.0.0",
-            name: "alice/utils/new-tool",
+            name: "alice/new-tool",
             version: "1.0.0",
             description: "A new tool",
           },
@@ -374,7 +374,7 @@ describe("publish module", () => {
       const client = createApiClient({ authToken: "valid-token" });
 
       const result = await submitAttestation(client, {
-        name: "alice/utils/greeter",
+        name: "alice/greeter",
         version: "1.2.0",
         sigstoreBundle: {
           $schema: "https://sigstore.dev/bundle/v1",
@@ -401,7 +401,7 @@ describe("publish module", () => {
       const client = createApiClient({ authToken: "valid-token" });
 
       const result = await submitAttestation(client, {
-        name: "alice/utils/greeter",
+        name: "alice/greeter",
         version: "1.2.0",
         sigstoreBundle: {
           $schema: "https://sigstore.dev/bundle/v1",
@@ -418,7 +418,7 @@ describe("publish module", () => {
 
       await expect(
         submitAttestation(client, {
-          name: "alice/utils/greeter",
+          name: "alice/greeter",
           version: "1.2.0",
           sigstoreBundle: { $schema: "https://sigstore.dev/bundle/v1" },
         })
@@ -430,7 +430,7 @@ describe("publish module", () => {
     test("yanks a version with reason", async () => {
       const client = createApiClient({ authToken: "valid-token" });
 
-      const result = await yankVersion(client, "alice/utils/greeter", "1.0.0", {
+      const result = await yankVersion(client, "alice/greeter", "1.0.0", {
         reason: "Security vulnerability CVE-2025-1234",
       });
 
@@ -443,7 +443,7 @@ describe("publish module", () => {
     test("yanks with replacement version", async () => {
       const client = createApiClient({ authToken: "valid-token" });
 
-      const result = await yankVersion(client, "alice/utils/greeter", "1.0.0", {
+      const result = await yankVersion(client, "alice/greeter", "1.0.0", {
         reason: "Deprecated",
         replacementVersion: "2.0.0",
       });
@@ -455,7 +455,7 @@ describe("publish module", () => {
     test("yanks without optional parameters", async () => {
       const client = createApiClient({ authToken: "valid-token" });
 
-      const result = await yankVersion(client, "alice/utils/greeter", "1.0.0");
+      const result = await yankVersion(client, "alice/greeter", "1.0.0");
 
       expect(result.yanked).toBe(true);
       expect(result.version).toBe("1.0.0");
@@ -464,7 +464,7 @@ describe("publish module", () => {
     test("requires authentication", async () => {
       const client = createApiClient({ baseUrl: "http://localhost" });
 
-      await expect(yankVersion(client, "alice/utils/greeter", "1.0.0")).rejects.toThrow();
+      await expect(yankVersion(client, "alice/greeter", "1.0.0")).rejects.toThrow();
     });
   });
 
@@ -472,7 +472,7 @@ describe("publish module", () => {
     test("unyanks a previously yanked version", async () => {
       const client = createApiClient({ authToken: "valid-token" });
 
-      const result = await unyankVersion(client, "alice/utils/greeter", "1.0.0");
+      const result = await unyankVersion(client, "alice/greeter", "1.0.0");
 
       expect(result.yanked).toBe(false);
       expect(result.version).toBe("1.0.0");
@@ -482,7 +482,7 @@ describe("publish module", () => {
     test("requires authentication", async () => {
       const client = createApiClient({ baseUrl: "http://localhost" });
 
-      await expect(unyankVersion(client, "alice/utils/greeter", "1.0.0")).rejects.toThrow();
+      await expect(unyankVersion(client, "alice/greeter", "1.0.0")).rejects.toThrow();
     });
   });
 
@@ -491,13 +491,13 @@ describe("publish module", () => {
       const client = createApiClient({ authToken: "valid-token" });
 
       // Should not throw
-      await deleteTool(client, "alice/utils/old-tool");
+      await deleteTool(client, "alice/old-tool");
     });
 
     test("requires authentication", async () => {
       const client = createApiClient({ baseUrl: "http://localhost" });
 
-      await expect(deleteTool(client, "alice/utils/old-tool")).rejects.toThrow();
+      await expect(deleteTool(client, "alice/old-tool")).rejects.toThrow();
     });
   });
 });

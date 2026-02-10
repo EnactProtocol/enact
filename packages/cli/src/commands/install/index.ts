@@ -2,7 +2,7 @@
  * enact install command
  *
  * Install a tool to the project or globally.
- * All tools are extracted to ~/.enact/cache/{tool}/{version}/
+ * All tools are extracted to ~/.agent/skills/{tool}/
  * - Project install: Adds entry to .enact/tools.json
  * - Global install: Adds entry to ~/.enact/tools.json
  *
@@ -25,7 +25,6 @@ import {
   addAlias,
   addMcpTool,
   addToolToRegistry,
-  getCacheDir,
   getInstalledVersion,
   getMinimumAttestations,
   getProjectEnactDir,
@@ -110,7 +109,8 @@ function isLocalPath(toolName: string): boolean {
  */
 async function extractBundle(bundleData: ArrayBuffer, destPath: string): Promise<void> {
   // Create a temporary file for the bundle
-  const tempFile = join(getCacheDir(), `bundle-${Date.now()}.tar.gz`);
+  const { tmpdir } = await import("node:os");
+  const tempFile = join(tmpdir(), `enact-bundle-${Date.now()}.tar.gz`);
   mkdirSync(dirname(tempFile), { recursive: true });
   writeFileSync(tempFile, Buffer.from(bundleData));
 
@@ -147,6 +147,40 @@ function formatBytes(bytes: number): string {
   const sizes = ["B", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${(bytes / k ** i).toFixed(1)} ${sizes[i]}`;
+}
+
+/**
+ * Run postinstall hook commands in the tool directory.
+ * Runs each command sequentially; throws on first failure.
+ */
+async function runPostinstallHook(
+  toolDir: string,
+  hookCommands: string | string[],
+  _toolName: string,
+  verbose?: boolean
+): Promise<void> {
+  const commands = Array.isArray(hookCommands) ? hookCommands : [hookCommands];
+
+  for (const cmd of commands) {
+    if (verbose) {
+      dim(`  Running: ${cmd}`);
+    }
+
+    const proc = Bun.spawn(["sh", "-c", cmd], {
+      cwd: toolDir,
+      stdout: verbose ? "inherit" : "pipe",
+      stderr: "pipe",
+      env: { ...process.env },
+    });
+
+    const exitCode = await proc.exited;
+    if (exitCode !== 0) {
+      const stderr = await new Response(proc.stderr).text();
+      throw new Error(
+        `postinstall hook failed (exit ${exitCode}): ${cmd}${stderr ? `\n${stderr.trim()}` : ""}`
+      );
+    }
+  }
 }
 
 /**
@@ -438,6 +472,26 @@ async function installFromRegistry(
     throw new RegistryError(`Failed to extract bundle: ${formatError(err)}`);
   }
 
+  // Run postinstall hook if the manifest defines one
+  const extractedManifest = loadManifestFromDir(cachePath);
+  if (extractedManifest?.manifest.hooks?.postinstall) {
+    try {
+      await withSpinner(
+        "Running postinstall hook...",
+        async () =>
+          runPostinstallHook(
+            cachePath,
+            extractedManifest.manifest.hooks!.postinstall!,
+            toolName,
+            options.verbose
+          ),
+        `${symbols.success} postinstall complete`
+      );
+    } catch (err) {
+      info(`${symbols.warning} postinstall hook failed: ${formatError(err)}`);
+    }
+  }
+
   // Update tools.json for the appropriate scope
   addToolToRegistry(toolName, targetVersion!, scope, isGlobal ? undefined : ctx.cwd);
 
@@ -485,7 +539,7 @@ async function installFromRegistry(
  * Install from a local path
  *
  * Both global and project installs:
- * 1. Copy tool to cache (~/.enact/cache/{tool}/{version}/)
+ * 1. Copy tool to ~/.agent/skills/{tool}/
  * 2. Update tools.json (global: ~/.enact/tools.json, project: .enact/tools.json)
  */
 async function installFromPath(
@@ -546,6 +600,25 @@ async function installFromPath(
     },
     `${symbols.success} Installed ${manifest.name}`
   );
+
+  // Run postinstall hook if the manifest defines one
+  if (manifest.hooks?.postinstall) {
+    try {
+      await withSpinner(
+        "Running postinstall hook...",
+        async () =>
+          runPostinstallHook(
+            cachePath,
+            manifest.hooks!.postinstall!,
+            manifest.name,
+            options.verbose
+          ),
+        `${symbols.success} postinstall complete`
+      );
+    } catch (err) {
+      info(`${symbols.warning} postinstall hook failed: ${formatError(err)}`);
+    }
+  }
 
   // Update tools.json for the appropriate scope
   addToolToRegistry(manifest.name, version, scope, isGlobal ? undefined : ctx.cwd);

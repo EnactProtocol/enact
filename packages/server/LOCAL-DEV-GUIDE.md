@@ -205,7 +205,7 @@ In production, you can only publish under your own username.
 
 You're trying to publish a version that already exists.
 
-**Fix**: Bump the version in your `enact.md` or `enact.yaml` manifest.
+**Fix**: Bump the version in your `skill.yaml` manifest.
 
 ### Edge functions not picking up env changes
 

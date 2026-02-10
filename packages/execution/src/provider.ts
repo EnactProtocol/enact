@@ -7,11 +7,13 @@
 
 import { basename } from "node:path";
 import { type Client, type Container, ReturnType, connect } from "@dagger.io/dagger";
-import type { ToolManifest } from "@enactprotocol/shared";
+import type { Action, ActionsManifest, ToolManifest } from "@enactprotocol/shared";
 import {
   applyDefaults,
   detectRuntime,
+  getEffectiveInputSchema,
   interpolateCommand,
+  prepareActionCommand,
   validateInputs,
 } from "@enactprotocol/shared";
 import type {
@@ -150,26 +152,8 @@ export class DaggerExecutionProvider implements ExecutionProvider {
       );
     }
 
-    // Validate inputs against schema
-    if (manifest.inputSchema) {
-      const validation = validateInputs(input.params, manifest.inputSchema);
-      if (!validation.valid) {
-        const errorMessages = validation.errors.map((e) => `${e.path}: ${e.message}`);
-        return this.createErrorResult(
-          manifest.name,
-          containerImage,
-          executionId,
-          startTime,
-          "VALIDATION_ERROR",
-          `Input validation failed: ${errorMessages.join(", ")}`
-        );
-      }
-    }
-
-    // Apply defaults to inputs
-    const params = manifest.inputSchema
-      ? applyDefaults(input.params, manifest.inputSchema)
-      : input.params;
+    // Pass params through (scripts handle their own validation via action inputSchema)
+    const params = input.params;
 
     // Get the command from the manifest
     const command = manifest.command;
@@ -184,15 +168,10 @@ export class DaggerExecutionProvider implements ExecutionProvider {
       );
     }
 
-    // Interpolate command with parameters - only substitute known inputSchema params
-    // Use onMissing: "empty" so optional params without values become empty strings
-    // (validation already caught truly missing required params above)
-    const knownParameters = manifest.inputSchema?.properties
-      ? new Set(Object.keys(manifest.inputSchema.properties))
-      : undefined;
+    // Interpolate command with parameters
+    // Without per-script schema, all ${param} patterns are substituted
     const interpolated = interpolateCommand(command, params, {
       onMissing: "empty",
-      ...(knownParameters ? { knownParameters } : {}),
     });
 
     // Parse timeout
@@ -303,6 +282,198 @@ export class DaggerExecutionProvider implements ExecutionProvider {
     };
 
     return this.execute(execManifest, input, options);
+  }
+
+  /**
+   * Execute an action from ACTIONS.yaml
+   *
+   * This method uses the {{param}} template system which:
+   * - Passes commands directly to execve() (no shell interpolation)
+   * - Each template becomes a single argument regardless of content
+   * - Omits arguments for optional params without values
+   *
+   * @param manifest - The skill manifest (SKILL.md)
+   * @param actionsManifest - The actions manifest (ACTIONS.yaml)
+   * @param actionName - The name of the action to execute
+   * @param action - The specific action definition to execute
+   * @param input - Execution input with params
+   * @param options - Execution options
+   */
+  async executeAction(
+    manifest: ToolManifest,
+    actionsManifest: ActionsManifest,
+    actionName: string,
+    action: Action,
+    input: ExecutionInput,
+    options: ExecutionOptions = {}
+  ): Promise<ExecutionResult> {
+    const startTime = new Date();
+    const executionId = this.generateExecutionId();
+
+    // Get container image from manifest
+    const containerImage = manifest.from ?? "alpine:latest";
+
+    // Ensure initialized
+    if (!this.initialized) {
+      await this.initialize();
+    }
+
+    // Check runtime availability
+    if (!this.detectedRuntime) {
+      return this.createErrorResult(
+        manifest.name,
+        containerImage,
+        executionId,
+        startTime,
+        "RUNTIME_NOT_FOUND",
+        "No container runtime available (docker, podman, or nerdctl required)"
+      );
+    }
+
+    // Get effective inputSchema (defaults to empty if not provided)
+    const effectiveSchema = getEffectiveInputSchema(action);
+
+    // Validate inputs against action's inputSchema
+    const validation = validateInputs(input.params, effectiveSchema);
+    if (!validation.valid) {
+      const errorMessages = validation.errors.map((e) => `${e.path}: ${e.message}`);
+      return this.createErrorResult(
+        manifest.name,
+        containerImage,
+        executionId,
+        startTime,
+        "VALIDATION_ERROR",
+        `Input validation failed: ${errorMessages.join(", ")}`
+      );
+    }
+
+    // Apply defaults to inputs
+    const params = applyDefaults(input.params, effectiveSchema);
+
+    // Prepare the command using {{param}} template system
+    // This returns an array suitable for execve() - no shell interpolation
+    let commandArray: string[];
+    try {
+      const actionCommand = action.command;
+      if (typeof actionCommand === "string") {
+        // String-form command (no templates allowed - validation ensures this)
+        // Split into args for execve
+        commandArray = actionCommand.split(/\s+/).filter((s) => s.length > 0);
+      } else {
+        // Array-form command with {{param}} templates
+        commandArray = prepareActionCommand(actionCommand, params, effectiveSchema);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return this.createErrorResult(
+        manifest.name,
+        containerImage,
+        executionId,
+        startTime,
+        "COMMAND_ERROR",
+        `Failed to prepare action command: ${message}`
+      );
+    }
+
+    if (commandArray.length === 0) {
+      return this.createErrorResult(
+        manifest.name,
+        containerImage,
+        executionId,
+        startTime,
+        "COMMAND_ERROR",
+        "Action command is empty"
+      );
+    }
+
+    // Parse timeout
+    const timeoutMs = this.parseTimeout(options.timeout ?? manifest.timeout);
+
+    // Execute with Dagger using direct exec (no shell wrapper)
+    try {
+      const output = await this.runActionContainer(
+        manifest,
+        actionsManifest,
+        containerImage,
+        commandArray,
+        input,
+        options,
+        timeoutMs
+      );
+
+      const endTime = new Date();
+      this.consecutiveFailures = 0;
+      this.lastHealthCheck = endTime;
+
+      const metadata: ExecutionMetadata = {
+        toolName: `${manifest.name}:${actionName}`,
+        containerImage,
+        startTime,
+        endTime,
+        durationMs: endTime.getTime() - startTime.getTime(),
+        cached: false,
+        executionId,
+      };
+
+      if (manifest.version) {
+        metadata.toolVersion = manifest.version;
+      }
+
+      if (output.exitCode !== 0) {
+        return {
+          success: false,
+          output,
+          metadata,
+          error: {
+            code: "COMMAND_ERROR",
+            message: `Action "${actionName}" exited with code ${output.exitCode}`,
+            ...(output.stderr && { details: { stderr: output.stderr } }),
+          },
+        };
+      }
+
+      // Validate output against outputSchema if defined
+      if (action.outputSchema && output.stdout) {
+        try {
+          const parsed = JSON.parse(output.stdout);
+          output.parsed = parsed;
+          // TODO: Validate parsed output against outputSchema
+        } catch {
+          // Output is not JSON - that's OK, leave as string
+        }
+      }
+
+      return {
+        success: true,
+        output,
+        metadata,
+      };
+    } catch (error) {
+      this.consecutiveFailures++;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      let code: ExecutionErrorCode = "CONTAINER_ERROR";
+      let displayMessage = errorMessage;
+
+      if (errorMessage.startsWith("BUILD_ERROR:")) {
+        code = "BUILD_ERROR";
+        displayMessage = errorMessage.slice("BUILD_ERROR:".length).trim();
+      } else if (errorMessage.includes("timeout") || errorMessage === "TIMEOUT") {
+        code = "TIMEOUT";
+        displayMessage = `Action execution timed out: ${errorMessage}`;
+      } else {
+        displayMessage = `Action execution failed: ${errorMessage}`;
+      }
+
+      return this.createErrorResult(
+        manifest.name,
+        containerImage,
+        executionId,
+        startTime,
+        code,
+        displayMessage
+      );
+    }
   }
 
   /**
@@ -530,6 +701,216 @@ export class DaggerExecutionProvider implements ExecutionProvider {
                     extractedFiles[filePath] = Buffer.from(content);
                   } catch {
                     // File doesn't exist or can't be read - skip
+                  }
+                }
+                if (Object.keys(extractedFiles).length > 0) {
+                  output.files = extractedFiles;
+                }
+              }
+
+              resolve(output);
+            } catch (error) {
+              clearTimeout(timeoutId);
+              throw error;
+            }
+          } catch (error) {
+            reject(error);
+          }
+        },
+        this.config.verbose ? { LogOutput: process.stderr } : {}
+      ).catch((error) => {
+        reject(error);
+      });
+    });
+  }
+
+  /**
+   * Run action container with direct exec (no shell wrapper)
+   *
+   * This is the key difference from runContainer - commands are passed
+   * directly to execve() without shell interpolation, preventing injection.
+   */
+  private async runActionContainer(
+    manifest: ToolManifest,
+    actionsManifest: ActionsManifest,
+    containerImage: string,
+    commandArray: string[],
+    input: ExecutionInput,
+    options: ExecutionOptions,
+    timeoutMs: number
+  ): Promise<ExecutionOutput> {
+    return new Promise<ExecutionOutput>((resolve, reject) => {
+      connect(
+        async (client: Client) => {
+          try {
+            // Create container from image
+            let container: Container = client.container().from(containerImage);
+
+            // Force the image to be pulled before timeout
+            await container.platform();
+
+            // Set working directory
+            const workdir = options.workdir ?? this.config.workdir ?? "/workspace";
+            container = container.withWorkdir(workdir);
+
+            // Add environment variables from ACTIONS.yaml env block
+            if (actionsManifest.env) {
+              for (const [key, envVar] of Object.entries(actionsManifest.env)) {
+                if (!envVar.secret && envVar.default) {
+                  container = container.withEnvVariable(key, envVar.default);
+                }
+              }
+            }
+
+            // Add environment variables from manifest (SKILL.md)
+            if (manifest.env) {
+              for (const [key, envVar] of Object.entries(manifest.env)) {
+                if (!envVar.secret && envVar.default) {
+                  container = container.withEnvVariable(key, envVar.default);
+                }
+              }
+            }
+
+            // Add additional environment variables from options
+            if (options.additionalEnv) {
+              for (const [key, value] of Object.entries(options.additionalEnv)) {
+                container = container.withEnvVariable(key, String(value));
+              }
+            }
+
+            // Add environment variable overrides from input
+            if (input.envOverrides) {
+              for (const [key, value] of Object.entries(input.envOverrides)) {
+                container = container.withEnvVariable(key, value);
+              }
+            }
+
+            // Add secrets from input overrides
+            if (input.secretOverrides) {
+              for (const [key, secretUri] of Object.entries(input.secretOverrides)) {
+                const secret = client.secret(secretUri);
+                container = container.withSecretVariable(key, secret);
+              }
+            }
+
+            // Mount directories
+            if (options.mountDirs) {
+              for (const [source, target] of Object.entries(options.mountDirs)) {
+                container = container.withDirectory(target, client.host().directory(source));
+              }
+            }
+
+            // Mount input paths
+            if (options.inputPaths) {
+              for (const inputPath of options.inputPaths) {
+                if (inputPath.name) {
+                  const target = `/inputs/${inputPath.name}`;
+                  if (inputPath.type === "file") {
+                    container = container.withFile(target, client.host().file(inputPath.path));
+                  } else {
+                    container = container.withDirectory(
+                      target,
+                      client.host().directory(inputPath.path)
+                    );
+                  }
+                } else if (inputPath.type === "file") {
+                  const filename = basename(inputPath.path);
+                  container = container.withFile(
+                    `/input/${filename}`,
+                    client.host().file(inputPath.path)
+                  );
+                } else {
+                  container = container.withDirectory(
+                    "/input",
+                    client.host().directory(inputPath.path)
+                  );
+                }
+              }
+            }
+
+            // Run build commands from ACTIONS.yaml (cached)
+            const buildCommands = actionsManifest.build
+              ? Array.isArray(actionsManifest.build)
+                ? actionsManifest.build
+                : [actionsManifest.build]
+              : manifest.build
+                ? Array.isArray(manifest.build)
+                  ? manifest.build
+                  : [manifest.build]
+                : [];
+
+            for (let i = 0; i < buildCommands.length; i++) {
+              const buildCmd = buildCommands[i] as string;
+              container = container.withExec(["sh", "-c", buildCmd], { expect: ReturnType.Any });
+              const buildContainer = await container.sync();
+
+              const buildExitCode = await buildContainer.exitCode();
+              const buildStdout = await buildContainer.stdout();
+              const buildStderr = await buildContainer.stderr();
+
+              if (buildExitCode !== 0) {
+                const stepInfo =
+                  buildCommands.length > 1
+                    ? `Build failed at step ${i + 1} of ${buildCommands.length}`
+                    : "Build failed";
+
+                const details = [
+                  stepInfo,
+                  `Command: ${buildCmd}`,
+                  `Exit code: ${buildExitCode}`,
+                  buildStderr ? `\nstderr:\n${buildStderr}` : "",
+                  buildStdout ? `\nstdout:\n${buildStdout}` : "",
+                ]
+                  .filter(Boolean)
+                  .join("\n");
+
+                throw new Error(`BUILD_ERROR: ${details}`);
+              }
+            }
+
+            // Start timeout for action execution
+            const timeoutId = setTimeout(() => {
+              reject(new Error("TIMEOUT"));
+            }, timeoutMs);
+
+            try {
+              // Execute the action command DIRECTLY (no shell wrapper!)
+              // This is the key security difference from runContainer
+              container = container.withExec(commandArray, { expect: ReturnType.Any });
+
+              const finalContainer = await container.sync();
+              const [stdout, stderr, exitCode] = await Promise.all([
+                finalContainer.stdout(),
+                finalContainer.stderr(),
+                finalContainer.exitCode(),
+              ]);
+
+              clearTimeout(timeoutId);
+
+              const output: ExecutionOutput = {
+                stdout,
+                stderr,
+                exitCode,
+              };
+
+              // Export /output directory if requested
+              if (options.outputPath) {
+                try {
+                  await finalContainer.directory("/output").export(options.outputPath);
+                } catch {
+                  // /output may not exist
+                }
+              }
+
+              // Extract output files if requested
+              if (options.outputFiles && options.outputFiles.length > 0) {
+                const extractedFiles: Record<string, Buffer> = {};
+                for (const filePath of options.outputFiles) {
+                  try {
+                    const content = await finalContainer.file(filePath).contents();
+                    extractedFiles[filePath] = Buffer.from(content);
+                  } catch {
+                    // File doesn't exist - skip
                   }
                 }
                 if (Object.keys(extractedFiles).length > 0) {

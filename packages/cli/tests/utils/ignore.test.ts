@@ -280,7 +280,9 @@ dist   `;
         expect(shouldIgnore("lib/utils.js", "utils.js")).toBe(false);
       });
 
-      test("allows enact manifest files", () => {
+      test("allows manifest files", () => {
+        expect(shouldIgnore("skill.yaml", "skill.yaml")).toBe(false);
+        expect(shouldIgnore("skill.yml", "skill.yml")).toBe(false);
         expect(shouldIgnore("enact.md", "enact.md")).toBe(false);
         expect(shouldIgnore("enact.yaml", "enact.yaml")).toBe(false);
         expect(shouldIgnore("enact.yml", "enact.yml")).toBe(false);

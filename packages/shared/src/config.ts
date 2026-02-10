@@ -4,9 +4,9 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 import yaml from "js-yaml";
-import { getConfigPath, getEnactHome } from "./paths";
+import { getConfigPath, getEnactHome, getSkillsDir } from "./paths";
 
 /**
  * Trust configuration for attestation verification
@@ -26,6 +26,10 @@ export interface TrustConfig {
   policy?: "require_attestation" | "prompt" | "allow";
   /** Minimum number of trusted attestations required */
   minimum_attestations?: number;
+  /** Alias: when true, sets policy to 'require_attestation'; when false, sets policy to 'allow' */
+  require_signatures?: boolean;
+  /** Alias: merged into auditors list */
+  trusted_publishers?: string[];
 }
 
 /**
@@ -41,11 +45,20 @@ export interface CacheConfig {
 /**
  * Execution configuration
  */
+/** Execution backend type */
+export type ExecutionBackend = "local" | "docker" | "dagger" | "container" | "remote";
+
 export interface ExecutionConfig {
   /** Default timeout for tool execution (e.g., "30s", "5m") */
   defaultTimeout?: string;
   /** Whether to run in verbose mode */
   verbose?: boolean;
+  /** Default execution backend */
+  default?: ExecutionBackend;
+  /** Fallback backend if default is unavailable */
+  fallback?: ExecutionBackend;
+  /** Package scopes that bypass container isolation and run locally (e.g., ["@my-org/*"]) */
+  trusted_scopes?: string[];
 }
 
 /**
@@ -143,6 +156,33 @@ function deepMerge(target: EnactConfig, source: Partial<EnactConfig>): EnactConf
 }
 
 /**
+ * Normalize config by resolving alias fields into their canonical counterparts.
+ * - trust.require_signatures → trust.policy
+ * - trust.trusted_publishers → merged into trust.auditors
+ */
+function normalizeConfig(config: EnactConfig): EnactConfig {
+  if (config.trust) {
+    // require_signatures is an alias for policy
+    if (config.trust.require_signatures !== undefined && config.trust.policy === undefined) {
+      config.trust.policy = config.trust.require_signatures ? "require_attestation" : "allow";
+    }
+
+    // trusted_publishers merges into auditors
+    if (config.trust.trusted_publishers?.length) {
+      const auditors = config.trust.auditors ?? [];
+      for (const publisher of config.trust.trusted_publishers) {
+        if (!auditors.includes(publisher)) {
+          auditors.push(publisher);
+        }
+      }
+      config.trust.auditors = auditors;
+    }
+  }
+
+  return config;
+}
+
+/**
  * Load configuration from ~/.enact/config.yaml
  * Returns default config if file doesn't exist or is invalid
  * @returns The loaded configuration merged with defaults
@@ -162,8 +202,10 @@ export function loadConfig(): EnactConfig {
       return { ...DEFAULT_CONFIG };
     }
 
-    // Merge with defaults to ensure all fields exist
-    return deepMerge(DEFAULT_CONFIG, parsed);
+    // Normalize aliases in user config BEFORE merging with defaults,
+    // so require_signatures → policy conversion isn't blocked by default policy
+    const normalized = normalizeConfig(parsed as EnactConfig);
+    return deepMerge(DEFAULT_CONFIG, normalized);
   } catch {
     // Return defaults on any error (parse error, read error, etc.)
     return { ...DEFAULT_CONFIG };
@@ -275,7 +317,7 @@ export function configExists(): boolean {
 export function ensureGlobalSetup(): boolean {
   const enactHome = getEnactHome();
   const configPath = getConfigPath();
-  const cacheDir = join(enactHome, "cache");
+  const cacheDir = getSkillsDir();
 
   let performedSetup = false;
 
@@ -285,7 +327,7 @@ export function ensureGlobalSetup(): boolean {
     performedSetup = true;
   }
 
-  // Ensure ~/.enact/cache/ directory exists
+  // Ensure ~/.agent/skills/ directory exists
   if (!existsSync(cacheDir)) {
     mkdirSync(cacheDir, { recursive: true });
     performedSetup = true;

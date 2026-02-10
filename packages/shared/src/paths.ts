@@ -74,11 +74,21 @@ export function getToolsDir(scope: ToolScope, startDir?: string): string | null 
 }
 
 /**
- * Get the cache directory (~/.enact/cache/)
- * @returns Absolute path to ~/.enact/cache/
+ * Get the skills directory (~/.agent/skills/)
+ * This is the standard Agent Skills location for installed skills.
+ * @returns Absolute path to ~/.agent/skills/
+ */
+export function getSkillsDir(): string {
+  return join(homedir(), ".agent", "skills");
+}
+
+/**
+ * Get the cache directory (~/.agent/skills/)
+ * @deprecated Use getSkillsDir() instead
+ * @returns Absolute path to ~/.agent/skills/
  */
 export function getCacheDir(): string {
-  return join(getEnactHome(), "cache");
+  return getSkillsDir();
 }
 
 /**

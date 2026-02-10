@@ -4,19 +4,21 @@
  * Resolution order:
  * 1. Direct file path (if provided path exists)
  * 2. Project tools (.enact/tools/{name}/)
- * 3. Global tools (via ~/.enact/tools.json → cache)
- * 4. Cache (~/.enact/cache/{name}/{version}/)
+ * 3. Global tools (via ~/.enact/tools.json → ~/.agent/skills/)
+ * 4. Skills directory (~/.agent/skills/{name}/)
  */
 
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import {
   type LoadManifestOptions,
   ManifestLoadError,
   findManifestFile,
   loadManifest,
+  loadManifestFromDir,
 } from "./manifest/loader";
-import { getCacheDir, getProjectEnactDir } from "./paths";
+import { manifestScriptsToActionsManifest } from "./manifest/scripts";
+import { getProjectEnactDir, getSkillsDir } from "./paths";
 import { getInstalledVersion, getToolCachePath, resolveAlias } from "./registry";
 import type { ToolLocation, ToolResolution } from "./types/manifest";
 
@@ -67,12 +69,69 @@ export interface ResolveOptions {
 }
 
 /**
+ * Result of parsing an action specifier
+ */
+export interface ParsedActionSpecifier {
+  /** The skill name (e.g., "owner/skill" from "owner/skill:action") */
+  skillName: string;
+  /** The action name (e.g., "action" from "owner/skill:action"), or undefined if not specified */
+  actionName?: string;
+}
+
+/**
+ * Parse an action specifier into skill name and action name
+ *
+ * Specifier formats (uses colon separator):
+ * - "owner/skill" - skill only, no action
+ * - "owner/skill:action" - skill with action
+ * - "./path" or "/path" - file path (no action parsing)
+ * - "./path:action" - file path with action
+ *
+ * Examples:
+ * - "mendable/firecrawl" → skill="mendable/firecrawl", action=undefined
+ * - "mendable/firecrawl:scrape" → skill="mendable/firecrawl", action="scrape"
+ * - "acme/tools/greeter:hello" → skill="acme/tools/greeter", action="hello"
+ * - "/tmp/skill" → skill="/tmp/skill", action=undefined (file path)
+ * - "./skill:hello" → skill="./skill", action="hello" (file path with action)
+ *
+ * @param specifier - The tool/action specifier string
+ * @returns Parsed skill name and optional action name
+ */
+export function parseActionSpecifier(specifier: string): ParsedActionSpecifier {
+  const normalized = specifier.replace(/\\/g, "/").trim();
+
+  // Check for colon separator (action specifier)
+  const colonIndex = normalized.lastIndexOf(":");
+
+  // No colon - just a skill name or file path
+  if (colonIndex === -1) {
+    return { skillName: normalized };
+  }
+
+  // Windows drive letter check (e.g., "C:/path")
+  // If colon is at index 1 and followed by /, it's a Windows path
+  if (colonIndex === 1 && normalized.length > 2 && normalized[2] === "/") {
+    return { skillName: normalized };
+  }
+
+  // Split on colon
+  const skillName = normalized.slice(0, colonIndex);
+  const actionName = normalized.slice(colonIndex + 1);
+
+  // Validate action name is non-empty
+  if (!actionName || actionName.length === 0) {
+    return { skillName: normalized };
+  }
+
+  return { skillName, actionName };
+}
+
+/**
  * Convert tool name to directory path
- * e.g., "acme/utils/greeter" -> "acme/utils/greeter"
+ * Strips the @ prefix for disk paths: "@org/my-skill" -> "org/my-skill"
  */
 export function toolNameToPath(name: string): string {
-  // Tool names are already path-like, just normalize
-  return name.replace(/\\/g, "/");
+  return name.replace(/^@/, "").replace(/\\/g, "/");
 }
 
 /**
@@ -92,6 +151,8 @@ export function getToolPath(toolsDir: string, toolName: string): string {
 /**
  * Try to load a tool from a specific directory
  *
+ * Supports two-file model (skill.yaml + SKILL.md) via loadManifestFromDir().
+ *
  * @param dir - Directory to check
  * @param location - The location type for metadata
  * @param options - Options for loading the manifest
@@ -106,22 +167,26 @@ function tryLoadFromDir(
     return null;
   }
 
-  const manifestPath = findManifestFile(dir);
-  if (!manifestPath) {
-    return null;
-  }
-
   try {
-    const loaded = loadManifest(manifestPath, options);
-    return {
+    const loaded = loadManifestFromDir(dir, options);
+
+    const resolution: ToolResolution = {
       manifest: loaded.manifest,
       sourceDir: dir,
       location,
-      manifestPath,
+      manifestPath: loaded.filePath,
       version: loaded.manifest.version,
     };
+
+    // Convert inline scripts to actionsManifest
+    const scriptsManifest = manifestScriptsToActionsManifest(loaded.manifest);
+    if (scriptsManifest) {
+      resolution.actionsManifest = scriptsManifest;
+    }
+
+    return resolution;
   } catch {
-    // Invalid manifest, skip
+    // No manifest or invalid manifest, skip
     return null;
   }
 }
@@ -153,13 +218,23 @@ export function resolveToolFromPath(filePath: string): ToolResolution {
     }
 
     const loaded = loadManifest(absolutePath, localOptions);
-    return {
+    const sourceDir = dirname(absolutePath);
+
+    const resolution: ToolResolution = {
       manifest: loaded.manifest,
-      sourceDir: dirname(absolutePath),
+      sourceDir,
       location: "file",
       manifestPath: absolutePath,
       version: loaded.manifest.version,
     };
+
+    // Convert inline scripts to actionsManifest
+    const scriptsManifest = manifestScriptsToActionsManifest(loaded.manifest);
+    if (scriptsManifest) {
+      resolution.actionsManifest = scriptsManifest;
+    }
+
+    return resolution;
   }
 
   // Treat as directory
@@ -172,9 +247,75 @@ export function resolveToolFromPath(filePath: string): ToolResolution {
 }
 
 /**
+ * Resolve a specific action from a tool/skill
+ *
+ * @param resolution - Already resolved tool
+ * @param actionName - Name of the action to resolve
+ * @returns ToolResolution with action field populated
+ * @throws ToolResolveError if action not found
+ */
+export function resolveAction(resolution: ToolResolution, actionName: string): ToolResolution {
+  // Check if the skill has actions (from scripts or ACTIONS.yaml)
+  if (!resolution.actionsManifest) {
+    throw new ToolResolveError(
+      `Skill "${resolution.manifest.name}" does not define any scripts or actions. ` +
+        `Cannot resolve "${actionName}".`,
+      `${resolution.manifest.name}:${actionName}`
+    );
+  }
+
+  // Find the script/action (map lookup)
+  const action = resolution.actionsManifest.actions[actionName];
+  if (!action) {
+    const availableActions = Object.keys(resolution.actionsManifest.actions);
+    throw new ToolResolveError(
+      `Action "${actionName}" not found in skill "${resolution.manifest.name}". ` +
+        `Available actions: ${availableActions.join(", ")}`,
+      `${resolution.manifest.name}:${actionName}`
+    );
+  }
+
+  return {
+    ...resolution,
+    action,
+    actionName,
+  };
+}
+
+/**
+ * Resolve a tool with optional action specifier
+ *
+ * Supports formats:
+ * - "owner/skill" - resolves skill only
+ * - "owner/skill:action" - resolves skill and specific action
+ *
+ * @param specifier - Tool/action specifier (e.g., "mendable/firecrawl:scrape")
+ * @param options - Resolution options
+ * @returns ToolResolution with action populated if specified
+ * @throws ToolResolveError if not found
+ */
+export function resolveToolWithAction(
+  specifier: string,
+  options: ResolveOptions = {}
+): ToolResolution {
+  const { skillName, actionName } = parseActionSpecifier(specifier);
+
+  // Resolve the skill first
+  const resolution = resolveTool(skillName, options);
+
+  // If no action specified, return as-is
+  if (!actionName) {
+    return resolution;
+  }
+
+  // Resolve the action
+  return resolveAction(resolution, actionName);
+}
+
+/**
  * Resolve a tool by name, searching through standard locations
  *
- * @param toolName - Tool name (e.g., "acme/utils/greeter") or alias (e.g., "firebase")
+ * @param toolName - Tool name (e.g., "acme/greeter" or "@acme/greeter") or alias (e.g., "firebase")
  * @param options - Resolution options
  * @returns ToolResolution
  * @throws ToolResolveError if not found
@@ -209,48 +350,29 @@ export function resolveTool(toolName: string, options: ResolveOptions = {}): Too
     }
   }
 
-  // 2. Try global tools (via ~/.enact/tools.json → cache)
+  // 2. Try global tools (via ~/.enact/tools.json → ~/.agent/skills/)
   if (!options.skipUser) {
     const globalVersion = getInstalledVersion(normalizedName, "global");
     if (globalVersion) {
-      const cachePath = getToolCachePath(normalizedName, globalVersion);
-      searchedLocations.push(cachePath);
+      const skillPath = getToolCachePath(normalizedName, globalVersion);
+      searchedLocations.push(skillPath);
 
-      const result = tryLoadFromDir(cachePath, "user");
+      const result = tryLoadFromDir(skillPath, "user");
       if (result) {
         return result;
       }
     }
   }
 
-  // 3. Try cache (with optional version)
+  // 3. Try skills directory (~/.agent/skills/{name}/)
   if (!options.skipCache) {
-    const cacheDir = getCacheDir();
-    const toolCacheBase = getToolPath(cacheDir, normalizedName);
+    const skillsDir = getSkillsDir();
+    const skillDir = getToolPath(skillsDir, normalizedName);
+    searchedLocations.push(skillDir);
 
-    if (options.version) {
-      // Look for specific version
-      const versionDir = join(toolCacheBase, `v${options.version.replace(/^v/, "")}`);
-      searchedLocations.push(versionDir);
-
-      const result = tryLoadFromDir(versionDir, "cache");
-      if (result) {
-        return result;
-      }
-    } else {
-      // Look for latest cached version
-      if (existsSync(toolCacheBase)) {
-        const latestVersion = findLatestCachedVersion(toolCacheBase);
-        if (latestVersion) {
-          const versionDir = join(toolCacheBase, latestVersion);
-          searchedLocations.push(versionDir);
-
-          const result = tryLoadFromDir(versionDir, "cache");
-          if (result) {
-            return result;
-          }
-        }
-      }
+    const result = tryLoadFromDir(skillDir, "cache");
+    if (result) {
+      return result;
     }
   }
 
@@ -259,33 +381,6 @@ export function resolveTool(toolName: string, options: ResolveOptions = {}): Too
     toolName,
     searchedLocations
   );
-}
-
-/**
- * Find the latest cached version directory
- */
-function findLatestCachedVersion(toolCacheBase: string): string | null {
-  try {
-    const entries = readdirSync(toolCacheBase, { withFileTypes: true });
-    const versions = entries
-      .filter((e) => e.isDirectory() && e.name.startsWith("v"))
-      .map((e) => e.name)
-      .sort((a, b) => {
-        // Sort by semver (v1.0.0 format)
-        const aVer = a.slice(1).split(".").map(Number);
-        const bVer = b.slice(1).split(".").map(Number);
-        for (let i = 0; i < 3; i++) {
-          if ((aVer[i] ?? 0) !== (bVer[i] ?? 0)) {
-            return (bVer[i] ?? 0) - (aVer[i] ?? 0);
-          }
-        }
-        return 0;
-      });
-
-    return versions[0] ?? null;
-  } catch {
-    return null;
-  }
 }
 
 /**
@@ -483,7 +578,7 @@ export function getToolSearchPaths(toolName: string, options: ResolveOptions = {
 
   // Cache
   if (!options.skipCache) {
-    const cacheDir = getCacheDir();
+    const cacheDir = getSkillsDir();
     paths.push(join(cacheDir, toolNameToPath(normalizedName)));
   }
 

@@ -24,7 +24,7 @@ describe("manifest validator", () => {
     test("validates complete manifest", () => {
       const manifest = {
         enact: "2.0.0",
-        name: "acme/utils/greeter",
+        name: "acme/greeter",
         description: "Greets users by name",
         version: "1.0.0",
         from: "node:18-alpine",
@@ -32,12 +32,8 @@ describe("manifest validator", () => {
         timeout: "30s",
         license: "MIT",
         tags: ["greeting", "utility"],
-        inputSchema: {
-          type: "object",
-          properties: {
-            name: { type: "string" },
-          },
-          required: ["name"],
+        scripts: {
+          greet: "echo 'Hello {{name}}'",
         },
         outputSchema: {
           type: "object",
@@ -222,13 +218,7 @@ describe("manifest validator", () => {
     });
 
     test("accepts valid tool name formats", () => {
-      const names = [
-        "org/tool",
-        "acme/utils/greeter",
-        "my-org/category/sub-category/tool-name",
-        "a/b",
-        "org_name/tool_name",
-      ];
+      const names = ["org/tool", "acme/greeter", "@my-org/tool-name", "a/b", "org_name/tool_name"];
 
       for (const name of names) {
         const manifest = { name, description: "Test" };
@@ -405,7 +395,7 @@ describe("manifest validator", () => {
     describe("isValidToolName", () => {
       test("returns true for valid names", () => {
         expect(isValidToolName("org/tool")).toBe(true);
-        expect(isValidToolName("acme/utils/greeter")).toBe(true);
+        expect(isValidToolName("@acme/greeter")).toBe(true);
         expect(isValidToolName("my-org/my-tool")).toBe(true);
         expect(isValidToolName("org_name/tool_name")).toBe(true);
       });
@@ -425,9 +415,9 @@ describe("manifest validator", () => {
         expect(isValidLocalToolName("simple")).toBe(true);
       });
 
-      test("returns true for hierarchical names", () => {
+      test("returns true for scoped names", () => {
         expect(isValidLocalToolName("org/tool")).toBe(true);
-        expect(isValidLocalToolName("acme/utils/greeter")).toBe(true);
+        expect(isValidLocalToolName("@acme/greeter")).toBe(true);
       });
 
       test("returns false for invalid names", () => {

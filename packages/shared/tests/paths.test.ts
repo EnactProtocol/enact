@@ -9,6 +9,7 @@ import {
   getGlobalEnvPath,
   getProjectEnactDir,
   getProjectEnvPath,
+  getSkillsDir,
   getToolsDir,
 } from "../src/paths";
 
@@ -106,11 +107,17 @@ describe("path utilities", () => {
     });
   });
 
-  describe("getCacheDir", () => {
-    test("returns ~/.enact/cache/ path", () => {
-      const result = getCacheDir();
-      const expected = join(homedir(), ".enact", "cache");
+  describe("getSkillsDir", () => {
+    test("returns ~/.agent/skills/ path", () => {
+      const result = getSkillsDir();
+      const expected = join(homedir(), ".agent", "skills");
       expect(result).toBe(expected);
+    });
+  });
+
+  describe("getCacheDir (deprecated)", () => {
+    test("returns same path as getSkillsDir", () => {
+      expect(getCacheDir()).toBe(getSkillsDir());
     });
   });
 

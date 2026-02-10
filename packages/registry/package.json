@@ -1,0 +1,23 @@
+{
+  "name": "@enactprotocol/registry",
+  "version": "2.2.4",
+  "description": "Self-hosted Enact registry server (SQLite + local file storage)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@enactprotocol/shared": "workspace:*",
+    "@hono/node-server": "^1.13.0",
+    "better-sqlite3": "^11.0.0",
+    "hono": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "typescript": "^5.0.0",
+    "tsx": "^4.0.0"
+  }
+}

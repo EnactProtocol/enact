@@ -97,7 +97,13 @@ export function getFileIcon(filePath: string): string {
   // Special files
   if (filename === "dockerfile") return "docker";
   if (filename === "makefile") return "terminal";
-  if (filename.endsWith(".enact.yaml") || filename.endsWith(".enact.yml")) return "enact";
+  if (
+    filename.endsWith(".enact.yaml") ||
+    filename.endsWith(".enact.yml") ||
+    filename === "skill.yaml" ||
+    filename === "skill.yml"
+  )
+    return "enact";
   if (filename === "readme.md") return "info";
   if (filename === "license" || filename === "license.md") return "scale";
   if (filename.startsWith(".env")) return "settings";

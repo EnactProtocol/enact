@@ -24,8 +24,8 @@ const SUPABASE_ANON_KEY =
  * Mock tool data (v2 format with full ToolMetadata shape)
  */
 export const MOCK_TOOLS: Record<string, ToolMetadata> = {
-  "alice/utils/greeter": {
-    name: "alice/utils/greeter",
+  "alice/greeter": {
+    name: "alice/greeter",
     description: "Greets the user by name",
     tags: ["utility", "text"],
     license: "MIT",
@@ -59,8 +59,8 @@ export const MOCK_TOOLS: Record<string, ToolMetadata> = {
     versions_total: 3,
     total_downloads: 750,
   },
-  "bob/data/csv-parser": {
-    name: "bob/data/csv-parser",
+  "bob/csv-parser": {
+    name: "bob/csv-parser",
     description: "Parse CSV files with custom delimiters",
     tags: ["data", "csv", "parser"],
     license: "Apache-2.0",
@@ -93,44 +93,33 @@ export const MOCK_TOOLS: Record<string, ToolMetadata> = {
  * Mock version data (v2 format with full ToolVersionDetails shape)
  */
 export const MOCK_VERSIONS: Record<string, ToolVersionDetails> = {
-  "alice/utils/greeter@1.2.0": {
-    name: "alice/utils/greeter",
+  "alice/greeter@1.2.0": {
+    name: "alice/greeter",
     version: "1.2.0",
     description: "Greets the user by name",
     license: "MIT",
     yanked: false,
     manifest: {
       enact: "2.0.0",
-      name: "alice/utils/greeter",
+      name: "alice/greeter",
       version: "1.2.0",
       description: "Greets the user by name",
       from: "alpine:latest",
-      command: "echo 'Hello, ${name}!'",
       timeout: "30s",
-      inputSchema: {
-        type: "object",
-        properties: {
-          name: { type: "string" },
-        },
-        required: ["name"],
+      scripts: {
+        greet: "echo 'Hello, {{name}}!'",
       },
     },
     rawManifest: `---
 enact: 2.0.0
-name: alice/utils/greeter
+name: alice/greeter
 version: 1.2.0
 description: Greets the user by name
 license: MIT
 from: alpine:latest
-command: echo 'Hello, \${name}!'
 timeout: 30s
-inputSchema:
-  type: object
-  properties:
-    name:
-      type: string
-  required:
-    - name
+scripts:
+  greet: echo 'Hello, {{name}}!'
 ---
 
 # Greeter Tool
@@ -140,17 +129,17 @@ A simple tool that greets users by name.
 ## Usage
 
 \`\`\`bash
-enact run alice/utils/greeter --name "World"
+enact run alice/greeter --name "World"
 \`\`\`
 
 ## Examples
 
-- Greet a user: \`enact run alice/utils/greeter --name "Alice"\`
+- Greet a user: \`enact run alice/greeter --name "Alice"\`
 `,
     bundle: {
       hash: "sha256:abc123def456",
       size: 1024,
-      download_url: "https://cdn.enact.tools/bundles/alice/utils/greeter/1.2.0.tar.gz",
+      download_url: "https://cdn.enact.tools/bundles/alice/greeter/1.2.0.tar.gz",
     },
     attestations: [
       {
@@ -172,34 +161,28 @@ enact run alice/utils/greeter --name "World"
     published_at: "2025-01-15T14:20:00Z",
     downloads: 450,
   },
-  "bob/data/csv-parser@2.0.0": {
-    name: "bob/data/csv-parser",
+  "bob/csv-parser@2.0.0": {
+    name: "bob/csv-parser",
     version: "2.0.0",
     description: "Parse CSV files with custom delimiters",
     license: "Apache-2.0",
     yanked: false,
     manifest: {
       enact: "2.0.0",
-      name: "bob/data/csv-parser",
+      name: "bob/csv-parser",
       version: "2.0.0",
       description: "Parse CSV files with custom delimiters",
       from: "python:3.12-slim",
-      command: "python /app/parse.py ${input_file}",
       timeout: "60s",
-      inputSchema: {
-        type: "object",
-        properties: {
-          input_file: { type: "string" },
-          delimiter: { type: "string", default: "," },
-        },
-        required: ["input_file"],
+      scripts: {
+        parse: "python /app/parse.py {{input_file}}",
       },
     },
     // No rawManifest for this tool - tests the case where rawManifest is not provided
     bundle: {
       hash: "sha256:xyz789abc012",
       size: 2048,
-      download_url: "https://cdn.enact.tools/bundles/bob/data/csv-parser/2.0.0.tar.gz",
+      download_url: "https://cdn.enact.tools/bundles/bob/csv-parser/2.0.0.tar.gz",
     },
     attestations: [],
     published_by: { username: "bob" },
@@ -212,8 +195,8 @@ enact run alice/utils/greeter --name "World"
  * Mock trust status (v2 - simplified structure)
  */
 export const MOCK_TRUST: Record<string, unknown> = {
-  "alice/utils/greeter@1.2.0": {
-    name: "alice/utils/greeter",
+  "alice/greeter@1.2.0": {
+    name: "alice/greeter",
     version: "1.2.0",
     bundle_hash: "sha256:abc123def456",
     attestations: [
@@ -254,7 +237,7 @@ export const MOCK_USERS: Record<string, CurrentUser> = {
 export function mockSearchResults(query: string, tags?: string): ToolSearchResult[] {
   const allTools: ToolSearchResult[] = [
     {
-      name: "alice/utils/greeter",
+      name: "alice/greeter",
       description: "Greets the user by name",
       tags: ["utility", "text"],
       version: "1.2.0",
@@ -268,7 +251,7 @@ export function mockSearchResults(query: string, tags?: string): ToolSearchResul
       },
     },
     {
-      name: "bob/data/csv-parser",
+      name: "bob/csv-parser",
       description: "Parse CSV files with custom delimiters",
       tags: ["data", "csv", "parser"],
       version: "2.0.0",
@@ -281,7 +264,7 @@ export function mockSearchResults(query: string, tags?: string): ToolSearchResul
       },
     },
     {
-      name: "acme/ai/text-generator",
+      name: "acme/text-generator",
       description: "Generate text using AI models",
       tags: ["ai", "text", "generation"],
       version: "3.0.0",
@@ -379,8 +362,8 @@ export function createMockServer() {
    * Match a path against a route and extract parameters.
    *
    * This handles routes like:
-   * - /tools/{name} -> name can be "alice/utils/greeter"
-   * - /tools/{name}/versions/{version} -> name="alice/utils/greeter", version="1.2.0"
+   * - /tools/{name} -> name can be "alice/greeter"
+   * - /tools/{name}/versions/{version} -> name="alice/greeter", version="1.2.0"
    * - /tools/{name}/versions/{version}/bundle -> same with trailing literal
    * - /tools/{name}/versions/{version}/trust/attestations/{auditor} -> with auditor param
    *
@@ -619,8 +602,8 @@ export function createMockServer() {
     return jsonResponse(trust[1]);
   });
 
-  // Publish tool (v2 - uses /tools/{name} with multipart)
-  addRoute("POST", "/tools/{name}", (request, params) => {
+  // Publish tool (v2 - uses /tools/{name}/versions with multipart)
+  addRoute("POST", "/tools/{name}/versions", (request, params) => {
     const authError = requireAuth(request);
     if (authError) return authError;
 

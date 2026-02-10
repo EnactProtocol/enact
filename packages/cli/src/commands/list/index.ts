@@ -5,7 +5,7 @@
  * - Default: project tools (via .enact/tools.json)
  * - --global/-g: global tools (via ~/.enact/tools.json)
  *
- * All tools are stored in ~/.enact/cache/{tool}/{version}/
+ * All tools are stored in ~/.agent/skills/{tool}/
  */
 
 import {

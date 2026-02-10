@@ -46,7 +46,7 @@ describe("install integration", () => {
     mkdirSync(join(TEST_GLOBAL_HOME, ".enact", "cache"), { recursive: true });
 
     // Create sample tool source
-    writeFileSync(join(TEST_TOOL_SRC, "enact.yaml"), SAMPLE_MANIFEST);
+    writeFileSync(join(TEST_TOOL_SRC, "skill.yaml"), SAMPLE_MANIFEST);
   });
 
   beforeEach(() => {
@@ -92,7 +92,7 @@ describe("install integration", () => {
 
       // Verify installation
       expect(existsSync(destPath)).toBe(true);
-      expect(existsSync(join(destPath, "enact.yaml"))).toBe(true);
+      expect(existsSync(join(destPath, "skill.yaml"))).toBe(true);
 
       // Verify manifest can be loaded from destination
       const installedManifest = loadManifestFromDir(destPath);
@@ -118,7 +118,7 @@ describe("install integration", () => {
       // Create v2 source
       const v2Source = join(TEST_BASE, "source-tool-v2");
       mkdirSync(v2Source, { recursive: true });
-      writeFileSync(join(v2Source, "enact.yaml"), SAMPLE_MANIFEST_V2);
+      writeFileSync(join(v2Source, "skill.yaml"), SAMPLE_MANIFEST_V2);
 
       // Simulate force overwrite
       rmSync(destPath, { recursive: true, force: true });
@@ -164,15 +164,14 @@ describe("install integration", () => {
       expect(getInstalledVersion("test/sample-tool", "project", TEST_PROJECT)).toBe("2.0.0");
     });
 
-    test("global install extracts to cache path", async () => {
+    test("global install extracts to skills path", async () => {
       const { getToolCachePath } = await import("@enactprotocol/shared");
 
-      // Verify cache path structure
-      const cachePath = getToolCachePath("test/sample-tool", "1.0.0");
-      expect(cachePath).toContain(".enact");
-      expect(cachePath).toContain("cache");
-      expect(cachePath).toContain("test/sample-tool");
-      expect(cachePath).toContain("v1.0.0");
+      // Verify skill path structure (~/.agent/skills/{name}/, no version subdir)
+      const skillPath = getToolCachePath("test/sample-tool", "1.0.0");
+      expect(skillPath).toContain(".agent");
+      expect(skillPath).toContain("skills");
+      expect(skillPath).toContain("test/sample-tool");
     });
 
     test("listInstalledTools returns installed tools from registry", async () => {
@@ -241,7 +240,7 @@ describe("install integration", () => {
       const cachePath = join(TEST_GLOBAL_HOME, ".enact", "cache", "test", "cached-tool", "v1.0.0");
       mkdirSync(cachePath, { recursive: true });
       writeFileSync(
-        join(cachePath, "enact.yaml"),
+        join(cachePath, "skill.yaml"),
         `
 name: test/cached-tool
 version: 1.0.0
@@ -252,7 +251,7 @@ command: echo "cached"
 
       // The resolver should be able to find this tool once it's registered
       // Note: Full resolver testing is in resolver.test.ts
-      expect(existsSync(join(cachePath, "enact.yaml"))).toBe(true);
+      expect(existsSync(join(cachePath, "skill.yaml"))).toBe(true);
     });
   });
 });

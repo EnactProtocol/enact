@@ -102,49 +102,14 @@ function validateManifest(manifest: ToolManifest, sourceDir: string): Validation
       message: "No 'command' field - this is an LLM instruction tool",
     });
   } else {
-    // Command-based tool - validate parameters
+    // Command-based tool - basic validation
     const commandParams = extractCommandParams(manifest.command);
-    const schemaProperties = manifest.inputSchema?.properties
-      ? Object.keys(manifest.inputSchema.properties)
-      : [];
-    const requiredParams = manifest.inputSchema?.required || [];
-
-    // Check for command params not in schema
-    for (const param of commandParams) {
-      if (!schemaProperties.includes(param)) {
-        issues.push({
-          level: "error",
-          message: `Command uses \${${param}} but it's not defined in inputSchema.properties`,
-          suggestion: `Add '${param}' to inputSchema.properties`,
-        });
-      }
-    }
-
-    // Check for required params without command usage (potential issue)
-    for (const param of requiredParams) {
-      if (!commandParams.includes(param)) {
-        issues.push({
-          level: "info",
-          message: `Required parameter '${param}' is not used in command template`,
-          suggestion: "This is fine if you access it via environment or files",
-        });
-      }
-    }
-
-    // Check for optional params without defaults
-    for (const prop of schemaProperties) {
-      if (!requiredParams.includes(prop)) {
-        const propSchema = manifest.inputSchema?.properties?.[prop] as
-          | { default?: unknown }
-          | undefined;
-        if (propSchema?.default === undefined) {
-          issues.push({
-            level: "warning",
-            message: `Optional parameter '${prop}' has no default value`,
-            suggestion: "Add a default value or it will be empty string in commands",
-          });
-        }
-      }
+    if (commandParams.length > 0) {
+      issues.push({
+        level: "info",
+        message: `Command uses parameters: ${commandParams.join(", ")}`,
+        suggestion: "Consider using scripts with {{param}} templates for better parameter handling",
+      });
     }
 
     // Check for double-quoting in command

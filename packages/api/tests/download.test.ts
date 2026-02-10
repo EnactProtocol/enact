@@ -25,9 +25,9 @@ describe("download module", () => {
   describe("getToolInfo", () => {
     test("gets tool info by name", async () => {
       const client = createApiClient({ baseUrl: "http://localhost" });
-      const info = await getToolInfo(client, "alice/utils/greeter");
+      const info = await getToolInfo(client, "alice/greeter");
 
-      expect(info.name).toBe("alice/utils/greeter");
+      expect(info.name).toBe("alice/greeter");
       expect(info.description).toBeDefined();
       expect(info.versions).toBeArray();
       expect(info.latestVersion).toBeDefined();
@@ -38,14 +38,14 @@ describe("download module", () => {
 
     test("includes license info", async () => {
       const client = createApiClient({ baseUrl: "http://localhost" });
-      const info = await getToolInfo(client, "alice/utils/greeter");
+      const info = await getToolInfo(client, "alice/greeter");
 
       expect(info.license).toBeDefined();
     });
 
     test("includes author", async () => {
       const client = createApiClient({ baseUrl: "http://localhost" });
-      const info = await getToolInfo(client, "alice/utils/greeter");
+      const info = await getToolInfo(client, "alice/greeter");
 
       expect(info.author).toBeDefined();
       expect(info.author.username).toBeDefined();
@@ -55,7 +55,7 @@ describe("download module", () => {
   describe("getToolVersion", () => {
     test("gets specific version info", async () => {
       const client = createApiClient({ baseUrl: "http://localhost" });
-      const version = await getToolVersion(client, "alice/utils/greeter", "1.2.0");
+      const version = await getToolVersion(client, "alice/greeter", "1.2.0");
 
       expect(version.version).toBe("1.2.0");
       expect(version.bundle.hash).toBeDefined();
@@ -65,7 +65,7 @@ describe("download module", () => {
 
     test("includes manifest", async () => {
       const client = createApiClient({ baseUrl: "http://localhost" });
-      const version = await getToolVersion(client, "alice/utils/greeter", "1.2.0");
+      const version = await getToolVersion(client, "alice/greeter", "1.2.0");
 
       expect(version.manifest).toBeDefined();
       expect(version.manifest.enact).toBeDefined();
@@ -73,7 +73,7 @@ describe("download module", () => {
 
     test("includes bundle info", async () => {
       const client = createApiClient({ baseUrl: "http://localhost" });
-      const version = await getToolVersion(client, "alice/utils/greeter", "1.2.0");
+      const version = await getToolVersion(client, "alice/greeter", "1.2.0");
 
       expect(version.bundle).toBeDefined();
       expect(version.bundle.hash).toBeDefined();
@@ -83,7 +83,7 @@ describe("download module", () => {
 
     test("includes rawManifest (enact.md content) when available", async () => {
       const client = createApiClient({ baseUrl: "http://localhost" });
-      const version = await getToolVersion(client, "alice/utils/greeter", "1.2.0");
+      const version = await getToolVersion(client, "alice/greeter", "1.2.0");
 
       expect(version.rawManifest).toBeDefined();
       expect(version.rawManifest).toBeString();
@@ -93,7 +93,7 @@ describe("download module", () => {
 
     test("rawManifest is undefined when not provided", async () => {
       const client = createApiClient({ baseUrl: "http://localhost" });
-      const version = await getToolVersion(client, "bob/data/csv-parser", "2.0.0");
+      const version = await getToolVersion(client, "bob/csv-parser", "2.0.0");
 
       expect(version.rawManifest).toBeUndefined();
     });
@@ -102,7 +102,7 @@ describe("download module", () => {
   describe("getAttestations (v2)", () => {
     test("gets attestations for a version", async () => {
       const client = createApiClient({ baseUrl: "http://localhost" });
-      const result = await getAttestations(client, "alice/utils/greeter", "1.2.0");
+      const result = await getAttestations(client, "alice/greeter", "1.2.0");
 
       expect(result.attestations).toBeArray();
       expect(result.total).toBeNumber();
@@ -112,7 +112,7 @@ describe("download module", () => {
 
     test("includes attestation verification details", async () => {
       const client = createApiClient({ baseUrl: "http://localhost" });
-      const result = await getAttestations(client, "alice/utils/greeter", "1.2.0");
+      const result = await getAttestations(client, "alice/greeter", "1.2.0");
 
       if (result.attestations.length > 0) {
         const attestation = result.attestations[0];
@@ -129,7 +129,7 @@ describe("download module", () => {
     test("downloads bundle with metadata", async () => {
       const client = createApiClient({ baseUrl: "http://localhost" });
       const result = await downloadBundle(client, {
-        name: "alice/utils/greeter",
+        name: "alice/greeter",
         version: "1.2.0",
       });
 
@@ -142,7 +142,7 @@ describe("download module", () => {
     test("returns hash", async () => {
       const client = createApiClient({ baseUrl: "http://localhost" });
       const result = await downloadBundle(client, {
-        name: "alice/utils/greeter",
+        name: "alice/greeter",
         version: "1.2.0",
       });
 
@@ -152,7 +152,7 @@ describe("download module", () => {
     test("works with different tool names", async () => {
       const client = createApiClient({ baseUrl: "http://localhost" });
       const result = await downloadBundle(client, {
-        name: "bob/data/csv-parser",
+        name: "bob/csv-parser",
         version: "2.0.0",
       });
 
@@ -162,7 +162,7 @@ describe("download module", () => {
     test("can verify hash on download", async () => {
       const client = createApiClient({ baseUrl: "http://localhost" });
       const result = await downloadBundle(client, {
-        name: "alice/utils/greeter",
+        name: "alice/greeter",
         version: "1.2.0",
         verify: true,
       });

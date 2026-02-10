@@ -149,12 +149,16 @@ export class EnactApiClient {
       headers.set("Content-Type", contentType);
     }
 
-    // Supabase Edge Functions require BOTH apikey and Authorization headers
-    // Always use the anon key for apikey header
-    headers.set("apikey", DEFAULT_SUPABASE_ANON_KEY);
+    const isSupabase = this.baseUrl.includes("supabase.co");
 
-    // Authorization header uses auth token if available, otherwise anon key
-    headers.set("Authorization", `Bearer ${this.authToken ?? DEFAULT_SUPABASE_ANON_KEY}`);
+    if (isSupabase) {
+      // Supabase Edge Functions require BOTH apikey and Authorization headers
+      headers.set("apikey", DEFAULT_SUPABASE_ANON_KEY);
+      headers.set("Authorization", `Bearer ${this.authToken ?? DEFAULT_SUPABASE_ANON_KEY}`);
+    } else if (this.authToken) {
+      // Self-hosted registries use standard Bearer auth
+      headers.set("Authorization", `Bearer ${this.authToken}`);
+    }
 
     return headers;
   }

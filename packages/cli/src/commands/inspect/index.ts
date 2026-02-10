@@ -9,7 +9,7 @@
 import { mkdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { createApiClient, downloadBundle, getToolInfo } from "@enactprotocol/api";
-import { getCacheDir, loadConfig, pathExists } from "@enactprotocol/shared";
+import { loadConfig, pathExists } from "@enactprotocol/shared";
 import type { Command } from "commander";
 import type { CommandContext, GlobalOptions } from "../../types";
 import {
@@ -65,7 +65,8 @@ function formatBytes(bytes: number): string {
  * Extract a tar.gz bundle to a directory
  */
 async function extractBundle(bundleData: ArrayBuffer, destPath: string): Promise<void> {
-  const tempFile = join(getCacheDir(), `inspect-${Date.now()}.tar.gz`);
+  const { tmpdir } = await import("node:os");
+  const tempFile = join(tmpdir(), `enact-inspect-${Date.now()}.tar.gz`);
   mkdirSync(dirname(tempFile), { recursive: true });
   writeFileSync(tempFile, Buffer.from(bundleData));
 

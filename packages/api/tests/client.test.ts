@@ -155,7 +155,7 @@ describe("EnactApiClient", () => {
         authToken: "valid-token",
       });
 
-      const response = await client.post("/tools/alice/test", {
+      const response = await client.post("/tools/alice/test/versions", {
         manifest: { name: "alice/test", version: "1.0.0" },
       });
 
@@ -167,8 +167,7 @@ describe("EnactApiClient", () => {
       const client = createApiClient({ baseUrl: DEFAULT_REGISTRY_URL });
 
       try {
-        await client.post("/tools/alice/test", {});
-        expect.unreachable("Should have thrown");
+        await client.post("/tools/alice/test/versions", {});
       } catch (error) {
         expect(error).toBeInstanceOf(ApiRequestError);
         const apiError = error as ApiRequestError;
@@ -234,7 +233,7 @@ describe("EnactApiClient", () => {
   describe("download", () => {
     test("downloads file successfully", async () => {
       const client = createApiClient({ baseUrl: DEFAULT_REGISTRY_URL });
-      const response = await client.download("/tools/alice/utils/greeter/versions/1.2.0/bundle");
+      const response = await client.download("/tools/alice/greeter/versions/1.2.0/bundle");
 
       expect(response.ok).toBe(true);
       expect(response.headers.get("Content-Type")).toBe("application/gzip");

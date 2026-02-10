@@ -38,3 +38,6 @@ export { configureMcpCommand } from "./mcp";
 
 // Validation command
 export { configureValidateCommand } from "./validate";
+
+// Self-hosted registry
+export { configureServeCommand } from "./serve";

@@ -6,7 +6,7 @@
 
 import { existsSync, readdirSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { getCacheDir, tryLoadManifestFromDir } from "@enactprotocol/shared";
+import { getSkillsDir, tryLoadManifestFromDir } from "@enactprotocol/shared";
 import type { Command } from "commander";
 import type { CommandContext, GlobalOptions } from "../../types";
 import {
@@ -114,7 +114,7 @@ function listCachedTools(cacheDir: string): CachedTool[] {
  * Cache list handler
  */
 async function listHandler(options: CacheOptions, _ctx: CommandContext): Promise<void> {
-  const cacheDir = getCacheDir();
+  const cacheDir = getSkillsDir();
   const tools = listCachedTools(cacheDir);
 
   if (options.json) {
@@ -165,7 +165,7 @@ async function listHandler(options: CacheOptions, _ctx: CommandContext): Promise
  * Cache clean handler - remove old/unused tools
  */
 async function cleanHandler(options: CacheOptions, ctx: CommandContext): Promise<void> {
-  const cacheDir = getCacheDir();
+  const cacheDir = getSkillsDir();
   const tools = listCachedTools(cacheDir);
 
   if (tools.length === 0) {
@@ -207,7 +207,7 @@ async function cleanHandler(options: CacheOptions, ctx: CommandContext): Promise
  * Cache clear handler - remove entire cache
  */
 async function clearHandler(options: CacheOptions, ctx: CommandContext): Promise<void> {
-  const cacheDir = getCacheDir();
+  const cacheDir = getSkillsDir();
 
   if (!existsSync(cacheDir)) {
     info("Cache directory does not exist.");
@@ -243,7 +243,7 @@ async function clearHandler(options: CacheOptions, ctx: CommandContext): Promise
  * Cache info handler
  */
 async function infoHandler(options: CacheOptions, _ctx: CommandContext): Promise<void> {
-  const cacheDir = getCacheDir();
+  const cacheDir = getSkillsDir();
   const exists = existsSync(cacheDir);
   const tools = exists ? listCachedTools(cacheDir) : [];
   const size = exists ? getDirSize(cacheDir) : 0;

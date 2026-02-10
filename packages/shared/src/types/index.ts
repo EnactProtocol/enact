@@ -13,6 +13,7 @@ export type {
   Author,
   ToolAnnotations,
   ResourceRequirements,
+  ToolHooks,
   ToolExample,
   // Validation types
   ValidationResult,
@@ -28,3 +29,13 @@ export {
   MANIFEST_FILES,
   PACKAGE_MANIFEST_FILE,
 } from "./manifest";
+
+// Actions types (internal — used by scripts bridge and execution pipeline)
+export type {
+  ActionEnvVar,
+  ActionEnvVars,
+  Action,
+  ActionsManifest,
+} from "./actions";
+
+export { DEFAULT_INPUT_SCHEMA, getEffectiveInputSchema } from "./actions";
