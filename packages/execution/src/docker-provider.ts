@@ -119,7 +119,7 @@ export class DockerExecutionProvider implements ExecutionProvider {
       );
     }
 
-    const sourceDir = options.workdir ?? process.cwd();
+    const sourceDir = this.resolveSourceDir(options);
     const timeoutMs = this.parseTimeout(options.timeout ?? manifest.timeout);
     const image = await this.resolveImage(manifest, sourceDir);
 
@@ -131,9 +131,26 @@ export class DockerExecutionProvider implements ExecutionProvider {
       }
     }
 
-    const dockerArgs = this.buildRunArgs(image, sourceDir, env, manifest.command);
-
     try {
+      // Run build commands if specified (e.g., manifest.build or hooks.build)
+      if (manifest.build) {
+        const buildCommands = Array.isArray(manifest.build) ? manifest.build : [manifest.build];
+        for (const cmd of buildCommands) {
+          const buildArgs = this.buildRunArgs(image, sourceDir, env, cmd);
+          const buildOutput = await this.runContainer(buildArgs, 600000); // 10 min build timeout
+          if (buildOutput.exitCode !== 0) {
+            return this.createErrorResult(
+              manifest.name,
+              executionId,
+              startTime,
+              "BUILD_ERROR",
+              `Build failed (exit ${buildOutput.exitCode}): ${buildOutput.stderr}`
+            );
+          }
+        }
+      }
+
+      const dockerArgs = this.buildRunArgs(image, sourceDir, env, manifest.command);
       const output = await this.runContainer(dockerArgs, timeoutMs);
 
       const endTime = new Date();
@@ -248,7 +265,7 @@ export class DockerExecutionProvider implements ExecutionProvider {
       );
     }
 
-    const sourceDir = options.workdir ?? process.cwd();
+    const sourceDir = this.resolveSourceDir(options);
     const timeoutMs = this.parseTimeout(options.timeout ?? manifest.timeout);
     const image = await this.resolveImage(manifest, sourceDir);
 
@@ -270,7 +287,16 @@ export class DockerExecutionProvider implements ExecutionProvider {
           : [actionsManifest.build];
         for (const cmd of buildCommands) {
           const buildArgs = this.buildRunArgs(image, sourceDir, env, cmd);
-          await this.runContainer(buildArgs, 600000); // 10 min build timeout
+          const buildOutput = await this.runContainer(buildArgs, 600000); // 10 min build timeout
+          if (buildOutput.exitCode !== 0) {
+            return this.createErrorResult(
+              toolLabel,
+              executionId,
+              startTime,
+              "BUILD_ERROR",
+              `Build failed (exit ${buildOutput.exitCode}): ${buildOutput.stderr}`
+            );
+          }
         }
       }
 
@@ -328,6 +354,19 @@ export class DockerExecutionProvider implements ExecutionProvider {
   // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------
+
+  /**
+   * Resolve the source directory from execution options.
+   * Checks mountDirs for a /workspace mount first, then falls back to workdir or cwd.
+   */
+  private resolveSourceDir(options: ExecutionOptions): string {
+    if (options.mountDirs) {
+      for (const [hostPath, containerPath] of Object.entries(options.mountDirs)) {
+        if (containerPath === "/workspace") return hostPath;
+      }
+    }
+    return options.workdir ?? process.cwd();
+  }
 
   private generateExecutionId(): string {
     return `docker-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;

@@ -121,8 +121,8 @@ export class ExecutionRouter {
    */
   private async resolveBackend(backend: ExecutionBackend): Promise<ExecutionProvider | null> {
     if (backend === "container") {
-      // Try docker first, then dagger
-      for (const name of ["docker", "dagger"]) {
+      // Try dagger first (full feature support), then docker as fallback
+      for (const name of ["dagger", "docker"]) {
         const provider = this.providers.get(name);
         if (provider && (await provider.isAvailable())) return provider;
       }
