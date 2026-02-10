@@ -39,7 +39,7 @@ This document provides a comprehensive overview of all available commands in the
 
 ## Overview
 
-Enact CLI manages containerized tools with cryptographic signing. It supports local development in `~/.enact/local/` and automatic caching of registry tools in `~/.enact/cache/`.
+Enact CLI manages containerized tools with cryptographic signing. It supports local development and automatic installation of registry tools to `~/.agent/skills/`.
 
 ## Global Options
 
@@ -94,9 +94,9 @@ enact setup --global --force
 
 **Tool Mode (default)**:
 Creates a new Enact tool with:
-- `SKILL.md` - Tool manifest (YAML frontmatter + documentation)
+- `SKILL.md` - Agent-facing documentation
+- `skill.yaml` - Execution metadata (scripts, hooks, env)
 - `AGENTS.md` - Development guide for AI agents
-- Basic project structure
 
 **Agent Mode**:
 Creates `AGENTS.md` with instructions for AI agents on how to use Enact tools in your project.
@@ -124,9 +124,9 @@ enact init --tool --force
 
 ## Core Commands
 
-### 3. run - Run Tool's Declared Command
+### 3. run - Run Tool's Script
 
-**Purpose**: Execute a tool's canonical, signed command.
+**Purpose**: Execute a tool's script defined in `skill.yaml`.
 
 **Usage**: `enact run <tool-name> --args '<json>'`
 
@@ -142,17 +142,17 @@ enact init --tool --force
 - `--quiet, -q` - Suppress output except for tool output
 
 **Behavior**:
-- If tool has `command` field → executes in container with declared command
-- If tool has no `command` field → displays the tool's markdown instructions
-- If tool has `build` field → build commands run first (cached by Dagger)
+- If tool has `scripts` field → executes in container with the defined script
+- If tool has no `scripts` field → displays the tool's SKILL.md instructions
+- If tool has `hooks.build` → build commands run first (cached by Dagger)
 
 **Build Caching**:
-Tools with a `build` field benefit from Dagger's layer caching:
-- First run: Container image pull + build steps + command (may be slow)
-- Subsequent runs: Cached build → only command executes (instant)
+Tools with `hooks.build` benefit from Dagger's layer caching:
+- First run: Container image pull + build steps + script (may be slow)
+- Subsequent runs: Cached build → only script executes (instant)
 - Use `--no-cache` to force a fresh build
 
-**Resolution order**: Project `.enact/` → `~/.enact/tools/` (user-level) → `~/.enact/cache/` → download from registry
+**Resolution order**: Project `.enact/` → `~/.enact/tools/` (user-level) → `~/.agent/skills/` → download from registry
 
 **Examples**:
 ```bash
@@ -177,7 +177,7 @@ enact run myorg/utils/hello --args '{"name":"Alice"}' --quiet
 
 ---
 
-### 2. exec - Execute Arbitrary Command in Tool's Environment
+### 4. exec - Execute Arbitrary Command in Tool's Environment
 
 **Purpose**: Run custom commands inside a tool's containerized environment.
 
@@ -199,7 +199,7 @@ enact run myorg/utils/hello --args '{"name":"Alice"}' --quiet
 **⚠️ Security Warning**:
 This command bypasses the deterministic execution guarantee of the signed manifest. It allows running *any* command inside the container. Use with caution, especially when automating tool execution.
 
-**Resolution order**: Project `.enact/` → `~/.enact/tools/` (user-level) → `~/.enact/cache/` → download from registry
+**Resolution order**: Project `.enact/` → `~/.enact/tools/` (user-level) → `~/.agent/skills/` → download from registry
 
 **Examples**:
 ```bash
@@ -234,45 +234,45 @@ enact exec kgroves88/ai/pdf-extract "python extract.py --file=doc.pdf --pages=1-
 
 **Behavior**:
 
-All tools are stored in the cache (`~/.enact/cache/{tool}/{version}/`) and tracked via `tools.json` files.
+All tools are installed to `~/.agent/skills/{tool}/` and tracked via `tools.json` files.
 
 **Project-level (default):**
-- `enact install <tool-name>` → Downloads to cache, adds to `./.enact/tools.json`
+- `enact install <tool-name>` → Installs to `~/.agent/skills/`, adds to `./.enact/tools.json`
 - `enact install` → Installs all tools from `./.enact/tools.json`
-- `enact install .` → Packages current directory to cache, adds to `./.enact/tools.json`
+- `enact install .` → Packages current directory to `~/.agent/skills/`, adds to `./.enact/tools.json`
 
 **User-level (--global):**
-- `enact install <tool-name> --global` → Downloads to cache, adds to `~/.enact/tools.json`
-- `enact install . --global` → Packages current directory to cache, adds to `~/.enact/tools.json`
+- `enact install <tool-name> --global` → Installs to `~/.agent/skills/`, adds to `~/.enact/tools.json`
+- `enact install . --global` → Packages current directory to `~/.agent/skills/`, adds to `~/.enact/tools.json`
 
-**Resolution order**: `./.enact/tools.json` (project) → `~/.enact/tools.json` (global) → `~/.enact/cache/` → download from registry
+**Resolution order**: `./.enact/tools.json` (project) → `~/.enact/tools.json` (global) → `~/.agent/skills/` → download from registry
 
 **Examples**:
 ```bash
 # Install tool for current project (like npm install <package>)
 enact install acme-corp/data/csv-processor
-# Downloads to ~/.enact/cache/acme-corp/data/csv-processor/v1.0.0/
+# Installs to ~/.agent/skills/acme-corp/data/csv-processor/
 # Adds to ./.enact/tools.json
 
 # Install all project tools (like npm install)
 enact install
-# Reads ./.enact/tools.json and installs all listed tools to cache
+# Reads ./.enact/tools.json and installs all listed tools
 
 # Install tool globally (like npm install -g <package>)
 enact install acme-corp/data/csv-processor --global
-# Downloads to ~/.enact/cache/acme-corp/data/csv-processor/v1.0.0/
+# Installs to ~/.agent/skills/acme-corp/data/csv-processor/
 # Adds to ~/.enact/tools.json
 
 # Install current directory globally (like npm install -g .)
 cd my-tool/
 enact install . --global
-# Packages to ~/.enact/cache/myorg/category/my-tool/v1.0.0/
+# Installs to ~/.agent/skills/myorg/category/my-tool/
 # Adds to ~/.enact/tools.json
 
 # Install current directory to project
 cd my-tool/
 enact install .
-# Packages to ~/.enact/cache/myorg/category/my-tool/v1.0.0/
+# Installs to ~/.agent/skills/myorg/category/my-tool/
 # Adds to ./.enact/tools.json
 ```
 
@@ -392,8 +392,8 @@ enact publish ./my-tool/
 **Returns**:
 - Tool metadata (name, description, tags)
 - Full instructions from SKILL.md
-- Input/output schemas
-- Whether tool is executable (has `command` field)
+- Scripts and input/output schemas
+- Whether tool is executable (has `scripts` field)
 
 **Examples**:
 ```bash
@@ -434,7 +434,7 @@ enact learn acme-corp/workflows/data-pipeline --format md
 **Behavior**:
 - Default: Opens the tool's page in your browser for quick review
 - With `--download`: Downloads the tool bundle and extracts to a local directory
-- Does NOT install to ~/.enact/cache/ or update tools.json
+- Does NOT install to ~/.agent/skills/ or update tools.json
 - Does NOT require trust verification (purpose is to audit before trusting)
 
 **Use cases**:
@@ -703,7 +703,7 @@ Lookup:
 
 **Common settings**:
 - `registry.url` - Registry URL (default: https://enact.tools)
-- `cache.dir` - Cache directory (default: ~/.enact/cache)
+- `cache.dir` - Skills directory (default: ~/.agent/skills)
 - `tools.dir` - User-level tools directory (default: ~/.enact/tools)
 
 **Examples**:
@@ -796,35 +796,37 @@ enact auth logout
 # 1. Create tool in project directory
 cd my-tool-project
 
-# 2. Create SKILL.md
+# 2. Create SKILL.md (documentation)
 cat > SKILL.md <<'EOF'
 ---
-enact: "2.0.0"
-name: "myorg/utils/my-tool"
-description: "My tool"
-tags: ["utility"]
-command: "echo 'Hello ${name}!'"
-inputSchema:
-  type: object
-  properties:
-    name: { type: string }
-  required: ["name"]
+name: myorg/utils/my-tool
+description: My tool
 ---
 
 # My Tool
 
-Simple greeting tool.
+Simple greeting tool. Provide a `name` parameter.
 EOF
 
-# 3. Test locally first (no install needed)
+# 3. Create skill.yaml (execution)
+cat > skill.yaml <<'EOF'
+enact: "2.0.0"
+name: myorg/utils/my-tool
+description: My tool
+
+scripts:
+  greet: "echo 'Hello, {{name}}!'"
+EOF
+
+# 4. Test locally first (no install needed)
 enact run . --args '{"name":"World"}'
 
-# 4. Install globally when ready
+# 5. Install globally when ready
 enact install . --global
-# Packages to ~/.enact/cache/myorg/utils/my-tool/v1.0.0/
+# Installs to ~/.agent/skills/myorg/utils/my-tool/
 # Adds to ~/.enact/tools.json
 
-# 5. Test the installed version
+# 6. Test the installed version
 enact run myorg/utils/my-tool --args '{"name":"World"}'
 ```
 
@@ -845,13 +847,13 @@ cd my-project
 # 2. Install tools for project
 enact install acme-corp/data/csv-processor
 enact install myorg/utils/formatter
-# Creates ./.enact/tools.json, downloads to ~/.enact/cache/
+# Creates ./.enact/tools.json, installs to ~/.agent/skills/
 
 # 3. Team members clone and install
 git clone https://github.com/myorg/my-project
 cd my-project
 enact install
-# Reads ./.enact/tools.json and downloads all tools to cache
+# Reads ./.enact/tools.json and installs all tools
 
 # 4. Use project tools
 enact run acme-corp/data/csv-processor --args '{"file":"data.csv"}'
@@ -901,17 +903,18 @@ my-project/                   # Project directory
 └── ...
 
 ~/.enact/
-├── tools.json               # Global installed tools registry (points to cache)
-├── cache/                   # All tools stored here (both project and global)
-│   └── {org}/
-│       └── {path}/
-│           └── {tool}/
-│               └── v1.0.0/
-│                   ├── SKILL.md
-│                   ├── src/
-│                   └── ...
+├── tools.json               # Global installed tools registry
 ├── .env                     # Global environment variables
 └── config.yaml              # CLI configuration
+
+~/.agent/
+└── skills/                  # Installed skills (Agent Skills standard)
+    └── {org}/
+        └── {path}/
+            └── {tool}/
+                ├── SKILL.md
+                ├── src/
+                └── ...
 ```
 
 ---
@@ -923,9 +926,8 @@ my-project/                   # Project directory
 registry:
   url: https://enact.tools
 
-cache:
-  dir: ~/.enact/cache
-  maxSize: 10GB
+skills:
+  dir: ~/.agent/skills
 ```
 
 ### ~/.enact/tools.json
@@ -942,10 +944,10 @@ cache:
 
 When executing a tool, Enact searches in this order:
 
-1. **Project tools** (`./.enact/tools.json` → cache) - Tools installed for current project
-2. **Global tools** (`~/.enact/tools.json` → cache) - Tools installed with `--global`
-3. **Cache** (`~/.enact/cache/`) - Any cached version
-4. **Registry** - Download, verify signature, cache, execute
+1. **Project tools** (`./.enact/tools.json`) - Tools installed for current project
+2. **Global tools** (`~/.enact/tools.json`) - Tools installed with `--global`
+3. **Skills directory** (`~/.agent/skills/`) - Any installed skill
+4. **Registry** - Download, verify signature, install, execute
 
 ---
 
@@ -984,7 +986,7 @@ Enact uses standardized exit codes following Unix conventions:
 ## Environment Variables
 
 - `ENACT_REGISTRY_URL` - Override registry URL
-- `ENACT_CACHE_DIR` - Override cache directory
+- `ENACT_SKILLS_DIR` - Override skills directory (default: ~/.agent/skills)
 - `ENACT_TOOLS_DIR` - Override user-level tools directory
 - `ENACT_DEBUG` - Enable debug logging
 
@@ -993,7 +995,7 @@ Enact uses standardized exit codes following Unix conventions:
 ## Security Notes
 
 1. **User-level tools** (`~/.enact/tools/`) skip signature verification (user-controlled workspace)
-2. **Cached tools** are verified on download from registry
+2. **Installed skills** (`~/.agent/skills/`) are verified on download from registry
 3. **Signature verification** happens automatically during install/run
 4. **Environment variables** are scoped to tool namespaces
 5. Use `enact trust check` to view trust status and attestations for any tool

@@ -1,0 +1,12 @@
+enact: "2.0.0"
+name: enact/dice-roll-rust
+version: "1.0.1"
+description: Roll dice with configurable sides and count - a simple Rust example tool
+from: rust:1.75-slim
+
+hooks:
+  build:
+    - rustc -o /workspace/dice /workspace/dice.rs
+
+scripts:
+  roll: "/workspace/dice {{sides}} {{count}}"

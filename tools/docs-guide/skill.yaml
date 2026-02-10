@@ -1,0 +1,7 @@
+enact: "2.0.0"
+name: enact/docs-guide
+version: "1.0.1"
+description: LLM guide for creating, publishing, and running Enact tools
+
+scripts:
+  read: "cat /work/SKILL.md"

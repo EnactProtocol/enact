@@ -1,0 +1,12 @@
+enact: "2.0.0"
+name: enact/ascii-art-generator
+version: "1.0.1"
+description: Generates ASCII art from a given text
+from: python:3.12-slim
+
+hooks:
+  build:
+    - pip install pyfiglet
+
+scripts:
+  generate: "python /work/main.py {{text}}"

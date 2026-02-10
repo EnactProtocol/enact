@@ -10,6 +10,7 @@
     "packages/shared",
     "packages/execution",
     "packages/api",
+    "packages/registry",
     "packages/server",
     "packages/mcp-server",
     "packages/cli",

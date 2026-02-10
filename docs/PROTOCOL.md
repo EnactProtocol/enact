@@ -4,9 +4,9 @@ A verified, portable way to define, discover, and safely run **AI-executable too
 
 Think **npm for AI tools**—publish once, run anywhere, with cryptographic verification and deterministic execution.
 
-Each tool includes a self-contained `SKILL.md` manifest describing its inputs, outputs, environment, and execution command. This format aligns with Anthropic's Agent Skills specification.
+Each tool is a folder containing a `SKILL.md` (agent-facing documentation) and a `skill.yaml` (execution metadata). This two-file format aligns with the [Agent Skills standard](https://agentskills.io).
 
-> **Backwards Compatibility:** Enact also recognizes `enact.md`, `enact.yaml`, and `enact.yml` for existing tools.
+> **Note:** For backwards compatibility, Enact also recognizes `enact.md`, `enact.yaml`, and `enact.yml`.
 
 **What Enact provides:**
 * 🔍 **Semantic discovery** — AI models and developers can find tools by task or capability
@@ -42,24 +42,29 @@ Your username becomes your namespace (e.g., username `alice` can publish to `ali
 
 ### 3. Create a tool
 
-Create a `SKILL.md` manifest:
+Create a `SKILL.md` with documentation and a `skill.yaml` with execution metadata:
 
+**SKILL.md:**
 ```markdown
 ---
-enact: "2.0.0"
-name: "alice/utils/greeter"
-description: "Greets the user by name"
-command: "echo 'Hello, ${name}!'"
-inputSchema:
-  type: object
-  properties:
-    name: { type: string }
-  required: ["name"]
+name: alice/utils/greeter
+description: Greets the user by name
 ---
 
 # Greeter
 
 A simple tool that greets users by name.
+Provide a `name` parameter to get a personalized greeting.
+```
+
+**skill.yaml:**
+```yaml
+enact: "2.0.0"
+name: alice/utils/greeter
+description: Greets the user by name
+
+scripts:
+  greet: "echo 'Hello, {{name}}!'"
 ```
 
 ### 4. Test locally
@@ -71,22 +76,21 @@ enact run . --args '{"name":"World"}'
 
 ### Advanced: Tools with Build Steps
 
-For tools that need compilation or dependency installation, use the `build` field:
+For tools that need compilation or dependency installation, use `hooks.build`:
 
-```markdown
----
+**skill.yaml:**
+```yaml
 enact: "2.0.0"
-name: "alice/utils/hello-rust"
-description: "A Rust greeting tool"
-from: "rust:1.75-alpine"
-build: "rustc hello.rs -o hello"
-command: "./hello ${name}"
-inputSchema:
-  type: object
-  properties:
-    name: { type: string }
-  required: ["name"]
----
+name: alice/utils/hello-rust
+description: A Rust greeting tool
+from: rust:1.75-alpine
+
+hooks:
+  build:
+    - rustc hello.rs -o hello
+
+scripts:
+  greet: "./hello {{name}}"
 ```
 
 Build steps are cached by Dagger—first run compiles, subsequent runs are instant.
@@ -177,7 +181,7 @@ enact install
 
 ## Running Tools
 
-**Deterministic execution** (only the manifest-defined command runs):
+**Run a script defined in skill.yaml:**
 
 ```bash
 enact run alice/utils/greeter --args '{"name":"Alice"}'
@@ -241,7 +245,7 @@ Where Enact stores things:
 | -------------------------------- | ---------------------------------------------------- |
 | `.enact/`                        | Project-installed tools (commit `.enact/tools.json`) |
 | `~/.enact/tools/`                | Global installs                                      |
-| `~/.enact/cache/`                | Immutable tool bundles for fast reinstalls           |
+| `~/.agent/skills/`               | Installed skills (Agent Skills standard)             |
 | `~/.enact/config.yaml`           | Trust configuration (identities, policies)           |
 | `~/.enact/.env`                  | Global environment variables                         |
 

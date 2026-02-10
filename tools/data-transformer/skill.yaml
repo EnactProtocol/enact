@@ -1,0 +1,13 @@
+enact: "2.0.0"
+name: enact/data-transformer
+version: "1.0.1"
+description: Transform data between CSV and JSON formats with filtering and column selection
+from: node:20-alpine
+
+hooks:
+  build:
+    - npm install
+    - npm run build
+
+scripts:
+  transform: "node dist/index.js {{input}} {{input_format}} {{output_format}} {{filter_column}} {{filter_value}} {{select_columns}}"

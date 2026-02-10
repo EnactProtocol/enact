@@ -318,7 +318,7 @@ GET /tools/{name}/versions/{version}
     "name": "alice/utils/greeter",
     "version": "1.2.0",
     "from": "alpine:latest",
-    "command": "echo 'Hello, ${name}!'",
+    "scripts": { "greet": "echo 'Hello, {{name}}!'" },
     "timeout": "30s",
     "inputSchema": {
       "type": "object",

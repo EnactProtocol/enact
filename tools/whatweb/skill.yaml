@@ -1,0 +1,14 @@
+enact: "2.0.0"
+name: enact/whatweb
+version: "1.0.1"
+description: Web scanner that identifies websites, CMS, frameworks, web servers, and embedded devices
+from: ruby:3.2-alpine
+
+hooks:
+  build:
+    - apk add --no-cache git
+    - git clone https://github.com/urbanadventurer/WhatWeb.git /opt/whatweb
+    - gem install addressable
+
+scripts:
+  scan: "/opt/whatweb/whatweb --colour=never --log-json=/dev/stdout -q -a {{aggression}} -t {{max_threads}} {{url}}"

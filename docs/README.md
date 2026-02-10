@@ -6,8 +6,7 @@ Technical reference documentation for the Enact protocol and implementation.
 
 ### Protocol & Specification
 - **[PROTOCOL.md](./PROTOCOL.md)** - Protocol overview and core concepts
-- **[SPEC.md](./SPEC.md)** - Tool manifest specification (enact.yaml format)
-- **[REGISTRY-SPEC.md](./REGISTRY-SPEC.md)** - Complete registry HTTP API specification
+- **[SPEC.md](./SPEC.md)** - Tool manifest specification (skill.yaml format)
 
 ### Command Line Interface
 - **[COMMANDS.md](./COMMANDS.md)** - Complete CLI command reference
@@ -15,7 +14,6 @@ Technical reference documentation for the Enact protocol and implementation.
 
 ### Trust & Security
 - **[TRUST.md](./TRUST.md)** - Trust system architecture and verification
-- **[TRUST_AUDIT.md](./TRUST_AUDIT.md)** - Security implementation audit
 
 ### Integration
 - **[API.md](./API.md)** - Registry HTTP API documentation
@@ -27,17 +25,6 @@ Technical reference documentation for the Enact protocol and implementation.
 For user-focused documentation, see:
 - [Getting Started Guide](../GETTING-STARTED.md) - Installation and basic usage
 - [Development Setup](../DEV-SETUP.md) - Contributing to Enact
-- [Deployment Guide](../DEPLOYMENT.md) - Production deployment
-
-## Overview
-
-Enact is a verified, portable protocol for AI-executable tools. Key features:
-
-- 🔍 **Discovery** - Search and find tools by capability
-- 🔐 **Trust** - Cryptographic verification via Sigstore
-- 🐳 **Execution** - Containerized, reproducible tool runs
-- 📦 **Registry** - Centralized tool distribution
-- 🤖 **AI Integration** - Native MCP support for agents
 
 ## Architecture
 

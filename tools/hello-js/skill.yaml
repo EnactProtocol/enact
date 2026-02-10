@@ -1,0 +1,8 @@
+enact: "2.0.0"
+name: enact/hello-js
+version: "1.0.1"
+description: A simple JavaScript greeting tool
+from: node:22-alpine
+
+scripts:
+  greet: "node /work/hello.js {{name}}"

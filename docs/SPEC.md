@@ -7,30 +7,27 @@ This document provides a comprehensive reference for all Enact protocol fields u
 
 ## Overview
 
-All Enact tools are defined in a single **`SKILL.md`** file that combines:
+Enact tools use a **two-file model** aligned with the [Agent Skills standard](https://agentskills.io):
 
-1. **YAML frontmatter** — Machine-readable metadata (fields documented below)
-2. **Markdown body** — Human-readable documentation and instructions
-
-This unified format serves as the single source of truth for both AI models and human developers.
+1. **`SKILL.md`** — Agent-facing documentation (YAML frontmatter with `name`, `description` + Markdown body)
+2. **`skill.yaml`** — Execution metadata (scripts, hooks, env, container image)
 
 ### Relationship to Agent Skills
 
-Enact's \`SKILL.md\` format is a **superset** of the open [Agent Skills standard](https://agentskills.io/specification). The base standard defines a minimal format: a \`SKILL.md\` file with YAML frontmatter (\`name\`, \`description\`) plus Markdown instructions.
+The `SKILL.md` file follows the open [Agent Skills standard](https://agentskills.io/specification). The base standard defines a minimal format: a `SKILL.md` file with YAML frontmatter (`name`, `description`) plus Markdown instructions.
 
-**Enact extends this with fields that make skills executable:**
-- \`version\` — Semantic versioning for the tool
-- \`inputSchema\`, \`outputSchema\` — JSON Schema definitions for AI agents
-- \`from:\` — Base Docker image
-- \`build:\` — Build/setup commands (cached by Dagger)
-- \`command:\` — Execution command with parameter substitution
-- \`timeout:\`, \`env:\`, \`files:\` — Runtime controls
+**Enact's `skill.yaml` adds fields that make skills executable:**
+- `scripts` — Named executable commands with `{{param}}` template substitution
+- `hooks.build` — Build/setup commands (cached by Dagger)
+- `from` — Base Docker image
+- `env` — Environment variables and secrets
+- `timeout` — Execution time limits
 
-This means a single \`SKILL.md\` defines both:
-1. **What the tool does** (standard Skills interface for AI)
-2. **How to run it** (Enact's container extensions for execution)
+This means a skill folder contains:
+1. **What the tool does** (`SKILL.md` — standard Agent Skills interface for AI)
+2. **How to run it** (`skill.yaml` — Enact's execution extensions)
 
-> **Note:** For backwards compatibility, Enact also recognizes \`enact.md\`, \`enact.yaml\`, and \`enact.yml\`.
+> **Note:** For backwards compatibility, Enact also recognizes `enact.md`, `enact.yaml`, and `enact.yml`.
 
 ## Package Definition (Optional)
 
@@ -57,56 +54,53 @@ license: "MIT"
 
 ---
 
-## Required Fields
+## Minimal Example
+
+**SKILL.md:**
 ```markdown
 ---
-enact: "2.0.0"
-name: "alice/utils/greeter"
-description: "Greets the user by name"
-command: "echo 'Hello, ${name}!'"
-inputSchema:
-  type: object
-  properties:
-    name: { type: string }
-  required: ["name"]
+name: alice/utils/greeter
+description: Greets the user by name
 ---
 
 # Greeter
 
 A simple tool that greets users by name.
+Provide a `name` parameter to get a personalized greeting.
+```
 
-## Usage
+**skill.yaml:**
+```yaml
+enact: "2.0.0"
+name: alice/utils/greeter
+description: Greets the user by name
 
-Provide a name and get a friendly greeting back.
+scripts:
+  greet: "echo 'Hello, {{name}}!'"
 ```
 
 ### Example with Build Step
-```markdown
----
+
+**skill.yaml:**
+```yaml
 enact: "2.0.0"
-name: "alice/utils/hello-rust"
-description: "A Rust-based greeting tool"
-from: "rust:1.75-alpine"
-build: "rustc hello.rs -o hello"
-command: "./hello ${name}"
-inputSchema:
-  type: object
-  properties:
-    name: { type: string }
-  required: ["name"]
----
+name: alice/utils/hello-rust
+description: A Rust-based greeting tool
+from: rust:1.75-alpine
 
-# Hello Rust
+hooks:
+  build:
+    - rustc hello.rs -o hello
 
-A greeting tool compiled from Rust source.
-The build step compiles the code and is cached by Dagger.
+scripts:
+  greet: "./hello {{name}}"
 ```
 
 ---
 
 ## Required Fields
 
-These fields must be present in the YAML frontmatter of every `SKILL.md` file.
+These fields must be present in `skill.yaml` (or `SKILL.md` frontmatter).
 
 ### `name`
 - **Type:** `string`
@@ -129,20 +123,35 @@ These fields must be present in the YAML frontmatter of every `SKILL.md` file.
 - **Best Practice:** Include what it does and when to use it
 - **Example:** `"Formats JavaScript/TypeScript code using Prettier"`
 
-### `command`
-- **Type:** `string`
-- **Description:** Shell command to execute with parameter substitution
-- **Format:** Uses `${parameter}` syntax for variable substitution
+### `scripts`
+- **Type:** `object` (map of script name → command string or expanded definition)
+- **Description:** Named executable commands with `{{param}}` template substitution
+- **Format:** Each key is a script name, value is a command string or expanded object
+- **Template syntax:** `{{param}}` — each template becomes a single argument, regardless of content
 - **Examples:**
   ```yaml
-  command: "echo Hello ${name}!"
-  command: "npx prettier@3.3.3 --write ${file}"
-  command: "python src/process.py --file=${file} --operation=${operation}"
+  # Simple string form
+  scripts:
+    greet: "echo 'Hello, {{name}}!'"
+    format: "npx prettier@3.3.3 --write {{file}}"
+
+  # Expanded form with metadata
+  scripts:
+    calculate:
+      command: "python3 calc.py {{operation}} {{a}} {{b}}"
+      description: "Perform arithmetic operations"
+      inputSchema:
+        type: object
+        properties:
+          operation: { type: string, enum: [add, subtract, multiply] }
+          a: { type: number }
+          b: { type: number }
+        required: [operation, a, b]
   ```
-- **Best Practice:** Use exact versions for reproducibility. Do NOT quote `${param}` placeholders - Enact handles quoting automatically
 - **Notes:**
-  - Required for container-executed tools
-  - Omitted for LLM-driven tools (tools without deterministic execution)
+  - Parameters are auto-inferred from `{{param}}` patterns when `inputSchema` is not provided
+  - Optional parameters without values are omitted entirely from the command
+  - Omit `scripts` for LLM-driven tools (instructions-only, no deterministic execution)
 
 ---
 
@@ -176,25 +185,28 @@ These optional fields should be included in the YAML frontmatter for better tool
 - **Default:** `"30s"`
 - **Notes:** Critical for preventing DoS attacks. Only applies to command execution, not build steps.
 
-### `build`
-- **Type:** `string` or `array of strings`
-- **Description:** Build command(s) to run before executing the main command
-- **Execution:** Runs outside the timeout, cached by Dagger for fast subsequent runs
+### `hooks`
+- **Type:** `object`
+- **Description:** Lifecycle hooks for the tool
+- **Fields:**
+  - `build` — `string` or `array of strings` — Build commands to run before execution
+  - `postinstall` — `string` or `array of strings` — Commands to run after installation
+- **Execution:** Build runs outside the timeout, cached by Dagger for fast subsequent runs
 - **Use cases:** Compiling code, installing dependencies, preparing the environment
 - **Examples:**
   ```yaml
-  # Single build command
-  build: "rustc hello.rs -o hello"
-  
-  # Multiple build commands
-  build:
-    - "npm install"
-    - "npm run build"
-  
-  # Python dependencies
-  build: "pip install -r requirements.txt"
+  hooks:
+    build:
+      - pip install -r requirements.txt
+      - npm install
+
+  hooks:
+    build:
+      - rustc hello.rs -o hello
+    postinstall:
+      - echo "Setup complete"
   ```
-- **Notes:** 
+- **Notes:**
   - Build steps are cached by Dagger's layer caching
   - First run may be slow, subsequent runs are instant
   - Errors during build will fail the tool execution
@@ -231,7 +243,7 @@ These optional fields should be included in the YAML frontmatter for better tool
 
 ## Schema Fields
 
-These fields define input and output structure in the YAML frontmatter, enabling validation and helping AI models use tools correctly.
+These fields define input and output structure. They can be specified per-script in the expanded form, or auto-inferred from `{{param}}` patterns.
 
 ### `inputSchema`
 - **Type:** `object` (JSON Schema)
@@ -250,8 +262,8 @@ These fields define input and output structure in the YAML frontmatter, enabling
         enum: ["summarize", "validate", "transform"]
     required: ["file", "operation"]
   ```
-- **Best Practice:** Always include for container-executed tools that accept arguments.
-- **Notes:** Not required, but highly recommended if the tool takes arguments. Helps AI models use tools correctly.
+- **Best Practice:** Include for scripts that accept complex or typed arguments.
+- **Notes:** When omitted, `inputSchema` is auto-inferred from `{{param}}` patterns in the script command (all params become required strings). Use the expanded script form to provide explicit schemas.
 
 ### `outputSchema`
 - **Type:** `object` (JSON Schema)
@@ -594,7 +606,7 @@ Signing with Sigstore...
 
 **Storage locations:**
 - Active tools: `~/.enact/tools/{org}/{path}/{tool}/` - No signature required (user-controlled)
-- Cached bundles: `~/.enact/cache/{org}/{path}/{tool}/v{version}/` - Verified on download from registry
+- Installed skills: `~/.agent/skills/{org}/{path}/{tool}/` - Verified on download from registry
 - Signature bundles: Stored alongside cached bundles as `.sigstore-bundle`
 
 **Security benefits:**
@@ -649,9 +661,10 @@ When publishing tools, Sigstore signs the **entire tool bundle** (tarball). The 
 ```bash
 # Tool structure
 my-tool/
-├── SKILL.md           # Tool definition (YAML frontmatter + Markdown docs)
+├── SKILL.md           # Agent-facing documentation
+├── skill.yaml         # Execution metadata (scripts, hooks, env)
 ├── src/               # Source code
-└── RESOURCES.md       # Additional documentation (optional, for progressive disclosure)
+└── RESOURCES.md       # Additional documentation (optional)
 
 # After signing
 my-tool-v1.0.0.tar.gz           # Signed tarball
@@ -660,28 +673,18 @@ my-tool.sigstore-bundle         # Signature + certificate + Rekor proof
 
 ---
 
-## File Format: `SKILL.md`
+## File Format
 
-All Enact tools are defined in a single **`SKILL.md`** file — a Markdown document with YAML frontmatter.
+Enact tools use a **two-file model**:
 
-### Structure
-- **YAML frontmatter** (between `---` delimiters) contains structured tool metadata
-- **Markdown body** contains human-readable documentation and instructions
-- **Single source of truth** for both machine-readable specs and human documentation
+### `SKILL.md` — Agent-facing documentation
 
-### Example:
+A Markdown document with YAML frontmatter following the [Agent Skills standard](https://agentskills.io):
+
 ```markdown
 ---
-enact: "2.0.0"
-name: "org/category/tool"
-description: "Tool description"
-command: "python src/main.py ${args}"  # Optional
-inputSchema:
-  type: object
-  properties:
-    args:
-      type: string
-  required: ["args"]
+name: org/category/tool
+description: Tool description
 ---
 
 # Tool Name
@@ -693,27 +696,45 @@ Detailed documentation in Markdown format.
 Explain how to use the tool, provide examples, tips, etc.
 ```
 
+### `skill.yaml` — Execution metadata
+
+Defines how to run the tool (scripts, hooks, env, container image):
+
+```yaml
+enact: "2.0.0"
+name: org/category/tool
+description: Tool description
+from: python:3.11-slim
+
+hooks:
+  build:
+    - pip install -r requirements.txt
+
+scripts:
+  process: "python src/main.py {{input}}"
+```
+
 ### Execution Model
 
-The presence of a `command` field in the YAML frontmatter determines execution:
-- **With `command`** → Container-executed (deterministic)
-- **Without `command`** → LLM-driven (instructions interpreted by AI)
+The presence of a `scripts` field determines execution:
+- **With `scripts`** → Container-executed (deterministic)
+- **Without `scripts`** → LLM-driven (instructions interpreted by AI from SKILL.md)
 
 ---
 
 ## Tool Types
 
-Both tool types are defined in `SKILL.md` files — the presence of a `command` field determines the execution model.
+The presence of a `scripts` field in `skill.yaml` determines the execution model.
 
 ### Container-Executed Tools
-- **Has:** `command` field in YAML frontmatter
-- **Execution:** Runs in isolated Dagger container
+- **Has:** `scripts` field in `skill.yaml`
+- **Execution:** Runs in isolated container
 - **Characteristics:** Deterministic, reproducible
 - **Use case:** Scripts, CLI tools, data processing
 
-### LLM-Driven Tools
-- **No:** `command` field in YAML frontmatter
-- **Execution:** Markdown body instructions interpreted by LLM
+### LLM-Driven Tools (Instructions-Only)
+- **No:** `scripts` field — only `SKILL.md` with documentation
+- **Execution:** Markdown instructions interpreted by LLM
 - **Characteristics:** Non-deterministic, flexible
 - **Use case:** Complex analysis, creative tasks, multi-step reasoning
 - **Supports:** Progressive disclosure (on-demand content loading via RESOURCES.md)
@@ -729,11 +750,10 @@ Both tool types are defined in `SKILL.md` files — the presence of a `command` 
     └── {path}/                      # Arbitrary depth hierarchy (like Java packages)
         └── {to}/
             └── {tool}/
-                ├── SKILL.md         # Tool definition
-                ├── src/             # Built source code (if any)
-                ├── dist/            # Compiled output (if any)
-                ├── node_modules/    # Dependencies (if any)
-                └── RESOURCES.md     # Additional docs (for progressive disclosure)
+                ├── SKILL.md         # Agent-facing documentation
+                ├── skill.yaml       # Execution metadata
+                ├── src/             # Source code (if any)
+                └── RESOURCES.md     # Additional docs (optional)
 ```
 
 **Examples:**
@@ -749,31 +769,29 @@ Both tool types are defined in `SKILL.md` files — the presence of a `command` 
 - Can be modified/customized by the user
 - Created when you run `enact install --global` or `enact install .`
 
-### Immutable Cached Bundles
+### Installed Skills
 ```
-~/.enact/cache/
+~/.agent/skills/
 └── {org}/
     └── {path}/                      # Arbitrary depth hierarchy
         └── {to}/
             └── {tool}/
-                └── v1.0.0/          # Specific version (immutable)
-                    ├── bundle.tar.gz
-                    ├── .sigstore-bundle
-                    └── metadata.json
+                ├── SKILL.md
+                ├── skill.yaml
+                ├── src/
+                └── ...
 ```
 
 **Examples:**
 ```
-~/.enact/cache/acme-corp/api/slack-notifier/v1.0.0/
-~/.enact/cache/acme-corp/api/slack-notifier/v1.0.1/
-~/.enact/cache/mycompany/ai/nlp/sentiment/analyzer/v2.3.0/
+~/.agent/skills/acme-corp/api/slack-notifier/
+~/.agent/skills/mycompany/ai/nlp/sentiment/analyzer/
 ```
 
 **Notes:**
-- Immutable, versioned artifacts
-- Can store multiple versions simultaneously
-- Used for instant reinstall, project reproducibility
-- Verified signatures stored here
+- Follows the [Agent Skills standard](https://agentskills.io) directory layout
+- One version per skill (no version subdirectories)
+- Verified on download from registry
 - Created automatically during install or download
 
 ### Project-Level Tools
@@ -821,24 +839,26 @@ project-dir/
 ## Security Considerations
 
 ### Command Injection Prevention
-The `command` field uses string interpolation (e.g., `${input}`). While convenient, this can be vulnerable to command injection if inputs contain shell metacharacters.
+The `scripts` field uses `{{param}}` template substitution. Each `{{param}}` becomes a single argument passed directly to `execve()` — no shell interpretation occurs.
+
+**Security model:**
+- `{{param}}` values are passed as individual arguments, not through a shell
+- No shell metacharacters can break out of the argument boundary
+- Optional parameters without values are omitted entirely (no empty arguments)
 
 **Best Practices:**
-1. **Use Environment Variables:** Pass complex or untrusted inputs as environment variables instead of interpolating them directly into the command string.
+1. **Use environment variables** for complex or sensitive inputs:
    ```yaml
-   # Safer approach
-   command: "python process.py"
    env:
-     INPUT_DATA: "${input}" # Runtime handles safe injection into env
+     INPUT_DATA:
+       description: "Complex input data"
+   scripts:
+     process: "python process.py"
    ```
-2. **Use JSON Files:** For complex structured data, write the input to a JSON file and pass the filename.
-   ```yaml
-   command: "python process.py --config input.json"
-   ```
-3. **Parameter Substitution:** Enact automatically shell-escapes parameter values. Do NOT add quotes around `${variable}` - Enact handles this automatically to prevent double-quoting issues.
+2. **Use JSON files** for complex structured data — write the input to a file and pass the filename.
 
 ### Secret Management
-Tools often require API keys or credentials. **Never hardcode secrets in `SKILL.md`.**
+Tools often require API keys or credentials. **Never hardcode secrets in `skill.yaml` or `SKILL.md`.**
 
 **Best Practices:**
 
@@ -875,7 +895,7 @@ Tools often require API keys or credentials. **Never hardcode secrets in `SKILL.
 ## Best Practices Summary
 
 1. **Naming:** Use hierarchical paths like Java packages (e.g., `org/category/tool-name` or deeper as needed)
-2. **Versions:** Pin exact versions in `command` fields (e.g., `npx prettier@3.3.3`)
+2. **Versions:** Pin exact versions in `scripts` commands (e.g., `npx prettier@3.3.3`)
 3. **Schemas:** Always provide `inputSchema` and `outputSchema`
 4. **Containers:** Pin specific image tags, prefer minimal images
 5. **Annotations:** Set appropriate behavior hints for safety
@@ -889,10 +909,9 @@ Tools often require API keys or credentials. **Never hardcode secrets in `SKILL.
 
 ## References
 
-- **Full Specification:** [new.md](new.md)
+- **Agent Skills Standard:** [agentskills.io](https://agentskills.io)
 - **Implementation Guide:** [README.md](README.md)
-- **Examples:** See `examples/` directory
-- **JSON Schema:** `schema.json` (for validation)
+- **CLI Commands:** [COMMANDS.md](COMMANDS.md)
 
 ---
 

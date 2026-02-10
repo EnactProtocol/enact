@@ -35,6 +35,10 @@ coverage/
 .archive/
 .claude/
 .idea/
+z-dev/
+test-tools/
+tool-backup/
+test-registry-data/
 *.swp
 *.swo
 *~
@@ -87,7 +91,5 @@ packages/enact-win32-x64/bin/enact.exe
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
-disable
-
-.archive/
+disable/
 feedback/

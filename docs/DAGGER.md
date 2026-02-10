@@ -11,29 +11,29 @@ Enact's promise of "publish once, run anywhere" relies on Dagger's core capabili
 1.  **Abstract the Environment:** Tools run in containers defined by code, ensuring they work identically on macOS, Linux, and Windows.
 2.  **Guarantee Determinism:** Dagger uses a Directed Acyclic Graph (DAG) where every step is content-addressed. If the inputs (files, args, container hash) are the same, the output is guaranteed to be the same.
 3.  **Smart Caching:** Dagger caches every operation. If you run a tool twice with the same inputs, the second run is instant because Dagger returns the cached result.
-4.  **Programmatic Control:** Unlike static Dockerfiles, Dagger allows Enact to dynamically construct execution pipelines based on the `enact.md` configuration.
+4.  **Programmatic Control:** Unlike static Dockerfiles, Dagger allows Enact to dynamically construct execution pipelines based on the `skill.yaml` configuration.
 
 ## How Enact Maps to Dagger
 
-When you execute `enact run tool`, the CLI translates the `enact.md` manifest into a Dagger pipeline on the fly.
+When you execute `enact run tool`, the CLI translates the `skill.yaml` manifest into a Dagger pipeline on the fly.
 
 | Enact Manifest Field | Dagger API Equivalent | Description |
 | :--- | :--- | :--- |
 | `from: "python:3.11"` | `dag.Container().From("python:3.11")` | Sets the base container image. |
-| `command: "python main.py"` | `.WithExec(["python", "main.py"])` | Executes the tool's logic. |
+| `scripts: { run: "python main.py" }` | `.WithExec(["python", "main.py"])` | Executes the tool's script. |
 | `env: { API_KEY: ... }` | `.WithSecretVariable("API_KEY", secret)` | Injects secrets securely into memory. |
 | Input Files | `.WithDirectory("/inputs", hostDir)` | Mounts user data into the sandbox. |
 | Output Files | `.Directory("/outputs").Export()` | Extracts results back to the host. |
 
 ## Execution Flow
 
-1.  **Parse:** The Enact CLI reads `enact.md` and validates the input arguments against the `inputSchema`.
+1.  **Parse:** The Enact CLI reads `skill.yaml` and validates the input arguments against the script's `inputSchema` (or auto-inferred from `{{param}}` patterns).
 2.  **Connect:** Enact connects to the local Dagger Engine (automatically starting it if necessary).
 3.  **Construct:** A Dagger graph is built programmatically:
     *   **Base:** Pull the image specified in `from`.
-    *   **Source:** Mount the tool's source code (from the installed tool bundle).
-    *   **Inputs:** Mount user-provided files and inject arguments as environment variables.
-    *   **Command:** Define the execution step using the `command` template.
+    *   **Source:** Mount the tool's source code (from the installed skill bundle).
+    *   **Inputs:** Mount user-provided files and inject arguments.
+    *   **Script:** Define the execution step using the script command with `{{param}}` substitution.
 4.  **Execute:** The graph is submitted to the engine.
     *   Dagger checks its cache for matching hashes.
     *   Missing steps are executed in isolated containers (using runc/containerd).

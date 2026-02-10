@@ -1,0 +1,8 @@
+enact: "2.0.0"
+name: enact/hello-ruby
+version: "1.0.1"
+description: A simple Ruby greeting tool
+from: ruby:3.3-alpine
+
+scripts:
+  greet: "ruby /work/hello.rb {{name}}"

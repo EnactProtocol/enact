@@ -262,11 +262,11 @@ If you want to share your own tools:
 ### 1. Create a tool
 
 Create a directory with:
-- `enact.yaml` - Tool manifest
+- `skill.yaml` - Package manifest
 - `Dockerfile` - Container definition
 - Source code and dependencies
 
-Example `enact.yaml`:
+Example `skill.yaml`:
 
 ```yaml
 name: username/my-tool

@@ -1,0 +1,12 @@
+enact: "2.0.0"
+name: enact/playwright
+version: "1.0.1"
+description: Browser automation tool using Playwright - captures screenshots and extracts content from web pages
+from: mcr.microsoft.com/playwright:v1.50.0-noble
+
+hooks:
+  build:
+    - cd /workspace && npm init -y && npm install playwright-core
+
+scripts:
+  run: "node /workspace/run.js {{url}} {{action}} {{selector}}"

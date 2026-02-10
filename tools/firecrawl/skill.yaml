@@ -1,0 +1,17 @@
+enact: "2.0.0"
+name: enact/firecrawl
+version: "1.0.1"
+description: Scrape, crawl, search, and extract structured data from websites using Firecrawl API - converts web pages to LLM-ready markdown
+from: python:3.12-slim
+
+hooks:
+  build:
+    - pip install requests
+
+env:
+  FIRECRAWL_API_KEY:
+    description: Your Firecrawl API key from firecrawl.dev
+    secret: true
+
+scripts:
+  scrape: "python /workspace/firecrawl.py {{action}} {{url}} {{formats}} {{limit}} {{only_main_content}} {{prompt}} {{schema}}"

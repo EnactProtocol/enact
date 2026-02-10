@@ -1,0 +1,8 @@
+enact: "2.0.0"
+name: enact/hello-go
+version: "1.0.1"
+description: A simple Go greeting tool
+from: golang:1.23-alpine
+
+scripts:
+  greet: "go run /work/hello.go {{name}}"
