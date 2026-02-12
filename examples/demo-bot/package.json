@@ -1,9 +1,0 @@
-{
-  "name": "enact-demo-bot",
-  "private": true,
-  "type": "module",
-  "dependencies": {
-    "openai": "^4.82.0",
-    "yaml": "^2.7.0"
-  }
-}

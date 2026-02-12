@@ -186,7 +186,13 @@ Deno.serve(async (req) => {
       return addCorsHeaders(await handleGetUserTools(supabase, username, url));
     }
 
-    // POST /tools/{name} -> publish tool
+    // POST /tools/{name}/versions -> publish tool (v2 endpoint)
+    if (pathParts[0] === "tools" && pathParts[pathParts.length - 1] === "versions" && pathParts.length >= 3 && req.method === "POST") {
+      const toolName = pathParts.slice(1, -1).join("/");
+      return addCorsHeaders(await handlePublish(supabase, req, toolName));
+    }
+
+    // POST /tools/{name} -> publish tool (legacy)
     if (pathParts[0] === "tools" && pathParts.length >= 2 && req.method === "POST") {
       const toolName = pathParts.slice(1).join("/");
       return addCorsHeaders(await handlePublish(supabase, req, toolName));

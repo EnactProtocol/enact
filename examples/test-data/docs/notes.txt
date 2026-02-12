@@ -1,3 +1,0 @@
-some notes in lowercase
-that should be converted to uppercase
-by the formatter tool
