@@ -450,22 +450,26 @@ async function fetchAndCacheTool(
   const attestations = attestationsResponse.attestations;
 
   if (attestations.length === 0) {
-    // No attestations found
-    info(`${symbols.warning} Tool ${toolName}@${targetVersion} has no attestations.`);
+    // No attestations found — but if minimum_attestations is 0, that's fine
+    if (minimumAttestations === 0) {
+      // User explicitly configured zero required attestations — allow execution
+    } else {
+      info(`${symbols.warning} Tool ${toolName}@${targetVersion} has no attestations.`);
 
-    if (trustPolicy === "require_attestation") {
-      throw new TrustError("Trust policy requires attestations. Execution blocked.");
-    }
-    if (ctx.isInteractive && trustPolicy === "prompt") {
-      const proceed = await confirm("Run unverified tool?");
-      if (!proceed) {
-        info("Execution cancelled.");
-        process.exit(0);
+      if (trustPolicy === "require_attestation") {
+        throw new TrustError("Trust policy requires attestations. Execution blocked.");
       }
-    } else if (!ctx.isInteractive && trustPolicy === "prompt") {
-      throw new TrustError("Cannot run unverified tools in non-interactive mode.");
+      if (ctx.isInteractive && trustPolicy === "prompt") {
+        const proceed = await confirm("Run unverified tool?");
+        if (!proceed) {
+          info("Execution cancelled.");
+          process.exit(0);
+        }
+      } else if (!ctx.isInteractive && trustPolicy === "prompt") {
+        throw new TrustError("Cannot run unverified tools in non-interactive mode.");
+      }
     }
-    // trustPolicy === "allow" - continue without prompting
+    // trustPolicy === "allow" or minimumAttestations === 0 - continue without prompting
   } else {
     // Verify attestations locally (never trust registry's verification status)
     const verifiedAuditors = await verifyAllAttestations(

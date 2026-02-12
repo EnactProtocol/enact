@@ -225,27 +225,31 @@ async function learnHandler(
     const attestations = attestationsResponse.attestations;
 
     if (attestations.length === 0) {
-      // No attestations found
-      info(`${symbols.warning} Tool ${toolName}@${version} has no attestations.`);
+      // No attestations found — but if minimum_attestations is 0, that's fine
+      if (minimumAttestations === 0) {
+        // User explicitly configured zero required attestations — allow access
+      } else {
+        info(`${symbols.warning} Tool ${toolName}@${version} has no attestations.`);
 
-      if (trustPolicy === "require_attestation") {
-        throw new TrustError(
-          "Trust policy requires attestations. Cannot display documentation from unverified tools."
-        );
-      }
-      if (ctx.isInteractive && trustPolicy === "prompt") {
-        dim("Documentation from unverified tools may contain malicious content.");
-        const proceed = await confirm("View documentation from unverified tool?");
-        if (!proceed) {
-          info("Cancelled.");
-          process.exit(0);
+        if (trustPolicy === "require_attestation") {
+          throw new TrustError(
+            "Trust policy requires attestations. Cannot display documentation from unverified tools."
+          );
         }
-      } else if (!ctx.isInteractive && trustPolicy === "prompt") {
-        throw new TrustError(
-          "Cannot display documentation from unverified tools in non-interactive mode."
-        );
+        if (ctx.isInteractive && trustPolicy === "prompt") {
+          dim("Documentation from unverified tools may contain malicious content.");
+          const proceed = await confirm("View documentation from unverified tool?");
+          if (!proceed) {
+            info("Cancelled.");
+            process.exit(0);
+          }
+        } else if (!ctx.isInteractive && trustPolicy === "prompt") {
+          throw new TrustError(
+            "Cannot display documentation from unverified tools in non-interactive mode."
+          );
+        }
       }
-      // trustPolicy === "allow" - continue without prompting
+      // trustPolicy === "allow" or minimumAttestations === 0 - continue without prompting
     } else {
       // Verify attestations locally (never trust registry's verification status)
       const verifiedAuditors = await verifyAllAttestations(

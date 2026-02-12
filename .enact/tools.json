@@ -1,4 +1,6 @@
 {
-  "tools": {},
+  "tools": {
+    "enact/dice-roll-rust": "1.0.1"
+  },
   "aliases": {}
 }

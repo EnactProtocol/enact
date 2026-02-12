@@ -292,25 +292,29 @@ async function installFromRegistry(
     const attestations = attestationsResponse.attestations;
 
     if (attestations.length === 0) {
-      // No attestations found
-      info(`${symbols.warning} Tool ${toolName}@${targetVersion} has no attestations.`);
+      // No attestations found — but if minimum_attestations is 0, that's fine
+      if (minimumAttestations === 0) {
+        // User explicitly configured zero required attestations — allow installation
+      } else {
+        info(`${symbols.warning} Tool ${toolName}@${targetVersion} has no attestations.`);
 
-      if (trustPolicy === "require_attestation") {
-        error("Trust policy requires attestations. Installation blocked.");
-        info("Configure trust policy in ~/.enact/config.yaml");
-        process.exit(EXIT_TRUST_ERROR);
-      } else if (ctx.isInteractive && trustPolicy === "prompt") {
-        const proceed = await confirm("Install unverified tool?");
-        if (!proceed) {
-          info("Installation cancelled.");
-          process.exit(0);
+        if (trustPolicy === "require_attestation") {
+          error("Trust policy requires attestations. Installation blocked.");
+          info("Configure trust policy in ~/.enact/config.yaml");
+          process.exit(EXIT_TRUST_ERROR);
+        } else if (ctx.isInteractive && trustPolicy === "prompt") {
+          const proceed = await confirm("Install unverified tool?");
+          if (!proceed) {
+            info("Installation cancelled.");
+            process.exit(0);
+          }
+        } else if (!ctx.isInteractive && trustPolicy === "prompt") {
+          error("Cannot install unverified tools in non-interactive mode.");
+          info("Run interactively to confirm installation.");
+          process.exit(EXIT_TRUST_ERROR);
         }
-      } else if (!ctx.isInteractive && trustPolicy === "prompt") {
-        error("Cannot install unverified tools in non-interactive mode.");
-        info("Run interactively to confirm installation.");
-        process.exit(EXIT_TRUST_ERROR);
       }
-      // trustPolicy === "allow" - continue without prompting
+      // trustPolicy === "allow" or minimumAttestations === 0 - continue without prompting
     } else {
       // Verify attestations locally (never trust registry's verification status)
       const verifiedAuditors = await verifyAllAttestations(
