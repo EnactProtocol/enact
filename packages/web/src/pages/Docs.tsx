@@ -1060,25 +1060,28 @@ function ManifestReference() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-gray-600 mb-2">Tool Manifest Reference</h1>
+        <h1 className="text-3xl font-bold text-gray-600 mb-2">Skill Package Reference</h1>
         <p className="text-lg text-gray-500">
-          Enact tools are defined by an{" "}
-          <code className="bg-pink-100 text-pink-600 px-2 py-0.5 rounded">SKILL.md</code> file with
-          YAML frontmatter and Markdown documentation.
+          Each skill package has two files:{" "}
+          <code className="bg-teal-100 text-teal-600 px-2 py-0.5 rounded">skill.yaml</code> for
+          execution config and{" "}
+          <code className="bg-pink-100 text-pink-600 px-2 py-0.5 rounded">SKILL.md</code> for
+          agent-facing documentation.
         </p>
       </div>
 
-      {/* Full Example */}
+      {/* skill.yaml Example */}
       <div className="bg-gray-800 rounded-2xl overflow-hidden shadow-xl">
         <div className="bg-gray-700 px-4 py-2 border-b border-gray-600 flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-brand-red" />
           <div className="w-3 h-3 rounded-full bg-brand-yellow" />
           <div className="w-3 h-3 rounded-full bg-brand-green" />
-          <span className="text-gray-400 text-sm ml-2 font-mono">SKILL.md</span>
+          <span className="text-gray-400 text-sm ml-2 font-mono">skill.yaml</span>
         </div>
         <pre className="p-6 text-sm overflow-x-auto">
           <code className="text-gray-100">
-            {`---
+            <span className="text-brand-pink">enact</span>
+            {`: "2.0"
 `}
             <span className="text-brand-pink">name</span>
             {`: owner/category/tool
@@ -1088,9 +1091,6 @@ function ManifestReference() {
 `}
             <span className="text-brand-pink">version</span>
             {`: 1.0.0
-`}
-            <span className="text-brand-pink">enact</span>
-            {`: "2.0"
 
 `}
             <span className="text-brand-teal">from</span>
@@ -1104,36 +1104,28 @@ function ManifestReference() {
             <span className="text-brand-teal">scripts</span>
             {`:
   process: "python /workspace/main.py {{input}}"
-`}
-            <span className="text-brand-teal">timeout</span>
-            {`: 30s
-
-`}
-            <span className="text-brand-yellow">inputSchema</span>
-            {`:
-  type: object
-  properties:
-    input:
-      type: string
-      description: "Input to process"
-  required: [input]
-
-`}
-            <span className="text-brand-yellow">outputSchema</span>
-            {`:
-  type: object
-  properties:
-    result:
-      type: string
 
 `}
             <span className="text-brand-green">env</span>
             {`:
   API_KEY:
     description: "External API key"
-    secret: true
----
-# Tool Name
+    secret: true`}
+          </code>
+        </pre>
+      </div>
+
+      {/* SKILL.md Example */}
+      <div className="bg-gray-800 rounded-2xl overflow-hidden shadow-xl">
+        <div className="bg-gray-700 px-4 py-2 border-b border-gray-600 flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full bg-brand-red" />
+          <div className="w-3 h-3 rounded-full bg-brand-yellow" />
+          <div className="w-3 h-3 rounded-full bg-brand-green" />
+          <span className="text-gray-400 text-sm ml-2 font-mono">SKILL.md</span>
+        </div>
+        <pre className="p-6 text-sm overflow-x-auto">
+          <code className="text-gray-100">
+            {`# Tool Name
 
 Documentation here. This markdown content is shown
 when users run \`enact learn owner/category/tool\`.
@@ -1147,7 +1139,7 @@ enact run owner/category/tool --args '{"input": "hello"}'
         </pre>
       </div>
 
-      {/* Field Reference */}
+      {/* skill.yaml Field Reference */}
       <div className="grid gap-6">
         <div>
           <h2 className="text-xl font-semibold text-gray-600 mb-4 flex items-center gap-2">
@@ -1203,41 +1195,12 @@ enact run owner/category/tool --args '{"input": "hello"}'
                     Lifecycle hooks (build commands, postinstall)
                   </td>
                 </tr>
-                <tr className="border-b border-teal-200">
+                <tr>
                   <td className="px-4 py-3 font-mono text-sm text-teal-600">scripts</td>
                   <td className="px-4 py-3 text-sm text-gray-600">
                     Named commands with{" "}
                     <code className="bg-teal-200 px-1 rounded">{"{{param}}"}</code> substitution
                   </td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 font-mono text-sm text-teal-600">timeout</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
-                    Max execution time (e.g., 30s, 5m, 1h)
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div>
-          <h2 className="text-xl font-semibold text-gray-600 mb-4 flex items-center gap-2">
-            <span className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <FileText className="w-4 h-4 text-yellow-600" />
-            </span>
-            Schema Fields
-          </h2>
-          <div className="bg-yellow-100 border border-yellow-200 rounded-xl overflow-hidden">
-            <table className="w-full">
-              <tbody>
-                <tr className="border-b border-yellow-200">
-                  <td className="px-4 py-3 font-mono text-sm text-yellow-600">inputSchema</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">JSON Schema for tool inputs</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 font-mono text-sm text-yellow-600">outputSchema</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">JSON Schema for tool outputs</td>
                 </tr>
               </tbody>
             </table>
@@ -1429,7 +1392,7 @@ enact run owner/category/tool --args '{"input": "hello"}'
           <div className="bg-white border border-blue-400 rounded-lg p-3">
             <div className="text-blue-600 font-semibold text-sm mb-1">Auto-inferred</div>
             <code className="text-sm text-gray-700">
-              Parameters are auto-inferred from {"{{param}}"} patterns when inputSchema is omitted
+              Parameters are auto-inferred from {"{{param}}"} patterns in scripts
             </code>
           </div>
         </div>
