@@ -331,9 +331,9 @@ export default function Home() {
               <div className="w-16 h-16 bg-teal-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <FolderOpen className="w-8 h-8 text-teal-600" />
               </div>
-              <h2 className="text-3xl font-bold mb-4 text-gray-6">Simple Project Structure</h2>
+              <h2 className="text-3xl font-bold mb-4 text-gray-6">Simple Skill Packages</h2>
               <p className="text-gray-5 max-w-2xl mx-auto">
-                Enact tools are simple to create. Just a SKILL.md manifest and your code—that's it.
+                Each skill package is just a SKILL.md, a skill.yaml, and your code—that's it.
               </p>
             </div>
 
@@ -345,6 +345,7 @@ export default function Home() {
                 files={[
                   { name: "hello-python", type: "folder", depth: 0 },
                   { name: "SKILL.md", type: "file", depth: 1, highlight: true },
+                  { name: "skill.yaml", type: "file", depth: 1, highlight: true },
                   { name: "hello.py", type: "file", depth: 1 },
                 ]}
               />
@@ -356,6 +357,7 @@ export default function Home() {
                 files={[
                   { name: "json-formatter", type: "folder", depth: 0 },
                   { name: "SKILL.md", type: "file", depth: 1, highlight: true },
+                  { name: "skill.yaml", type: "file", depth: 1, highlight: true },
                   { name: "format.js", type: "file", depth: 1 },
                 ]}
               />
@@ -367,6 +369,7 @@ export default function Home() {
                 files={[
                   { name: "data-pipeline", type: "folder", depth: 0 },
                   { name: "SKILL.md", type: "file", depth: 1, highlight: true },
+                  { name: "skill.yaml", type: "file", depth: 1, highlight: true },
                   { name: "src", type: "folder", depth: 1 },
                   { name: "extractors", type: "folder", depth: 2 },
                   { name: "utils", type: "folder", depth: 2 },
@@ -379,13 +382,15 @@ export default function Home() {
               <p className="text-sm text-gray-5 mb-4">
                 The{" "}
                 <code className="bg-gray-100 px-2 py-1 rounded font-mono text-sm">SKILL.md</code>{" "}
-                file defines your tool's metadata, inputs, outputs, and runtime.
+                defines your tool for AI agents, and{" "}
+                <code className="bg-gray-100 px-2 py-1 rounded font-mono text-sm">skill.yaml</code>{" "}
+                configures its runtime and execution.
               </p>
               <Link
                 to="/browse"
                 className="text-brand-blue hover:underline inline-flex items-center gap-1"
               >
-                Browse example tools <ChevronRight className="w-4 h-4" />
+                Browse skill packages <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
           </div>

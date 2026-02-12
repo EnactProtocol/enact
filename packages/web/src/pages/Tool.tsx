@@ -1,3 +1,4 @@
+import CodeViewer from "@/components/code/CodeViewer";
 import { type FileNode, buildFileTree } from "@/components/code/FileTree";
 import AttestButton from "@/components/trust/AttestButton";
 import Badge from "@/components/ui/Badge";
@@ -224,9 +225,11 @@ export default function Tool() {
                       <Markdown remarkPlugins={[remarkGfm]}>{enactContent.content}</Markdown>
                     </div>
                   ) : (
-                    <pre className="text-sm text-gray-700 font-mono whitespace-pre-wrap overflow-x-auto">
-                      {enactContent.content}
-                    </pre>
+                    <CodeViewer
+                      code={enactContent.content}
+                      filePath={enactFile.path}
+                      showLineNumbers={false}
+                    />
                   )
                 ) : (
                   <div className="text-gray-500 text-sm">Loading content...</div>
