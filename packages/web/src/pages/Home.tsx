@@ -344,13 +344,18 @@ export default function Home() {
                 description="Minimal Python greeting tool"
                 files={[
                   { name: "hello-python", type: "folder", depth: 0 },
-                  { name: "SKILL.md", type: "file", depth: 1, highlight: true },
+                  {
+                    name: "SKILL.md",
+                    type: "file",
+                    depth: 1,
+                    highlight: true,
+                    color: "text-teal-600",
+                  },
                   {
                     name: "skill.yaml",
                     type: "file",
                     depth: 1,
                     highlight: true,
-                    color: "text-teal-600",
                   },
                   { name: "hello.py", type: "file", depth: 1 },
                 ]}
@@ -362,13 +367,18 @@ export default function Home() {
                 description="Node.js JSON formatter"
                 files={[
                   { name: "json-formatter", type: "folder", depth: 0 },
-                  { name: "SKILL.md", type: "file", depth: 1, highlight: true },
+                  {
+                    name: "SKILL.md",
+                    type: "file",
+                    depth: 1,
+                    highlight: true,
+                    color: "text-teal-600",
+                  },
                   {
                     name: "skill.yaml",
                     type: "file",
                     depth: 1,
                     highlight: true,
-                    color: "text-teal-600",
                   },
                   { name: "format.js", type: "file", depth: 1 },
                 ]}
@@ -380,14 +390,14 @@ export default function Home() {
                 description="Data pipeline with modules"
                 files={[
                   { name: "data-pipeline", type: "folder", depth: 0 },
-                  { name: "SKILL.md", type: "file", depth: 1, highlight: true },
                   {
-                    name: "skill.yaml",
+                    name: "SKILL.md",
                     type: "file",
                     depth: 1,
                     highlight: true,
                     color: "text-teal-600",
                   },
+                  { name: "skill.yaml", type: "file", depth: 1, highlight: true },
                   { name: "src", type: "folder", depth: 1 },
                   { name: "extractors", type: "folder", depth: 2 },
                   { name: "utils", type: "folder", depth: 2 },
