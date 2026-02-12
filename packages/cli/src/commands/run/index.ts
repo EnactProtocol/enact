@@ -318,22 +318,22 @@ function atomicReplace(targetDir: string, sourceDir: string): void {
 async function extractToCache(
   bundleData: ArrayBuffer,
   toolName: string,
-  version: string
+  _version: string
 ): Promise<string> {
   const cacheDir = getCacheDir();
   const toolPath = toolNameToPath(toolName);
-  const versionDir = join(cacheDir, toolPath, `v${version.replace(/^v/, "")}`);
+  const destDir = join(cacheDir, toolPath);
 
   // Create a temporary file for the bundle
   const tempFile = join(cacheDir, `bundle-${Date.now()}.tar.gz`);
   mkdirSync(dirname(tempFile), { recursive: true });
   writeFileSync(tempFile, Buffer.from(bundleData));
 
-  // Create destination directory
-  mkdirSync(versionDir, { recursive: true });
+  // Create destination directory (flat, no version subdirectory — matches resolver)
+  mkdirSync(destDir, { recursive: true });
 
   // Extract using tar command
-  const proc = Bun.spawn(["tar", "-xzf", tempFile, "-C", versionDir], {
+  const proc = Bun.spawn(["tar", "-xzf", tempFile, "-C", destDir], {
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -352,7 +352,7 @@ async function extractToCache(
     throw new Error(`Failed to extract bundle: ${stderr}`);
   }
 
-  return versionDir;
+  return destDir;
 }
 
 /**
