@@ -13,6 +13,7 @@
     { "path": "../shared" },
     { "path": "../secrets" },
     { "path": "../execution" },
-    { "path": "../api" }
+    { "path": "../api" },
+    { "path": "../registry" }
   ]
 }
