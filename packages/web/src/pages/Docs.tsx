@@ -50,7 +50,7 @@ const commands: CommandDoc[] = [
     icon: <Play className="w-5 h-5" />,
     colorClass: "bg-brand-green text-gray-900",
     dotColor: "bg-brand-green",
-    usage: "enact run <tool> [options]",
+    usage: "enact run <tool>:<script> [options]",
     category: "core",
     options: [
       { flag: "-a, --args <json>", description: "Input arguments as JSON string" },
@@ -77,23 +77,23 @@ const commands: CommandDoc[] = [
     ],
     examples: [
       {
-        command: "enact run alice/resizer --args '{\"width\": 800}'",
+        command: "enact run alice/resizer:resize --args '{\"width\": 800}'",
         description: "Run with JSON args",
       },
       {
-        command: "enact run ./formatter --input ./src --output ./dist",
+        command: "enact run ./formatter:format --input ./src --output ./dist",
         description: "Process files from ./src, export results to ./dist",
       },
       {
-        command: "enact run ./formatter --input ./src --output ./src --apply",
+        command: "enact run ./formatter:format --input ./src --output ./src --apply",
         description: "In-place transformation with atomic apply",
       },
       {
-        command: "enact run ./diff-tool --input left=./old --input right=./new",
+        command: "enact run ./diff-tool:compare --input left=./old --input right=./new",
         description: "Named inputs for multi-input tools",
       },
       {
-        command: "enact run alice/resizer --dry-run",
+        command: "enact run alice/resizer:resize --dry-run",
         description: "Preview what would be executed",
       },
     ],
@@ -969,7 +969,7 @@ function GettingStarted() {
             <p className="text-gray-500 mb-3">Execute any tool instantly - Enact handles caching</p>
             <div className="bg-gray-800 rounded-lg p-3">
               <code className="text-brand-green font-mono text-sm">
-                $ enact run alice/resizer --args '&#123;"width": 800&#125;'
+                $ enact run alice/resizer:resize --args '&#123;"width": 800&#125;'
               </code>
             </div>
           </div>
@@ -1080,9 +1080,6 @@ function ManifestReference() {
         </div>
         <pre className="p-6 text-sm overflow-x-auto">
           <code className="text-gray-100">
-            <span className="text-brand-pink">enact</span>
-            {`: "2.0"
-`}
             <span className="text-brand-pink">name</span>
             {`: owner/category/tool
 `}
@@ -1104,6 +1101,7 @@ function ManifestReference() {
             <span className="text-brand-teal">scripts</span>
             {`:
   process: "python /workspace/main.py {{input}}"
+  summarize: "python /workspace/summarize.py {{input}} --format {{format}}"
 
 `}
             <span className="text-brand-green">env</span>
@@ -1133,7 +1131,7 @@ when users run \`enact learn owner/category/tool\`.
 ## Usage
 
 \`\`\`bash
-enact run owner/category/tool --args '{"input": "hello"}'
+enact run owner/category/tool:process --args '{"input": "hello"}'
 \`\`\``}
           </code>
         </pre>
@@ -1263,7 +1261,7 @@ enact run owner/category/tool --args '{"input": "hello"}'
             </p>
             <div className="bg-gray-800 rounded-lg p-3">
               <code className="text-brand-green font-mono text-sm">
-                $ enact run ./formatter --input ./src --output ./src --apply
+                $ enact run ./formatter:format --input ./src --output ./src --apply
               </code>
             </div>
             <p className="text-xs text-gray-400 mt-2">

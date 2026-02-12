@@ -97,7 +97,7 @@ export default function Home() {
                         Execute any tool without pre-installation—Enact handles it automatically
                       </p>
                       <code className="text-xs bg-gray-100 px-2 py-1 rounded mt-2 inline-block font-mono">
-                        enact run alice/resizer --width 800
+                        enact run alice/resizer:resize --args '{"{"}width: 800{"}"}'
                       </code>
                     </div>
                   </div>
@@ -184,7 +184,7 @@ export default function Home() {
                     <span className="text-purple-400">agent</span>
                     <span className="text-gray-500"> $ </span>
                     <span>
-                      enact run alice/resizer --args '{"{"}width: 800{"}"}'
+                      enact run alice/resizer:resize --args '{"{"}width: 800{"}"}'
                     </span>
                   </div>
                   <div className="text-green-400">✓ Tool executed successfully</div>
@@ -276,7 +276,7 @@ export default function Home() {
                 <div className="bg-blueLight-1/50 hover:bg-red-100 rounded-lg p-3 text-gray-6 transition-colors cursor-pointer">
                   <div className="flex items-center justify-between">
                     <span>
-                      <span className="text-gray-4">$</span> enact run alice/resizer
+                      <span className="text-gray-4">$</span> enact run alice/resizer:resize
                     </span>
                   </div>
                   <p className="text-xs text-gray-5 mt-1 font-sans">Execute a tool instantly</p>
