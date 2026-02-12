@@ -345,7 +345,13 @@ export default function Home() {
                 files={[
                   { name: "hello-python", type: "folder", depth: 0 },
                   { name: "SKILL.md", type: "file", depth: 1, highlight: true },
-                  { name: "skill.yaml", type: "file", depth: 1, highlight: true },
+                  {
+                    name: "skill.yaml",
+                    type: "file",
+                    depth: 1,
+                    highlight: true,
+                    color: "text-teal-600",
+                  },
                   { name: "hello.py", type: "file", depth: 1 },
                 ]}
               />
@@ -357,7 +363,13 @@ export default function Home() {
                 files={[
                   { name: "json-formatter", type: "folder", depth: 0 },
                   { name: "SKILL.md", type: "file", depth: 1, highlight: true },
-                  { name: "skill.yaml", type: "file", depth: 1, highlight: true },
+                  {
+                    name: "skill.yaml",
+                    type: "file",
+                    depth: 1,
+                    highlight: true,
+                    color: "text-teal-600",
+                  },
                   { name: "format.js", type: "file", depth: 1 },
                 ]}
               />
@@ -369,7 +381,13 @@ export default function Home() {
                 files={[
                   { name: "data-pipeline", type: "folder", depth: 0 },
                   { name: "SKILL.md", type: "file", depth: 1, highlight: true },
-                  { name: "skill.yaml", type: "file", depth: 1, highlight: true },
+                  {
+                    name: "skill.yaml",
+                    type: "file",
+                    depth: 1,
+                    highlight: true,
+                    color: "text-teal-600",
+                  },
                   { name: "src", type: "folder", depth: 1 },
                   { name: "extractors", type: "folder", depth: 2 },
                   { name: "utils", type: "folder", depth: 2 },
@@ -589,6 +607,7 @@ interface FileTreeItem {
   type: "file" | "folder";
   depth: number;
   highlight?: boolean;
+  color?: string;
 }
 
 function FileTreeCard({
@@ -607,20 +626,25 @@ function FileTreeCard({
         <p className="text-sm text-gray-5">{description}</p>
       </div>
       <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm">
-        {files.map((file) => (
-          <div
-            key={`${file.depth}-${file.name}`}
-            className={`flex items-center gap-2 py-1 ${file.highlight ? "text-brand-blue font-medium" : "text-gray-6"}`}
-            style={{ paddingLeft: `${file.depth * 16}px` }}
-          >
-            {file.type === "folder" ? (
-              <Folder className="w-4 h-4 text-amber-500" />
-            ) : (
-              <File className={`w-4 h-4 ${file.highlight ? "text-brand-blue" : "text-gray-400"}`} />
-            )}
-            <span>{file.name}</span>
-          </div>
-        ))}
+        {files.map((file) => {
+          const color = file.color || (file.highlight ? "text-brand-blue" : "text-gray-6");
+          return (
+            <div
+              key={`${file.depth}-${file.name}`}
+              className={`flex items-center gap-2 py-1 ${color} ${file.highlight ? "font-medium" : ""}`}
+              style={{ paddingLeft: `${file.depth * 16}px` }}
+            >
+              {file.type === "folder" ? (
+                <Folder className="w-4 h-4 text-amber-500" />
+              ) : (
+                <File
+                  className={`w-4 h-4 ${file.color || (file.highlight ? "text-brand-blue" : "text-gray-400")}`}
+                />
+              )}
+              <span>{file.name}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
