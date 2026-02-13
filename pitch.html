@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enact — Pitch Deck</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07070c;
+    --fg: #e8e6e1;
+    --accent: #00ffa3;
+    --accent-dim: #00ffa315;
+    --accent-mid: #00ffa350;
+    --surface: #0f0f18;
+    --surface-2: #161622;
+    --border: #1e1e2e;
+    --muted: #6b6b80;
+    --red: #ff4d6a;
+    --amber: #ffb84d;
+    --blue: #4da6ff;
+    --yellow: #ffd24d;
+    --purple: #a855f7;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.6;
+  }
+
+  .slide {
+    min-height: 100vh;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 60px 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  @media (max-width: 768px) {
+    .slide { padding: 40px 24px; }
+  }
+
+  .slide-number {
+    position: absolute;
+    top: 40px;
+    right: 60px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--border);
+    letter-spacing: 2px;
+  }
+
+  .logo-mark {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    position: absolute;
+    top: 40px;
+    left: 80px;
+  }
+
+  @media (max-width: 768px) {
+    .logo-mark { left: 24px; }
+    .slide-number { right: 24px; }
+  }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+  }
+
+  .slide h2 {
+    font-size: clamp(32px, 4.5vw, 58px);
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1.1;
+    margin-bottom: 40px;
+    max-width: 860px;
+  }
+
+  .subtext {
+    font-size: 17px;
+    color: var(--muted);
+    max-width: 640px;
+    line-height: 1.6;
+  }
+
+  /* ── SLIDE 1: TITLE ── */
+  .slide-title {
+    background:
+      radial-gradient(ellipse at 15% 50%, #00ffa306 0%, transparent 55%),
+      radial-gradient(ellipse at 85% 20%, #a855f706 0%, transparent 45%),
+      var(--bg);
+  }
+
+  .slide-title h1 {
+    font-size: clamp(72px, 12vw, 160px);
+    font-weight: 900;
+    letter-spacing: -4px;
+    line-height: 0.9;
+    margin-bottom: 28px;
+    background: linear-gradient(135deg, var(--accent), #4da6ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .slide-title .tagline {
+    font-size: clamp(18px, 2.5vw, 26px);
+    font-weight: 300;
+    color: var(--muted);
+    max-width: 600px;
+    margin-bottom: 52px;
+    line-height: 1.4;
+  }
+
+  .slide-title .meta-row {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+  }
+
+  /* ── SLIDE 2: THE PATTERN ── */
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    max-width: 800px;
+    position: relative;
+    padding-left: 28px;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--muted), var(--accent));
+  }
+
+  .timeline-item {
+    padding: 20px 0 20px 28px;
+    position: relative;
+  }
+
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -24px;
+    top: 28px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--muted);
+    border: 2px solid var(--bg);
+  }
+
+  .timeline-item:last-child::before {
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent-mid);
+  }
+
+  .timeline-item .year {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    letter-spacing: 1px;
+  }
+
+  .timeline-item:last-child .year { color: var(--accent); }
+
+  .timeline-item .shift {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .timeline-item .detail {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .timeline-closer {
+    margin-top: 40px;
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--fg);
+    font-style: italic;
+    max-width: 600px;
+  }
+
+  /* ── SLIDE 3: PROTOCOL FRAGMENTATION ── */
+  .frag-cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    max-width: 920px;
+    margin-bottom: 36px;
+  }
+
+  .frag-card {
+    padding: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    text-align: center;
+  }
+
+  .frag-card .proto-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .frag-card:nth-child(1) .proto-name { color: var(--blue); }
+  .frag-card:nth-child(2) .proto-name { color: var(--accent); }
+  .frag-card:nth-child(3) .proto-name { color: var(--purple); }
+  .frag-card:nth-child(4) .proto-name { color: var(--yellow); }
+
+  .frag-card .proto-detail {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* ── SLIDE 3: MARKET VALIDATION ── */
+  .validation-hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    max-width: 960px;
+    margin-bottom: 36px;
+  }
+
+  @media (max-width: 768px) {
+    .validation-hero { grid-template-columns: 1fr; }
+  }
+
+  .validation-side {
+    padding: 32px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+
+  .validation-side.demand {
+    background: linear-gradient(135deg, var(--surface), #0f1a14);
+    border-color: #00ffa325;
+  }
+
+  .validation-side.gap {
+    background: linear-gradient(135deg, var(--surface), #1a0f14);
+    border-color: #ff4d6a25;
+  }
+
+  .validation-side h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .validation-side.demand h3 { color: var(--accent); }
+  .validation-side.gap h3 { color: var(--red); }
+
+  .val-stat {
+    margin-bottom: 16px;
+  }
+
+  .val-stat .big {
+    font-size: 32px;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .validation-side.demand .val-stat .big { color: var(--accent); }
+  .validation-side.gap .val-stat .big { color: var(--red); }
+
+  .val-stat .caption {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .validation-takeaway {
+    font-size: 18px;
+    color: var(--fg);
+    max-width: 700px;
+    line-height: 1.6;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .validation-takeaway strong { color: var(--accent); }
+  .validation-takeaway em { color: var(--red); font-style: normal; font-weight: 600; }
+
+  .protocol-gap {
+    font-size: 18px;
+    color: var(--fg);
+    max-width: 700px;
+    line-height: 1.6;
+    padding: 24px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .protocol-gap strong { color: var(--accent); }
+
+  /* ── SLIDE 4: IT'S BROKEN ── */
+  .broken-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 900px;
+  }
+
+  .broken-card {
+    display: flex;
+    gap: 20px;
+    padding: 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    align-items: flex-start;
+    transition: border-color 0.3s;
+  }
+
+  .broken-card:hover { border-color: var(--red); }
+
+  .broken-card .icon {
+    font-size: 18px;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: #ff4d6a12;
+    color: var(--red);
+  }
+
+  .broken-card h3 {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--red);
+    margin-bottom: 6px;
+  }
+
+  .broken-card p {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* ── SLIDE 5: INSIGHT ── */
+  .slide-insight {
+    text-align: center;
+    align-items: center;
+    background:
+      radial-gradient(ellipse at 50% 50%, #00ffa308 0%, transparent 50%),
+      var(--bg);
+  }
+
+  .insight-lines {
+    text-align: center;
+    max-width: 750px;
+  }
+
+  .insight-lines .line-dim {
+    font-size: clamp(22px, 3.2vw, 36px);
+    font-weight: 600;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .insight-lines .line-bright {
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1.3;
+    margin: 16px 0 32px;
+  }
+
+  .insight-sub {
+    font-size: 17px;
+    color: var(--muted);
+    text-align: center;
+    max-width: 580px;
+  }
+
+  /* ── SLIDE 6: ONE PLATFORM ── */
+  .platform-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    max-width: 1000px;
+    margin-bottom: 36px;
+  }
+
+  .platform-step {
+    padding: 28px 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    transition: border-color 0.3s;
+  }
+
+  .platform-step:hover { border-color: var(--accent); }
+
+  .platform-step .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--accent-dim);
+    margin-bottom: 8px;
+    line-height: 1;
+  }
+
+  .platform-step h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .platform-step p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .observability-note {
+    font-size: 15px;
+    color: var(--muted);
+    max-width: 740px;
+    line-height: 1.6;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── SLIDE 7: ENTERPRISE ── */
+  .enterprise-cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+    max-width: 900px;
+  }
+
+  .enterprise-col {
+    padding: 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  .enterprise-col h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .enterprise-col:first-child h3 { color: var(--accent); }
+  .enterprise-col:last-child h3 { color: var(--blue); }
+
+  .enterprise-col ul { list-style: none; }
+
+  .enterprise-col li {
+    font-size: 14px;
+    color: var(--muted);
+    padding: 8px 0;
+    border-bottom: 1px solid #1a1a28;
+    line-height: 1.4;
+  }
+
+  .enterprise-col li:last-child { border-bottom: none; }
+
+  /* ── SLIDE 8: WHAT'S BUILT ── */
+  .built-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+    max-width: 1000px;
+    margin-bottom: 32px;
+  }
+
+  .built-card {
+    padding: 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  .built-card h3 {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+
+  .built-card:nth-child(1) h3 { color: var(--accent); }
+  .built-card:nth-child(2) h3 { color: var(--blue); }
+  .built-card:nth-child(3) h3 { color: var(--purple); }
+
+  .built-card ul { list-style: none; }
+
+  .built-card li {
+    font-size: 13px;
+    color: var(--muted);
+    padding: 5px 0;
+    padding-left: 16px;
+    position: relative;
+    line-height: 1.4;
+  }
+
+  .built-card li::before {
+    content: '·';
+    position: absolute;
+    left: 0;
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  .live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    padding: 8px 16px;
+    border: 1px solid var(--accent-mid);
+    border-radius: 8px;
+    background: var(--accent-dim);
+  }
+
+  .live-badge .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* ── SLIDE 9: BUSINESS MODEL ── */
+  .biz-flow {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 0;
+    align-items: stretch;
+    max-width: 900px;
+  }
+
+  @media (max-width: 768px) {
+    .biz-flow {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    .biz-arrow { display: none; }
+  }
+
+  .biz-card {
+    padding: 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  .biz-card h3 {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .biz-card .tier {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .biz-card:first-child .tier { color: var(--muted); }
+  .biz-card:last-child h3 { color: var(--accent); }
+  .biz-card:last-child .tier { color: var(--accent); }
+
+  .biz-card ul { list-style: none; }
+
+  .biz-card li {
+    font-size: 14px;
+    color: var(--muted);
+    padding: 6px 0;
+    line-height: 1.4;
+  }
+
+  .biz-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    color: var(--accent-mid);
+    padding: 0 16px;
+  }
+
+  /* ── SLIDE 10: FOUNDER ── */
+  .founder-name {
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 800;
+    margin-bottom: 36px;
+  }
+
+  .founder-roles {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 700px;
+  }
+
+  .role-item {
+    padding-left: 20px;
+    border-left: 2px solid var(--border);
+  }
+
+  .role-item:first-child { border-color: var(--accent); }
+
+  .role-item h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--fg);
+  }
+
+  .role-item p {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* ── SLIDE 11: THE ASK ── */
+  .slide-ask {
+    background:
+      radial-gradient(ellipse at 50% 60%, #00ffa308 0%, transparent 50%),
+      var(--bg);
+  }
+
+  .ask-items {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 640px;
+    margin-bottom: 48px;
+  }
+
+  .ask-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    font-size: 17px;
+    color: var(--fg);
+    line-height: 1.5;
+  }
+
+  .ask-item .arrow {
+    color: var(--accent);
+    font-size: 18px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .contact-row {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+
+  .contact-row a {
+    color: var(--accent);
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+
+  .contact-row a:hover { opacity: 0.7; }
+
+  /* ── NAV DOTS ── */
+  .nav-dots {
+    position: fixed;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 100;
+  }
+
+  .nav-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--border);
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s;
+    padding: 0;
+  }
+
+  .nav-dot.active, .nav-dot:hover {
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent-mid);
+  }
+
+  @media (max-width: 768px) {
+    .nav-dots { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav-dots" id="navDots"></nav>
+
+<!-- SLIDE 1: TITLE -->
+<section class="slide slide-title" data-slide="0">
+  <span class="slide-number">01 / 11</span>
+  <h1>enact</h1>
+  <p class="tagline">The packaging and governance layer for the agent economy</p>
+  <div class="meta-row">Keith Groves · Founder · Pre-Seed · February 2026</div>
+</section>
+
+<!-- SLIDE 2: THE PATTERN -->
+<section class="slide" data-slide="1">
+  <span class="logo-mark">Enact</span>
+  <span class="slide-number">02 / 12</span>
+  <p class="section-label">The Pattern</p>
+  <h2>Every platform shift creates a packaging layer</h2>
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="year">2009</div>
+      <div class="shift">Node.js → npm</div>
+      <div class="detail">JavaScript needed a way to share modules. npm became the world's largest package registry.</div>
+    </div>
+    <div class="timeline-item">
+      <div class="year">2013</div>
+      <div class="shift">Containers → Docker Hub</div>
+      <div class="detail">Containers needed a way to distribute images. Docker Hub became the default registry.</div>
+    </div>
+    <div class="timeline-item">
+      <div class="year">2025</div>
+      <div class="shift">AI Agents → ?</div>
+      <div class="detail">Agents need tools. But there's no packaging layer. No registry. No trust. No governance.</div>
+    </div>
+  </div>
+  <p class="timeline-closer">The question isn't whether this layer gets built. It's who builds it.</p>
+</section>
+
+<!-- SLIDE 3: MARKET VALIDATION -->
+<section class="slide" data-slide="2">
+  <span class="logo-mark">Enact</span>
+  <span class="slide-number">03 / 12</span>
+  <p class="section-label">Market Validation</p>
+  <h2>OpenClaw proved the demand — and the danger</h2>
+  <div class="validation-hero">
+    <div class="validation-side demand">
+      <h3>The demand is real</h3>
+      <div class="val-stat">
+        <div class="big">188K+</div>
+        <div class="caption">GitHub stars — fastest repo to 100K in history</div>
+      </div>
+      <div class="val-stat">
+        <div class="big">1,000+</div>
+        <div class="caption">Community-built skills on ClawHub</div>
+      </div>
+      <div class="val-stat">
+        <div class="big">22%</div>
+        <div class="caption">Of enterprises already have employees running agents without IT approval</div>
+      </div>
+    </div>
+    <div class="validation-side gap">
+      <h3>The trust layer is missing</h3>
+      <div class="val-stat">
+        <div class="big">341</div>
+        <div class="caption">Malicious skills found on ClawHub in a single week</div>
+      </div>
+      <div class="val-stat">
+        <div class="big">26%</div>
+        <div class="caption">Of all agent skills contain at least one vulnerability — Cisco / Cornell</div>
+      </div>
+      <div class="val-stat">
+        <div class="big">0</div>
+        <div class="caption">Cryptographic signing, identity verification, or governance controls</div>
+      </div>
+    </div>
+  </div>
+  <p class="validation-takeaway">OpenClaw proved that developers want extensible agent skills. Its security crisis proved that <strong>packaging without trust is a supply chain disaster</strong>. Cisco called it <em>"an absolute nightmare."</em></p>
+</section>
+
+<!-- SLIDE 4: THE PROBLEM -->
+<section class="slide" data-slide="3">
+  <span class="logo-mark">Enact</span>
+  <span class="slide-number">04 / 12</span>
+  <p class="section-label">The Problem</p>
+  <h2>The tooling layer is broken</h2>
+  <div class="broken-grid">
+    <div class="broken-card">
+      <div class="icon">⚠</div>
+      <div>
+        <h3>Protocols are fragmenting</h3>
+        <p>MCP, CLI tools, API wrappers — new interfaces keep emerging. MCP has context bloat issues, CLI tools lack discovery, and nothing has converged. The protocol is a moving target.</p>
+      </div>
+    </div>
+    <div class="broken-card">
+      <div class="icon">✕</div>
+      <div>
+        <h3>No trust model</h3>
+        <p>"Install this tool" means running unaudited code with host access. No signing, no verification, no sandboxing. Enterprises won't accept this.</p>
+      </div>
+    </div>
+    <div class="broken-card">
+      <div class="icon">⚠</div>
+      <div>
+        <h3>No governance or visibility</h3>
+        <p>Which agents use which tools? Who approved this? When something breaks, teams dig through logs across systems. No audit trail, no access control, no observability.</p>
+      </div>
+    </div>
+  </div>
+  <p class="protocol-gap">Every approach has the same gap: <strong>no standard way to package, distribute, trust, or govern agent tools</strong>. That layer is missing regardless of how agents talk to tools.</p>
+</section>
+
+<!-- SLIDE 5: THE INSIGHT -->
+<section class="slide slide-insight" data-slide="4">
+  <span class="logo-mark">Enact</span>
+  <span class="slide-number">05 / 11</span>
+  <div class="insight-lines">
+    <div class="line-dim">Protocols come and go.</div>
+    <div class="line-dim">The packaging layer is permanent.</div>
+    <div class="line-bright">Enact is that layer.</div>
+  </div>
+  <p class="insight-sub">How organizations package, distribute, trust, govern, and observe their agent capabilities — regardless of protocol.</p>
+</section>
+
+<!-- SLIDE 6: ONE PLATFORM -->
+<section class="slide" data-slide="5">
+  <span class="logo-mark">Enact</span>
+  <span class="slide-number">06 / 11</span>
+  <p class="section-label">The Product</p>
+  <h2>One platform for your agent tools</h2>
+  <div class="platform-steps">
+    <div class="platform-step">
+      <div class="num">01</div>
+      <h3>Discover</h3>
+      <p>Search a curated registry of agent-ready tools — MCP, CLI, or any interface</p>
+    </div>
+    <div class="platform-step">
+      <div class="num">02</div>
+      <h3>Understand</h3>
+      <p>Agents read prose docs to learn usage and context before invoking anything</p>
+    </div>
+    <div class="platform-step">
+      <div class="num">03</div>
+      <h3>Execute</h3>
+      <p>Run in isolated containers with secrets injected at runtime, never exposed</p>
+    </div>
+    <div class="platform-step">
+      <div class="num">04</div>
+      <h3>Manage</h3>
+      <p>Pin versions, set policies, control access by team across every tool type</p>
+    </div>
+  </div>
+  <p class="observability-note">Every invocation flows through Enact. That's a natural instrumentation point: which tools agents use, how often, success/failure rates, latency, cost per team. Observability built into the architecture.</p>
+</section>
+
+<!-- SLIDE 7: ENTERPRISE -->
+<section class="slide" data-slide="6">
+  <span class="logo-mark">Enact</span>
+  <span class="slide-number">07 / 11</span>
+  <p class="section-label">Enterprise</p>
+  <h2>Built for the enterprise</h2>
+  <p class="subtext" style="margin-bottom:32px;">Private registries where companies control what their agents can access.</p>
+  <div class="enterprise-cols">
+    <div class="enterprise-col">
+      <h3>Govern</h3>
+      <ul>
+        <li>Private @company/* namespaces</li>
+        <li>Team-scoped access controls</li>
+        <li>Tool approval workflows</li>
+        <li>Cryptographic signing via Sigstore</li>
+        <li>SSO / SAML authentication</li>
+      </ul>
+    </div>
+    <div class="enterprise-col">
+      <h3>Observe</h3>
+      <ul>
+        <li>Every invocation logged automatically</li>
+        <li>Which agents use which tools, how often</li>
+        <li>Success/failure rates and latency</li>
+        <li>Cost attribution per team and agent</li>
+        <li>Export to SIEM / audit systems</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 8: WHAT'S BUILT -->
+<section class="slide" data-slide="7">
+  <span class="logo-mark">Enact</span>
+  <span class="slide-number">08 / 11</span>
+  <p class="section-label">Progress</p>
+  <h2>What's built and live today</h2>
+  <p class="subtext" style="margin-bottom:32px;">Every tool that runs is cryptographically traceable to an approved identity.</p>
+  <div class="built-grid">
+    <div class="built-card">
+      <h3>Cryptographic Trust</h3>
+      <ul>
+        <li>Sigstore signing with OIDC identity</li>
+        <li>Trust policies: only approved signers</li>
+        <li>Third-party auditor attestations</li>
+        <li>Immutable transparency log via Rekor</li>
+      </ul>
+    </div>
+    <div class="built-card">
+      <h3>Built-in Observability</h3>
+      <ul>
+        <li>Every invocation instrumented</li>
+        <li>Tool usage, success/failure, latency, cost</li>
+        <li>Per-team and per-agent attribution</li>
+        <li>Export to SIEM and audit systems</li>
+      </ul>
+    </div>
+    <div class="built-card">
+      <h3>Infrastructure</h3>
+      <ul>
+        <li>Registry + CLI</li>
+        <li>MCP Server + CLI execution</li>
+        <li>Container sandboxing</li>
+        <li>Protocol-agnostic open spec</li>
+      </ul>
+    </div>
+  </div>
+  <div class="live-badge">
+    <span class="dot"></span>
+    Live today · enact.tools
+  </div>
+</section>
+
+<!-- SLIDE 9: BUSINESS MODEL -->
+<section class="slide" data-slide="8">
+  <span class="logo-mark">Enact</span>
+  <span class="slide-number">09 / 11</span>
+  <p class="section-label">Business Model</p>
+  <h2>Open registry drives adoption.<br>Private registries drive revenue.</h2>
+  <div class="biz-flow">
+    <div class="biz-card">
+      <h3>Adoption Wedge</h3>
+      <div class="tier">Public Registry · Free</div>
+      <ul>
+        <li>Developers publish and discover tools</li>
+        <li>Community builds the catalog</li>
+        <li>Protocol-agnostic: MCP, CLI, any interface</li>
+        <li>Telemetry shows what tools agents need</li>
+      </ul>
+    </div>
+    <div class="biz-arrow">→</div>
+    <div class="biz-card">
+      <h3>Revenue Engine</h3>
+      <div class="tier">Private Registries · Paid</div>
+      <ul>
+        <li>Private @company/* namespaces</li>
+        <li>Access control + approval workflows</li>
+        <li>Observability + audit logs</li>
+        <li>Self-hosted option for enterprise</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 10: FOUNDER -->
+<section class="slide" data-slide="9">
+  <span class="logo-mark">Enact</span>
+  <span class="slide-number">10 / 11</span>
+  <p class="section-label">Founder</p>
+  <div class="founder-name">Keith Groves</div>
+  <div class="founder-roles">
+    <div class="role-item">
+      <h3>CTO, Defispot</h3>
+      <p>Norway's largest DEX. $200M+ in transactions. Built threat detection and cross-chain security systems.</p>
+    </div>
+    <div class="role-item">
+      <h3>Creator, Agent Actions</h3>
+      <p>Open standard for agent tool interfaces. Growing community of contributors and implementers.</p>
+    </div>
+    <div class="role-item">
+      <h3>Director of Education, League of Amazing Programmers</h3>
+      <p>Scaled from 100 to 500+ concurrent students. 500% growth.</p>
+    </div>
+    <div class="role-item">
+      <h3>UC San Diego Extended Studies</h3>
+      <p>Java Board Member and instructor. Taught thousands of developers.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 11: THE ASK -->
+<section class="slide slide-ask" data-slide="10">
+  <span class="logo-mark">Enact</span>
+  <span class="slide-number">11 / 11</span>
+  <p class="section-label">The Ask</p>
+  <h2>Pre-Seed Round</h2>
+  <div class="ask-items">
+    <div class="ask-item">
+      <span class="arrow">→</span>
+      <span>Sign 5 design partners deploying agents in production</span>
+    </div>
+    <div class="ask-item">
+      <span class="arrow">→</span>
+      <span>Launch private registries with access control and telemetry</span>
+    </div>
+    <div class="ask-item">
+      <span class="arrow">→</span>
+      <span>Grow public registry to 100+ production-quality tools</span>
+    </div>
+    <div class="ask-item">
+      <span class="arrow">→</span>
+      <span>Hire founding engineer (runtime + infrastructure)</span>
+    </div>
+  </div>
+  <div class="contact-row">
+    <a href="mailto:keithalgroves@gmail.com">keithalgroves@gmail.coms</a>
+    <a href="https://enact.tools">enact.tools</a>
+  </div>
+</section>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const dotsContainer = document.getElementById('navDots');
+
+  slides.forEach((_, i) => {
+    const dot = document.createElement('button');
+    dot.className = 'nav-dot';
+    dot.setAttribute('aria-label', `Slide ${i + 1}`);
+    dot.addEventListener('click', () => slides[i].scrollIntoView({ behavior: 'smooth' }));
+    dotsContainer.appendChild(dot);
+  });
+
+  const dots = document.querySelectorAll('.nav-dot');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const idx = parseInt(entry.target.dataset.slide);
+        dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+      }
+    });
+  }, { threshold: 0.5 });
+
+  slides.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enact — Pitch Deck</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --fg: #e8e6e1;
+    --accent: #00ffa3;
+    --accent-dim: #00ffa320;
+    --accent-mid: #00ffa360;
+    --surface: #12121a;
+    --surface-2: #1a1a26;
+    --border: #2a2a3a;
+    --muted: #6b6b80;
+    --red: #ff4d6a;
+    --blue: #4da6ff;
+    --yellow: #ffd24d;
+    --purple: #a855f7;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.6;
+  }
+
+  .slide {
+    min-height: 100vh;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 60px 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  @media (max-width: 768px) {
+    .slide { padding: 40px 28px; }
+  }
+
+  .slide-number {
+    position: absolute;
+    top: 40px;
+    right: 60px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 2px;
+  }
+
+  .logo-mark {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    position: absolute;
+    top: 40px;
+    left: 80px;
+  }
+
+  @media (max-width: 768px) {
+    .logo-mark { left: 28px; }
+    .slide-number { right: 28px; }
+  }
+
+  /* ── SLIDE 1: TITLE ── */
+  .slide-title {
+    background: radial-gradient(ellipse at 20% 50%, #00ffa308 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, #a855f708 0%, transparent 50%),
+                var(--bg);
+  }
+
+  .slide-title h1 {
+    font-size: clamp(64px, 10vw, 140px);
+    font-weight: 900;
+    letter-spacing: -3px;
+    line-height: 0.95;
+    margin-bottom: 24px;
+  }
+
+  .slide-title h1 .highlight {
+    background: linear-gradient(135deg, var(--accent), #4da6ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .slide-title .tagline {
+    font-size: clamp(18px, 2.5vw, 28px);
+    font-weight: 300;
+    color: var(--muted);
+    max-width: 600px;
+    margin-bottom: 48px;
+  }
+
+  .slide-title .meta-row {
+    display: flex;
+    gap: 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .slide-title .meta-row span {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+
+  /* ── SLIDE 2: PROBLEM ── */
+  .slide-problem {
+    background: radial-gradient(ellipse at 70% 60%, #ff4d6a08 0%, transparent 50%), var(--bg);
+  }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+  }
+
+  .slide h2 {
+    font-size: clamp(36px, 5vw, 64px);
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1.1;
+    margin-bottom: 40px;
+    max-width: 900px;
+  }
+
+  .problem-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    max-width: 1100px;
+  }
+
+  .problem-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    position: relative;
+    transition: border-color 0.3s;
+  }
+
+  .problem-card:hover {
+    border-color: var(--red);
+  }
+
+  .problem-card .icon {
+    font-size: 28px;
+    margin-bottom: 16px;
+  }
+
+  .problem-card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--red);
+  }
+
+  .problem-card p {
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* ── SLIDE 3: SOLUTION ── */
+  .slide-solution {
+    background: radial-gradient(ellipse at 30% 40%, #00ffa306 0%, transparent 50%), var(--bg);
+  }
+
+  .solution-statement {
+    font-size: clamp(22px, 3vw, 32px);
+    font-weight: 400;
+    color: var(--fg);
+    max-width: 800px;
+    margin-bottom: 48px;
+    line-height: 1.5;
+  }
+
+  .solution-statement strong {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .code-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    line-height: 1.8;
+    max-width: 700px;
+    overflow-x: auto;
+  }
+
+  .code-block .comment { color: var(--muted); }
+  .code-block .cmd { color: var(--accent); }
+  .code-block .arg { color: var(--blue); }
+  .code-block .str { color: var(--yellow); }
+
+  /* ── SLIDE 4: HOW IT WORKS ── */
+  .flow-steps {
+    display: flex;
+    gap: 0;
+    align-items: stretch;
+    max-width: 1100px;
+    flex-wrap: wrap;
+  }
+
+  .flow-step {
+    flex: 1;
+    min-width: 220px;
+    padding: 36px 28px;
+    position: relative;
+    border-left: 2px solid var(--border);
+  }
+
+  .flow-step:first-child { border-left: 2px solid var(--accent); }
+
+  .flow-step .step-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--accent-dim);
+    margin-bottom: 12px;
+    line-height: 1;
+  }
+
+  .flow-step:first-child .step-num { color: var(--accent-mid); }
+
+  .flow-step h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  .flow-step p {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* ── SLIDE 5: DIFFERENTIATORS ── */
+  .diff-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+    max-width: 1100px;
+  }
+
+  .diff-card {
+    padding: 32px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    transition: all 0.3s;
+  }
+
+  .diff-card:hover {
+    border-color: var(--accent);
+    background: var(--surface-2);
+  }
+
+  .diff-card .badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-bottom: 16px;
+  }
+
+  .diff-card:nth-child(1) .badge { background: #00ffa318; color: var(--accent); }
+  .diff-card:nth-child(2) .badge { background: #4da6ff18; color: var(--blue); }
+  .diff-card:nth-child(3) .badge { background: #a855f718; color: var(--purple); }
+  .diff-card:nth-child(4) .badge { background: #ffd24d18; color: var(--yellow); }
+
+  .diff-card h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  .diff-card p {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* ── SLIDE 6: MCP ── */
+  .mcp-table {
+    max-width: 800px;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 8px;
+  }
+
+  .mcp-table th, .mcp-table td {
+    padding: 16px 20px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mcp-table th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .mcp-table td:first-child {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .mcp-table td:last-child {
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .mcp-flow {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    flex-wrap: wrap;
+  }
+
+  .mcp-flow .step-pill {
+    padding: 8px 20px;
+    border-radius: 8px;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .mcp-flow .arrow {
+    color: var(--muted);
+    font-size: 20px;
+  }
+
+  /* ── SLIDE 7: COMPARISON ── */
+  .compare-table {
+    max-width: 900px;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .compare-table th, .compare-table td {
+    padding: 14px 20px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+
+  .compare-table th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .compare-table th:nth-child(2) { color: var(--accent); }
+
+  .compare-table td:first-child {
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .compare-table td:nth-child(2) {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .compare-table td:nth-child(3) {
+    color: var(--muted);
+  }
+
+  .check { color: var(--accent); }
+  .x-mark { color: #ff4d6a60; }
+
+  /* ── SLIDE 8: TRACTION ── */
+  .traction-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 24px;
+    max-width: 900px;
+    margin-bottom: 48px;
+  }
+
+  .traction-item {
+    padding: 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    text-align: center;
+  }
+
+  .traction-item .number {
+    font-size: 48px;
+    font-weight: 900;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .traction-item .label {
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  .traction-bullets {
+    max-width: 700px;
+  }
+
+  .traction-bullets li {
+    font-size: 18px;
+    color: var(--fg);
+    margin-bottom: 16px;
+    padding-left: 24px;
+    position: relative;
+    list-style: none;
+  }
+
+  .traction-bullets li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* ── SLIDE 9: ARCHITECTURE ── */
+  .arch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    max-width: 900px;
+  }
+
+  .arch-item {
+    padding: 18px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    transition: border-color 0.3s;
+  }
+
+  .arch-item:hover { border-color: var(--accent); }
+
+  .arch-item .name { color: var(--accent); font-weight: 600; margin-bottom: 4px; }
+  .arch-item .desc { color: var(--muted); font-size: 11px; }
+
+  /* ── SLIDE 10: CTA ── */
+  .slide-cta {
+    text-align: center;
+    align-items: center;
+    background: radial-gradient(ellipse at 50% 50%, #00ffa30a 0%, transparent 60%), var(--bg);
+  }
+
+  .slide-cta h2 {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+  }
+
+  .cta-links {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
+  .cta-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 32px;
+    border-radius: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s;
+  }
+
+  .cta-primary {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  .cta-primary:hover { filter: brightness(1.15); transform: translateY(-2px); }
+
+  .cta-secondary {
+    border: 1px solid var(--border);
+    color: var(--fg);
+  }
+
+  .cta-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── NAV DOTS ── */
+  .nav-dots {
+    position: fixed;
+    right: 28px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 100;
+  }
+
+  .nav-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s;
+    padding: 0;
+  }
+
+  .nav-dot.active, .nav-dot:hover {
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent-mid);
+  }
+
+  @media (max-width: 768px) {
+    .nav-dots { display: none; }
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    width: 60px;
+    height: 2px;
+    background: var(--accent);
+    margin-bottom: 32px;
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav-dots" id="navDots"></nav>
+
+<!-- SLIDE 1: TITLE -->
+<section class="slide slide-title" data-slide="0">
+  <span class="slide-number">01 / 10</span>
+  <h1><span class="highlight">enact</span></h1>
+  <p class="tagline">The package manager for agent skills. Publish once, run anywhere — securely.</p>
+  <div class="meta-row">
+    <span>enact.tools</span>
+    <span>Apache-2.0</span>
+    <span>v2.0.0</span>
+  </div>
+</section>
+
+<!-- SLIDE 2: PROBLEM -->
+<section class="slide slide-problem" data-slide="1">
+  <span class="logo-mark">Enact</span>
+  <span class="slide-number">02 / 10</span>
+  <p class="section-label">The Problem</p>
+  <h2>AI agents can't discover or trust the tools they need</h2>
+  <div class="problem-grid">
+    <div class="problem-card">
+      <div class="icon">🔒</div>
+      <h3>Static Toolkits</h3>
+      <p>Agents ship with hardcoded tools. Adding capabilities means redeploying the entire agent.</p>
+    </div>
+    <div class="problem-card">
+      <div class="icon">⚠️</div>
+      <h3>No Trust Layer</h3>
+      <p>There's no standard way to verify who published a tool or whether it's been tampered with.</p>
+    </div>
+    <div class="problem-card">
+      <div class="icon">🧩</div>
+      <h3>Fragmented Execution</h3>
+      <p>Every platform re-invents tool packaging, execution, and secrets management from scratch.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 3: SOLUTION -->
+<section class="slide slide-solution" data-slide="2">
+  <span class="logo-mark">Enact</span>
+  <span class="slide-number">03 / 10</span>
+  <p class="section-label">The Solution</p>
+  <h2>A universal registry for agent skills</h2>
+  <p class="solution-statement">
+    Enact is <strong>npm for AI tools</strong>. Agents discover capabilities at runtime through semantic search, verify trust through cryptographic signing, and execute skills in portable containers — all through a single protocol.
+  </p>
+  <div class="code-block">
+    <span class="comment"># Find a tool</span><br>
+    <span class="cmd">enact search</span> <span class="arg">scraper</span><br><br>
+    <span class="comment"># Read its documentation</span><br>
+    <span class="cmd">enact learn</span> <span class="arg">enact/firecrawl</span><br><br>
+    <span class="comment"># Run it</span><br>
+    <span class="cmd">enact run</span> <span class="arg">enact/firecrawl:scrape</span> <span class="str">-a '{"url": "https://example.com"}'</span>
+  </div>
+</section>
+
+<!-- SLIDE 4: HOW IT WORKS -->
+<section class="slide" data-slide="3">
+  <span class="logo-mark">Enact</span>
+  <span class="slide-number">04 / 10</span>
+  <p class="section-label">How It Works</p>
+  <h2>Search → Learn → Run</h2>
+  <div class="flow-steps">
+    <div class="flow-step">
+      <div class="step-num">01</div>
+      <h3>Discover</h3>
+      <p>Agent searches the registry using natural language. Vector embeddings return results by capability, not just keywords.</p>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">02</div>
+      <h3>Learn</h3>
+      <p>Agent reads the SKILL.md — agent-facing documentation that teaches it how to invoke the tool, what parameters it needs, and what to expect.</p>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">03</div>
+      <h3>Verify</h3>
+      <p>Sigstore-based cryptographic verification confirms publisher identity, package integrity, and transparency log entry.</p>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">04</div>
+      <h3>Execute</h3>
+      <p>Skills run in the configured backend — local, Docker, Dagger, or remote — with secrets injected at runtime, never exposed.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 5: KEY DIFFERENTIATORS -->
+<section class="slide" data-slide="4">
+  <span class="logo-mark">Enact</span>
+  <span class="slide-number">05 / 10</span>
+  <p class="section-label">Why Enact</p>
+  <h2>Built different</h2>
+  <div class="diff-grid">
+    <div class="diff-card">
+      <span class="badge">Security</span>
+      <h3>Cryptographic Trust</h3>
+      <p>Every package is Sigstore-signed. Publisher identity, integrity, and transparency are verified before execution. Not an afterthought — foundational.</p>
+    </div>
+    <div class="diff-card">
+      <span class="badge">Discovery</span>
+      <h3>Semantic Search</h3>
+      <p>Vector embeddings index every skill. Agents find tools by describing what they need, not by memorizing package names.</p>
+    </div>
+    <div class="diff-card">
+      <span class="badge">Execution</span>
+      <h3>Portable Runtime</h3>
+      <p>Skills declare dependencies. You choose where they run — local, Docker, Dagger, or remote. Same skill, any backend, zero changes.</p>
+    </div>
+    <div class="diff-card">
+      <span class="badge">Ownership</span>
+      <h3>Self-Hosted Registry</h3>
+      <p>One command to run your own private registry. SQLite + local storage. No vendor lock-in. Mirror the public registry or run fully private.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 6: MCP INTEGRATION -->
+<section class="slide" data-slide="5">
+  <span class="logo-mark">Enact</span>
+  <span class="slide-number">06 / 10</span>
+  <p class="section-label">MCP Native</p>
+  <h2>First-class agent protocol support</h2>
+  <p class="solution-statement" style="margin-bottom:32px;">
+    Enact exposes the full registry to any MCP-compatible client. One line to connect — then agents discover and run tools dynamically.
+  </p>
+  <table class="mcp-table">
+    <tr><th>Tool</th><th>Description</th></tr>
+    <tr><td>enact_search</td><td>Find tools by keyword or capability</td></tr>
+    <tr><td>enact_learn</td><td>Read documentation and usage guides</td></tr>
+    <tr><td>enact_run</td><td>Execute any tool from the registry</td></tr>
+    <tr><td>enact_install</td><td>Cache tools locally for faster re-runs</td></tr>
+  </table>
+  <div class="mcp-flow">
+    <span class="step-pill">search</span>
+    <span class="arrow">→</span>
+    <span class="step-pill">learn</span>
+    <span class="arrow">→</span>
+    <span class="step-pill">run</span>
+  </div>
+</section>
+
+<!-- SLIDE 7: COMPETITIVE COMPARISON -->
+<section class="slide" data-slide="6">
+  <span class="logo-mark">Enact</span>
+  <span class="slide-number">07 / 10</span>
+  <p class="section-label">Landscape</p>
+  <h2>How Enact compares</h2>
+  <table class="compare-table">
+    <tr>
+      <th></th>
+      <th>Enact</th>
+      <th>Others (ClawHub, etc.)</th>
+    </tr>
+    <tr>
+      <td>Purpose</td>
+      <td>Skill registry + execution protocol</td>
+      <td>Feature within a larger product</td>
+    </tr>
+    <tr>
+      <td>Cryptographic signing</td>
+      <td class="check">✓ Sigstore</td>
+      <td class="x-mark">✗</td>
+    </tr>
+    <tr>
+      <td>Semantic discovery</td>
+      <td class="check">✓ Vector embeddings</td>
+      <td class="x-mark">✗ Keyword only</td>
+    </tr>
+    <tr>
+      <td>MCP native</td>
+      <td class="check">✓ First-class</td>
+      <td class="x-mark">✗</td>
+    </tr>
+    <tr>
+      <td>Execution backends</td>
+      <td class="check">✓ Local / Docker / Dagger / Remote</td>
+      <td>Host-only or basic Docker</td>
+    </tr>
+    <tr>
+      <td>Self-hostable registry</td>
+      <td class="check">✓ One command</td>
+      <td class="x-mark">✗</td>
+    </tr>
+    <tr>
+      <td>Secrets management</td>
+      <td class="check">✓ Declarative + injected</td>
+      <td>Env vars / manual</td>
+    </tr>
+    <tr>
+      <td>Standalone protocol</td>
+      <td class="check">✓ Platform-agnostic</td>
+      <td>Tightly coupled</td>
+    </tr>
+  </table>
+</section>
+
+<!-- SLIDE 8: TRACTION -->
+<section class="slide" data-slide="7">
+  <span class="logo-mark">Enact</span>
+  <span class="slide-number">08 / 10</span>
+  <p class="section-label">Traction</p>
+  <h2>What we've built</h2>
+  <div class="traction-grid">
+    <div class="traction-item">
+      <div class="number">2yr</div>
+      <div class="label">In development</div>
+    </div>
+    <div class="traction-item">
+      <div class="number">v2.0</div>
+      <div class="label">Protocol spec</div>
+    </div>
+    <div class="traction-item">
+      <div class="number">9</div>
+      <div class="label">Core packages</div>
+    </div>
+    <div class="traction-item">
+      <div class="number">4</div>
+      <div class="label">Execution backends</div>
+    </div>
+  </div>
+  <ul class="traction-bullets">
+    <li>Full CLI, registry API, MCP server, and web UI shipped</li>
+    <li>Sigstore signing and verification integrated end-to-end</li>
+    <li>Public registry live at enact.tools with curated starter library</li>
+    <li>Self-hosted registry with zero external dependencies</li>
+  </ul>
+</section>
+
+<!-- SLIDE 9: ARCHITECTURE -->
+<section class="slide" data-slide="8">
+  <span class="logo-mark">Enact</span>
+  <span class="slide-number">09 / 10</span>
+  <p class="section-label">Architecture</p>
+  <h2>Modular by design</h2>
+  <div style="margin-bottom:32px; color:var(--muted); font-size:15px; max-width:700px;">
+    Monorepo with cleanly separated concerns. Each package can be consumed independently. The protocol is the product — the tools are implementations.
+  </div>
+  <div class="arch-grid">
+    <div class="arch-item"><div class="name">cli</div><div class="desc">Command-line interface</div></div>
+    <div class="arch-item"><div class="name">api</div><div class="desc">Registry API client</div></div>
+    <div class="arch-item"><div class="name">registry</div><div class="desc">Self-hosted backend (SQLite)</div></div>
+    <div class="arch-item"><div class="name">execution</div><div class="desc">Local / Docker / Dagger / Remote</div></div>
+    <div class="arch-item"><div class="name">mcp-server</div><div class="desc">MCP server for AI agents</div></div>
+    <div class="arch-item"><div class="name">trust</div><div class="desc">Sigstore signing & verification</div></div>
+    <div class="arch-item"><div class="name">secrets</div><div class="desc">Secure credential storage</div></div>
+    <div class="arch-item"><div class="name">shared</div><div class="desc">Core types, manifest parsing</div></div>
+    <div class="arch-item"><div class="name">web</div><div class="desc">Web UI (enact.tools)</div></div>
+  </div>
+</section>
+
+<!-- SLIDE 10: CTA -->
+<section class="slide slide-cta" data-slide="9">
+  <span class="logo-mark">Enact</span>
+  <span class="slide-number">10 / 10</span>
+  <p class="section-label">Get Started</p>
+  <h2>The infrastructure layer<br>for agent capabilities</h2>
+  <div class="cta-links">
+    <a href="https://enact.tools" class="cta-link cta-primary">enact.tools</a>
+    <a href="https://github.com/EnactProtocol/enact" class="cta-link cta-secondary">GitHub</a>
+    <a href="https://discord.com/invite/mMfxvMtHyS" class="cta-link cta-secondary">Discord</a>
+  </div>
+</section>
+
+<script>
+  // Nav dots
+  const slides = document.querySelectorAll('.slide');
+  const dotsContainer = document.getElementById('navDots');
+
+  slides.forEach((_, i) => {
+    const dot = document.createElement('button');
+    dot.className = 'nav-dot';
+    dot.addEventListener('click', () => slides[i].scrollIntoView({ behavior: 'smooth' }));
+    dotsContainer.appendChild(dot);
+  });
+
+  const dots = document.querySelectorAll('.nav-dot');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const idx = parseInt(entry.target.dataset.slide);
+        dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+      }
+    });
+  }, { threshold: 0.5 });
+
+  slides.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
