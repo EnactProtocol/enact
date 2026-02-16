@@ -1,6 +1,6 @@
 {
   "name": "@enactprotocol/mcp-server",
-  "version": "2.3.5",
+  "version": "2.3.7",
   "description": "MCP protocol server for Enact tool integration",
   "type": "module",
   "main": "./dist/index.js",
