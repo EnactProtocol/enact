@@ -112,7 +112,7 @@ After installation, tools are organized by their namespaced name:
 │           └── ...
 └── EnactProtocol/
     └── pdf-extract/
-        ├── skill.yaml
+        ├── skill.package.yml
         └── ...
 ```
 

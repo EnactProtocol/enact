@@ -15,6 +15,8 @@ export const ErrorCodes = {
   VERSION_YANKED: "VERSION_YANKED",
   VALIDATION_ERROR: "VALIDATION_ERROR",
   NAMESPACE_MISMATCH: "NAMESPACE_MISMATCH",
+  ORG_NOT_FOUND: "ORG_NOT_FOUND",
+  ORG_PERMISSION_DENIED: "ORG_PERMISSION_DENIED",
   BUNDLE_TOO_LARGE: "BUNDLE_TOO_LARGE",
   ATTESTATION_VERIFICATION_FAILED: "ATTESTATION_VERIFICATION_FAILED",
   RATE_LIMITED: "RATE_LIMITED",
@@ -34,6 +36,8 @@ export const ErrorStatusCodes: Record<ErrorCode, number> = {
   VERSION_YANKED: 410,
   VALIDATION_ERROR: 422,
   NAMESPACE_MISMATCH: 403,
+  ORG_NOT_FOUND: 404,
+  ORG_PERMISSION_DENIED: 403,
   BUNDLE_TOO_LARGE: 413,
   ATTESTATION_VERIFICATION_FAILED: 422,
   RATE_LIMITED: 429,
@@ -100,8 +104,20 @@ export const Errors = {
   namespaceMismatch: (toolNamespace: string, userNamespace: string) =>
     errorResponse(
       ErrorCodes.NAMESPACE_MISMATCH,
-      `Tool namespace "${toolNamespace}" does not match your username "${userNamespace}". You can only publish tools under your own namespace.`,
+      toolNamespace.startsWith("@")
+        ? `You must be a member of the "${toolNamespace.substring(1)}" organization to publish under the "${toolNamespace}" namespace.`
+        : `Tool namespace "${toolNamespace}" does not match your username "${userNamespace}". You can only publish tools under your own namespace.`,
       { toolNamespace, userNamespace }
+    ),
+
+  orgNotFound: (orgName: string) =>
+    errorResponse(ErrorCodes.ORG_NOT_FOUND, `Organization "${orgName}" not found.`, { orgName }),
+
+  orgPermissionDenied: (orgName: string, action: string) =>
+    errorResponse(
+      ErrorCodes.ORG_PERMISSION_DENIED,
+      `You do not have permission to ${action} in organization "${orgName}".`,
+      { orgName, action }
     ),
 
   bundleTooLarge: (size: number, maxSize: number) =>

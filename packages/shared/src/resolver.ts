@@ -127,11 +127,12 @@ export function parseActionSpecifier(specifier: string): ParsedActionSpecifier {
 }
 
 /**
- * Convert tool name to directory path
- * Strips the @ prefix for disk paths: "@org/my-skill" -> "org/my-skill"
+ * Convert tool name to directory path.
+ * Preserves @ prefix for npm-style layout: "@org/my-skill" -> "@org/my-skill"
+ * User tools unchanged: "user/my-skill" -> "user/my-skill"
  */
 export function toolNameToPath(name: string): string {
-  return name.replace(/^@/, "").replace(/\\/g, "/");
+  return name.replace(/\\/g, "/");
 }
 
 /**
@@ -151,7 +152,7 @@ export function getToolPath(toolsDir: string, toolName: string): string {
 /**
  * Try to load a tool from a specific directory
  *
- * Supports two-file model (skill.yaml + SKILL.md) via loadManifestFromDir().
+ * Supports two-file model (skill.package.yml + SKILL.md) via loadManifestFromDir().
  *
  * @param dir - Directory to check
  * @param location - The location type for metadata

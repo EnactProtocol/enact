@@ -52,7 +52,7 @@ export interface LoadManifestOptions extends ValidateManifestOptions {
 /**
  * Load a manifest from a file path
  *
- * @param filePath - Path to the manifest file (SKILL.md, skill.yaml, skill.yml, enact.md, enact.yaml, or enact.yml)
+ * @param filePath - Path to the manifest file (SKILL.md, skill.package.yml, skill.yml, enact.md, enact.yaml, or enact.yml)
  * @param options - Options for loading and validation
  * @returns LoadedManifest with validated manifest and metadata
  * @throws ManifestLoadError if file doesn't exist, parse fails, or validation fails
@@ -120,7 +120,7 @@ export function loadManifest(filePath: string, options: LoadManifestOptions = {}
 /**
  * Load SKILL.md for its body content and frontmatter fields.
  * Does NOT validate as a full ToolManifest — used only to extract
- * agent-facing documentation in two-file mode (skill.yaml + SKILL.md).
+ * agent-facing documentation in two-file mode (skill.package.yml + SKILL.md).
  */
 function loadSkillDoc(
   filePath: string
@@ -142,10 +142,10 @@ function loadSkillDoc(
  * Find and load a manifest from a directory
  *
  * Supports two modes:
- * 1. **Two-file model**: If both `skill.yaml` and `SKILL.md` exist, `skill.yaml` is
- *    the package manifest and `SKILL.md` provides agent-facing documentation (body → `doc`).
- *    Also supports legacy `enact.yaml` in place of `skill.yaml`.
- * 2. **Single-file fallback**: Searches for SKILL.md, skill.yaml, skill.yml, enact.md, enact.yaml, or enact.yml
+ * 1. **Two-file model**: If both a package manifest (`skill.package.yaml`, `skill.package.yml`, etc.) and `SKILL.md` exist,
+ *    the package manifest provides execution metadata and `SKILL.md` provides agent-facing documentation (body → `doc`).
+ *    Also supports legacy `enact.yaml` in place of `skill.package.yml`.
+ * 2. **Single-file fallback**: Searches for SKILL.md, skill.package.yaml, skill.package.yml, skill.yml, enact.md, enact.yaml, or enact.yml
  *    and uses the first match as the complete manifest.
  *
  * @param dir - Directory to search for manifest
@@ -160,9 +160,15 @@ export function loadManifestFromDir(
   const skillMdPath = join(dir, "SKILL.md");
   const hasSkillMd = existsSync(skillMdPath);
 
-  // Find config file (skill.yaml, skill.yml, or legacy enact.yaml/enact.yml)
+  // Find config file (skill.package.yaml, skill.package.yml, skill.yml, or legacy enact.yaml/enact.yml)
   let enactConfigPath: string | null = null;
-  for (const f of ["skill.yaml", "skill.yml", "enact.yaml", "enact.yml"]) {
+  for (const f of [
+    "skill.package.yaml",
+    "skill.package.yml",
+    "skill.yml",
+    "enact.yaml",
+    "enact.yml",
+  ]) {
     const p = join(dir, f);
     if (existsSync(p)) {
       enactConfigPath = p;
@@ -170,7 +176,7 @@ export function loadManifestFromDir(
     }
   }
 
-  // Two-file model: skill.yaml + SKILL.md
+  // Two-file model: skill.package.yaml/skill.package.yml + SKILL.md
   if (enactConfigPath && hasSkillMd) {
     const loaded = loadManifest(enactConfigPath, options);
     const skillDoc = loadSkillDoc(skillMdPath);

@@ -41,3 +41,6 @@ export { configureValidateCommand } from "./validate";
 
 // Self-hosted registry
 export { configureServeCommand } from "./serve";
+
+// Organizations
+export { configureOrgCommand } from "./org";

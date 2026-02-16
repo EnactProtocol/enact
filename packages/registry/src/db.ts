@@ -17,9 +17,29 @@ CREATE TABLE IF NOT EXISTS profiles (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS organizations (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  name TEXT UNIQUE NOT NULL,
+  display_name TEXT,
+  description TEXT,
+  avatar_url TEXT,
+  created_by TEXT NOT NULL REFERENCES profiles(id),
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS org_members (
+  org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'member')),
+  added_at TEXT DEFAULT (datetime('now')),
+  added_by TEXT REFERENCES profiles(id),
+  PRIMARY KEY (org_id, user_id)
+);
+
 CREATE TABLE IF NOT EXISTS tools (
   id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
   owner_id TEXT NOT NULL REFERENCES profiles(id),
+  org_id TEXT REFERENCES organizations(id),
   name TEXT UNIQUE NOT NULL,
   short_name TEXT NOT NULL,
   description TEXT,

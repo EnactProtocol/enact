@@ -22,6 +22,7 @@ import {
   configureLearnCommand,
   configureListCommand,
   configureMcpCommand,
+  configureOrgCommand,
   configurePublishCommand,
   configureReportCommand,
   configureRunCommand,
@@ -92,6 +93,9 @@ async function main() {
 
   // Self-hosted registry
   configureServeCommand(program);
+
+  // Organizations
+  configureOrgCommand(program);
 
   // Global error handler - handle Commander's help/version exits gracefully
   program.exitOverride((err) => {

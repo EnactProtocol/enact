@@ -104,11 +104,11 @@ description: A minimal tool
   });
 
   describe("loadManifestFromDir", () => {
-    test("loads manifest from directory with skill.yaml", () => {
+    test("loads manifest from directory with skill.package.yml", () => {
       const testDir = join(TEST_DIR, "yaml-dir");
       mkdirSync(testDir, { recursive: true });
       writeFileSync(
-        join(testDir, "skill.yaml"),
+        join(testDir, "skill.package.yml"),
         `
 name: test/yaml
 description: Test YAML manifest
@@ -156,12 +156,53 @@ description: Test Markdown manifest
       expect(result.format).toBe("md");
     });
 
-    test("prefers skill.yaml over legacy enact.yaml", () => {
+    test("loads manifest from directory with skill.package.yaml", () => {
+      const testDir = join(TEST_DIR, "package-yaml-dir");
+      mkdirSync(testDir, { recursive: true });
+      writeFileSync(
+        join(testDir, "skill.package.yaml"),
+        `
+name: test/package-yaml
+description: Test package YAML manifest
+`,
+        "utf-8"
+      );
+
+      const result = loadManifestFromDir(testDir);
+      expect(result.manifest.name).toBe("test/package-yaml");
+    });
+
+    test("prefers skill.package.yaml over skill.package.yml", () => {
+      const testDir = join(TEST_DIR, "package-vs-skill-dir");
+      mkdirSync(testDir, { recursive: true });
+
+      writeFileSync(
+        join(testDir, "skill.package.yaml"),
+        `
+name: test/package-preferred
+description: Package version
+`,
+        "utf-8"
+      );
+      writeFileSync(
+        join(testDir, "skill.package.yml"),
+        `
+name: test/skill-version
+description: Skill version
+`,
+        "utf-8"
+      );
+
+      const result = loadManifestFromDir(testDir);
+      expect(result.manifest.name).toBe("test/package-preferred");
+    });
+
+    test("prefers skill.package.yml over legacy enact.yaml", () => {
       const testDir = join(TEST_DIR, "both-dir");
       mkdirSync(testDir, { recursive: true });
 
       writeFileSync(
-        join(testDir, "skill.yaml"),
+        join(testDir, "skill.package.yml"),
         `
 name: test/skill-preferred
 description: Skill version
@@ -191,13 +232,13 @@ description: Legacy version
   });
 
   describe("findManifestFile", () => {
-    test("finds skill.yaml", () => {
+    test("finds skill.package.yml", () => {
       const testDir = join(TEST_DIR, "find-yaml");
       mkdirSync(testDir, { recursive: true });
-      writeFileSync(join(testDir, "skill.yaml"), "name: test/find", "utf-8");
+      writeFileSync(join(testDir, "skill.package.yml"), "name: test/find", "utf-8");
 
       const result = findManifestFile(testDir);
-      expect(result).toBe(join(testDir, "skill.yaml"));
+      expect(result).toBe(join(testDir, "skill.package.yml"));
     });
 
     test("finds enact.md", () => {
@@ -222,7 +263,7 @@ description: Legacy version
     test("returns true when manifest exists", () => {
       const testDir = join(TEST_DIR, "has-manifest");
       mkdirSync(testDir, { recursive: true });
-      writeFileSync(join(testDir, "skill.yaml"), "name: test/has", "utf-8");
+      writeFileSync(join(testDir, "skill.package.yml"), "name: test/has", "utf-8");
 
       expect(hasManifest(testDir)).toBe(true);
     });
@@ -264,7 +305,7 @@ description: Legacy version
       const testDir = join(TEST_DIR, "try-success");
       mkdirSync(testDir, { recursive: true });
       writeFileSync(
-        join(testDir, "skill.yaml"),
+        join(testDir, "skill.package.yml"),
         `
 name: test/try
 description: Test try loading

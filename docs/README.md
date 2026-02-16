@@ -6,7 +6,7 @@ Technical reference documentation for the Enact protocol and implementation.
 
 ### Protocol & Specification
 - **[PROTOCOL.md](./PROTOCOL.md)** - Protocol overview and core concepts
-- **[SPEC.md](./SPEC.md)** - Tool manifest specification (skill.yaml format)
+- **[SPEC.md](./SPEC.md)** - Tool manifest specification (skill.package.yml format)
 
 ### Command Line Interface
 - **[COMMANDS.md](./COMMANDS.md)** - Complete CLI command reference

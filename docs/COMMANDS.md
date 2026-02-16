@@ -95,7 +95,7 @@ enact setup --global --force
 **Tool Mode (default)**:
 Creates a new Enact tool with:
 - `SKILL.md` - Agent-facing documentation
-- `skill.yaml` - Execution metadata (scripts, hooks, env)
+- `skill.package.yml` - Execution metadata (scripts, hooks, env)
 - `AGENTS.md` - Development guide for AI agents
 
 **Agent Mode**:
@@ -126,7 +126,7 @@ enact init --tool --force
 
 ### 3. run - Run Tool's Script
 
-**Purpose**: Execute a tool's script defined in `skill.yaml`.
+**Purpose**: Execute a tool's script defined in `skill.package.yml`.
 
 **Usage**: `enact run <tool-name> --args '<json>'`
 
@@ -808,8 +808,8 @@ description: My tool
 Simple greeting tool. Provide a `name` parameter.
 EOF
 
-# 3. Create skill.yaml (execution)
-cat > skill.yaml <<'EOF'
+# 3. Create skill.package.yml (execution)
+cat > skill.package.yml <<'EOF'
 enact: "2.0.0"
 name: myorg/utils/my-tool
 description: My tool

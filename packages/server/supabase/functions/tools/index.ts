@@ -27,6 +27,7 @@ import {
   extractShortName,
   isValidToolName,
   isValidVersion,
+  isOrgScoped,
   parsePaginationParams,
 } from "../../../src/utils/validation.ts";
 import {
@@ -460,16 +461,47 @@ async function handlePublish(
   const namespace = extractNamespace(toolName);
   const shortName = extractShortName(toolName);
 
-  // Enforce namespace ownership - users can only publish under their username (skip in dev mode)
-  if (!isDev && namespace !== username) {
-    return Errors.namespaceMismatch(namespace, username);
+  // Enforce namespace ownership (skip in dev mode)
+  let orgId: string | null = null;
+  if (!isDev) {
+    if (isOrgScoped(toolName)) {
+      // Org-scoped: check org membership
+      const orgName = namespace.substring(1); // strip @
+      const { data: org } = await supabase
+        .from("organizations")
+        .select("id")
+        .eq("name", orgName)
+        .single();
+
+      if (!org) {
+        return Errors.orgNotFound(orgName);
+      }
+
+      const { data: membership } = await supabase
+        .from("org_members")
+        .select("role")
+        .eq("org_id", org.id)
+        .eq("user_id", userId)
+        .single();
+
+      if (!membership) {
+        return Errors.namespaceMismatch(namespace, username);
+      }
+
+      orgId = org.id;
+    } else {
+      // User-scoped: must match username
+      if (namespace !== username) {
+        return Errors.namespaceMismatch(namespace, username);
+      }
+    }
   }
 
   // Get or create tool
   let { data: tool, error: toolError } = await supabase
     .from("tools")
     .select("*")
-    .eq("owner_id", userId)
+    .eq(orgId ? "org_id" : "owner_id", orgId ?? userId)
     .eq("short_name", shortName)
     .single();
 
@@ -495,6 +527,7 @@ async function handlePublish(
 
     const insertData: any = {
       owner_id: userId,
+      org_id: orgId,
       name: toolName,
       short_name: shortName,
       description: manifest.description,

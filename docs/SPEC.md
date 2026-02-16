@@ -10,13 +10,13 @@ This document provides a comprehensive reference for all Enact protocol fields u
 Enact tools use a **two-file model** aligned with the [Agent Skills standard](https://agentskills.io):
 
 1. **`SKILL.md`** — Agent-facing documentation (YAML frontmatter with `name`, `description` + Markdown body)
-2. **`skill.yaml`** — Execution metadata (scripts, hooks, env, container image)
+2. **`skill.package.yml`** — Execution metadata (scripts, hooks, env, container image)
 
 ### Relationship to Agent Skills
 
 The `SKILL.md` file follows the open [Agent Skills standard](https://agentskills.io/specification). The base standard defines a minimal format: a `SKILL.md` file with YAML frontmatter (`name`, `description`) plus Markdown instructions.
 
-**Enact's `skill.yaml` adds fields that make skills executable:**
+**Enact's `skill.package.yml` adds fields that make skills executable:**
 - `scripts` — Named executable commands with `{{param}}` template substitution
 - `hooks.build` — Build/setup commands (cached by Dagger)
 - `from` — Base Docker image
@@ -25,7 +25,7 @@ The `SKILL.md` file follows the open [Agent Skills standard](https://agentskills
 
 This means a skill folder contains:
 1. **What the tool does** (`SKILL.md` — standard Agent Skills interface for AI)
-2. **How to run it** (`skill.yaml` — Enact's execution extensions)
+2. **How to run it** (`skill.package.yml` — Enact's execution extensions)
 
 > **Note:** For backwards compatibility, Enact also recognizes `enact.md`, `enact.yaml`, and `enact.yml`.
 
@@ -69,7 +69,7 @@ A simple tool that greets users by name.
 Provide a `name` parameter to get a personalized greeting.
 ```
 
-**skill.yaml:**
+**skill.package.yml:**
 ```yaml
 enact: "2.0.0"
 name: alice/utils/greeter
@@ -81,7 +81,7 @@ scripts:
 
 ### Example with Build Step
 
-**skill.yaml:**
+**skill.package.yml:**
 ```yaml
 enact: "2.0.0"
 name: alice/utils/hello-rust
@@ -100,7 +100,7 @@ scripts:
 
 ## Required Fields
 
-These fields must be present in `skill.yaml` (or `SKILL.md` frontmatter).
+These fields must be present in `skill.package.yml` (or `SKILL.md` frontmatter).
 
 ### `name`
 - **Type:** `string`
@@ -662,7 +662,7 @@ When publishing tools, Sigstore signs the **entire tool bundle** (tarball). The 
 # Tool structure
 my-tool/
 ├── SKILL.md           # Agent-facing documentation
-├── skill.yaml         # Execution metadata (scripts, hooks, env)
+├── skill.package.yml         # Execution metadata (scripts, hooks, env)
 ├── src/               # Source code
 └── RESOURCES.md       # Additional documentation (optional)
 
@@ -696,7 +696,7 @@ Detailed documentation in Markdown format.
 Explain how to use the tool, provide examples, tips, etc.
 ```
 
-### `skill.yaml` — Execution metadata
+### `skill.package.yml` — Execution metadata
 
 Defines how to run the tool (scripts, hooks, env, container image):
 
@@ -724,10 +724,10 @@ The presence of a `scripts` field determines execution:
 
 ## Tool Types
 
-The presence of a `scripts` field in `skill.yaml` determines the execution model.
+The presence of a `scripts` field in `skill.package.yml` determines the execution model.
 
 ### Container-Executed Tools
-- **Has:** `scripts` field in `skill.yaml`
+- **Has:** `scripts` field in `skill.package.yml`
 - **Execution:** Runs in isolated container
 - **Characteristics:** Deterministic, reproducible
 - **Use case:** Scripts, CLI tools, data processing
@@ -751,7 +751,7 @@ The presence of a `scripts` field in `skill.yaml` determines the execution model
         └── {to}/
             └── {tool}/
                 ├── SKILL.md         # Agent-facing documentation
-                ├── skill.yaml       # Execution metadata
+                ├── skill.package.yml       # Execution metadata
                 ├── src/             # Source code (if any)
                 └── RESOURCES.md     # Additional docs (optional)
 ```
@@ -777,7 +777,7 @@ The presence of a `scripts` field in `skill.yaml` determines the execution model
         └── {to}/
             └── {tool}/
                 ├── SKILL.md
-                ├── skill.yaml
+                ├── skill.package.yml
                 ├── src/
                 └── ...
 ```
@@ -858,7 +858,7 @@ The `scripts` field uses `{{param}}` template substitution. Each `{{param}}` bec
 2. **Use JSON files** for complex structured data — write the input to a file and pass the filename.
 
 ### Secret Management
-Tools often require API keys or credentials. **Never hardcode secrets in `skill.yaml` or `SKILL.md`.**
+Tools often require API keys or credentials. **Never hardcode secrets in `skill.package.yml` or `SKILL.md`.**
 
 **Best Practices:**
 

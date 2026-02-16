@@ -359,5 +359,12 @@ export function isValidTimeout(timeout: string): boolean {
   return GO_DURATION_REGEX.test(timeout);
 }
 
+/**
+ * Check if a tool name is org-scoped (starts with @)
+ */
+export function isOrgScoped(name: string): boolean {
+  return name.startsWith("@");
+}
+
 // Export the schema for external use
 export { ToolManifestSchema };

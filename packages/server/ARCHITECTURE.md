@@ -237,7 +237,7 @@ bundles/
 Each bundle is a `.tar.gz` containing:
 ```
 tool-name-version/
-├── skill.yaml        # or SKILL.md
+├── skill.package.yml        # or SKILL.md
 ├── src/              # Tool source code
 ├── package.json      # If applicable
 └── README.md         # Documentation

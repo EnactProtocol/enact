@@ -4,7 +4,7 @@ A verified, portable way to define, discover, and safely run **AI-executable too
 
 Think **npm for AI tools**—publish once, run anywhere, with cryptographic verification and deterministic execution.
 
-Each tool is a folder containing a `SKILL.md` (agent-facing documentation) and a `skill.yaml` (execution metadata). This two-file format aligns with the [Agent Skills standard](https://agentskills.io).
+Each tool is a folder containing a `SKILL.md` (agent-facing documentation) and a `skill.package.yml` (execution metadata). This two-file format aligns with the [Agent Skills standard](https://agentskills.io).
 
 > **Note:** For backwards compatibility, Enact also recognizes `enact.md`, `enact.yaml`, and `enact.yml`.
 
@@ -42,7 +42,7 @@ Your username becomes your namespace (e.g., username `alice` can publish to `ali
 
 ### 3. Create a tool
 
-Create a `SKILL.md` with documentation and a `skill.yaml` with execution metadata:
+Create a `SKILL.md` with documentation and a `skill.package.yml` with execution metadata:
 
 **SKILL.md:**
 ```markdown
@@ -57,7 +57,7 @@ A simple tool that greets users by name.
 Provide a `name` parameter to get a personalized greeting.
 ```
 
-**skill.yaml:**
+**skill.package.yml:**
 ```yaml
 enact: "2.0.0"
 name: alice/utils/greeter
@@ -78,7 +78,7 @@ enact run . --args '{"name":"World"}'
 
 For tools that need compilation or dependency installation, use `hooks.build`:
 
-**skill.yaml:**
+**skill.package.yml:**
 ```yaml
 enact: "2.0.0"
 name: alice/utils/hello-rust
@@ -181,7 +181,7 @@ enact install
 
 ## Running Tools
 
-**Run a script defined in skill.yaml:**
+**Run a script defined in skill.package.yml:**
 
 ```bash
 enact run alice/utils/greeter --args '{"name":"Alice"}'

@@ -3,7 +3,7 @@
  *
  * Handles parsing of:
  * - SKILL.md files (YAML frontmatter + Markdown body) - primary format
- * - skill.yaml/yml files (pure YAML) - package manifest
+ * - skill.package.yml/yml files (pure YAML) - package manifest
  * - enact.yaml/yml files (pure YAML) - legacy format
  * - enact.md files (YAML frontmatter + Markdown body) - legacy format
  */

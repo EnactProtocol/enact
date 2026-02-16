@@ -262,11 +262,11 @@ If you want to share your own tools:
 ### 1. Create a tool
 
 Create a directory with:
-- `skill.yaml` - Package manifest
+- `skill.package.yml` - Package manifest
 - `Dockerfile` - Container definition
 - Source code and dependencies
 
-Example `skill.yaml`:
+Example `skill.package.yml`:
 
 ```yaml
 name: username/my-tool

@@ -20,12 +20,12 @@ Tools use a two-file model:
 
 ```
 my-tool/
-├── skill.yaml   # Technical manifest (execution config)
+├── skill.package.yml   # Technical manifest (execution config)
 ├── SKILL.md     # Agent-facing documentation
 └── main.py      # Your code (any language)
 ```
 
-## skill.yaml Template
+## skill.package.yml Template
 
 ```yaml
 enact: "2.0.0"
@@ -162,7 +162,7 @@ Access in code via environment variable: `os.environ['API_KEY']`
 ```bash
 # 1. Create
 mkdir my-tool && cd my-tool
-# Create skill.yaml, SKILL.md, and source files
+# Create skill.package.yml, SKILL.md, and source files
 
 # 2. Test
 enact run . --input "test=value"

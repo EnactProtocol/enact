@@ -139,7 +139,7 @@ When a tool runs, environment variables are resolved in this order:
 
 1. **Local** - `.enact/.env` in the project directory
 2. **Global** - `~/.enact/.env`
-3. **Manifest defaults** - Default values from `skill.yaml`
+3. **Manifest defaults** - Default values from `skill.package.yml`
 
 ## Secret Namespaces
 

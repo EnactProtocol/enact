@@ -304,6 +304,16 @@ export class EnactApiClient {
   }
 
   /**
+   * PATCH request
+   */
+  async patch<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
+    return this.request<T>("PATCH", path, {
+      body,
+      contentType: "application/json",
+    });
+  }
+
+  /**
    * DELETE request
    */
   async delete<T>(path: string): Promise<ApiResponse<T>> {

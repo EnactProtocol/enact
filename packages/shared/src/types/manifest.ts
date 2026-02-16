@@ -1,6 +1,6 @@
 /**
  * TypeScript types for Enact tool manifests
- * These types define the structure of SKILL.md (and skill.yaml/legacy enact.yaml/enact.md) frontmatter
+ * These types define the structure of SKILL.md (and skill.package.yml/legacy enact.yaml/enact.md) frontmatter
  */
 
 import type { JSONSchema7 } from "json-schema";
@@ -104,7 +104,7 @@ export interface ToolExample {
 
 /**
  * Complete tool manifest structure
- * This represents the YAML frontmatter in SKILL.md (or skill.yaml/legacy enact.md/enact.yaml)
+ * This represents the YAML frontmatter in SKILL.md (or skill.package.yml/legacy enact.md/enact.yaml)
  */
 export interface ToolManifest {
   // ==================== Required Fields ====================
@@ -310,12 +310,13 @@ export interface ToolResolution {
 /**
  * Supported manifest file names
  * SKILL.md is the primary format (aligned with Anthropic Agent Skills)
- * skill.yaml/yml is the package manifest
+ * skill.package.yml/yml is the package manifest
  * enact.md/yaml/yml are supported for backwards compatibility
  */
 export const MANIFEST_FILES = [
   "SKILL.md",
-  "skill.yaml",
+  "skill.package.yaml",
+  "skill.package.yml",
   "skill.yml",
   "enact.md",
   "enact.yaml",

@@ -310,7 +310,7 @@ describe("manifest types", () => {
         },
         sourceDir: "/home/user/.enact/tools/org/tool",
         location: "user",
-        manifestPath: "/home/user/.enact/tools/org/tool/skill.yaml",
+        manifestPath: "/home/user/.enact/tools/org/tool/skill.package.yml",
         version: "1.0.0",
       };
 
@@ -332,7 +332,7 @@ describe("manifest types", () => {
           manifest: { name: "test", description: "test" },
           sourceDir: "/test",
           location: loc,
-          manifestPath: "/test/skill.yaml",
+          manifestPath: "/test/skill.package.yml",
         };
         expect(resolution.location).toBe(loc);
       }
@@ -342,12 +342,13 @@ describe("manifest types", () => {
   describe("constants", () => {
     test("MANIFEST_FILES contains expected files", () => {
       expect(MANIFEST_FILES).toContain("SKILL.md");
-      expect(MANIFEST_FILES).toContain("skill.yaml");
+      expect(MANIFEST_FILES).toContain("skill.package.yaml");
+      expect(MANIFEST_FILES).toContain("skill.package.yml");
       expect(MANIFEST_FILES).toContain("skill.yml");
       expect(MANIFEST_FILES).toContain("enact.md");
       expect(MANIFEST_FILES).toContain("enact.yaml");
       expect(MANIFEST_FILES).toContain("enact.yml");
-      expect(MANIFEST_FILES.length).toBe(6);
+      expect(MANIFEST_FILES.length).toBe(7);
     });
 
     test("PACKAGE_MANIFEST_FILE is correct", () => {

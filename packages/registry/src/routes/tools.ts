@@ -543,6 +543,48 @@ tools.post("/:name{.+}/versions", async (c) => {
   const name = c.req.param("name");
   const db = getDatabase();
 
+  // Enforce namespace ownership for org-scoped tools (only when auth is active)
+  let orgId: string | null = null;
+  const namespace = name.split("/")[0] ?? "";
+  if (apiKey && namespace.startsWith("@")) {
+    const orgName = namespace.substring(1);
+    const org = db.prepare("SELECT id FROM organizations WHERE name = ?").get(orgName) as
+      | { id: string }
+      | undefined;
+    if (!org) {
+      return c.json(
+        { error: { code: "ORG_NOT_FOUND", message: `Organization "${orgName}" not found` } },
+        404
+      );
+    }
+    if (publisherId) {
+      const membership = db
+        .prepare("SELECT role FROM org_members WHERE org_id = ? AND user_id = ?")
+        .get(org.id, publisherId) as { role: string } | undefined;
+      if (!membership) {
+        return c.json(
+          {
+            error: {
+              code: "NAMESPACE_MISMATCH",
+              message: `You must be a member of the "${orgName}" organization to publish under the "@${orgName}" namespace.`,
+            },
+          },
+          403
+        );
+      }
+    }
+    orgId = org.id;
+  } else if (namespace.startsWith("@")) {
+    // In open mode, still associate with org if it exists
+    const orgName = namespace.substring(1);
+    const org = db.prepare("SELECT id FROM organizations WHERE name = ?").get(orgName) as
+      | { id: string }
+      | undefined;
+    if (org) {
+      orgId = org.id;
+    }
+  }
+
   const contentType = c.req.header("Content-Type") ?? "";
   let manifestObj: Record<string, unknown>;
   let bundleData: Buffer;
@@ -612,11 +654,12 @@ tools.post("/:name{.+}/versions", async (c) => {
     const tags = JSON.stringify(Array.isArray(manifestObj.tags) ? manifestObj.tags : []);
 
     db.prepare(
-      `INSERT INTO tools (id, owner_id, name, short_name, description, license, tags, repository_url, homepage_url, visibility)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO tools (id, owner_id, org_id, name, short_name, description, license, tags, repository_url, homepage_url, visibility)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       toolId,
       publisherId,
+      orgId,
       name,
       shortName,
       (manifestObj.description as string) ?? null,

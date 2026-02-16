@@ -281,7 +281,8 @@ dist   `;
       });
 
       test("allows manifest files", () => {
-        expect(shouldIgnore("skill.yaml", "skill.yaml")).toBe(false);
+        expect(shouldIgnore("skill.package.yaml", "skill.package.yaml")).toBe(false);
+        expect(shouldIgnore("skill.package.yml", "skill.package.yml")).toBe(false);
         expect(shouldIgnore("skill.yml", "skill.yml")).toBe(false);
         expect(shouldIgnore("enact.md", "enact.md")).toBe(false);
         expect(shouldIgnore("enact.yaml", "enact.yaml")).toBe(false);

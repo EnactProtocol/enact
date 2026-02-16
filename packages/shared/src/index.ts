@@ -97,6 +97,16 @@ export type {
 
 export { DEFAULT_INPUT_SCHEMA, getEffectiveInputSchema } from "./types/actions";
 
+// Organization types
+export type {
+  OrgRole,
+  Organization,
+  OrgMember,
+  OrgInfo,
+} from "./types/organization";
+
+export { isOrgScoped } from "./types/organization";
+
 // Manifest parsing, validation, and loading
 export {
   // Parser

@@ -191,14 +191,14 @@ Enact uses the \`SKILL.md\` manifest format—a superset of the open [Agent Skil
 - \`name\`, \`description\` (required)
 - \`license\`, \`compatibility\`, \`metadata\` (optional)
 
-**Enact extensions (in \`skill.yaml\`):**
+**Enact extensions (in \`skill.package.yml\`):**
 - \`version\` — Semantic versioning for the tool
 - \`scripts\` — Named executable commands with \`{{param}}\` template substitution
 - \`from:\` — Base Docker image (e.g., \`node:18-alpine\`, \`python:3.12-slim\`)
 - \`hooks.build:\` — Build steps run once and cached (compile code, install deps)
 - \`timeout:\`, \`env:\` — Execution controls and environment
 
-This combination is powerful: **the SKILL.md defines what the tool does (for AI) and the skill.yaml defines how to run it (for containers)**. Enact handles building the container, injecting inputs as environment variables or files, capturing stdout as JSON, and exposing everything via [Model Context Protocol (MCP)](https://modelcontextprotocol.io/).
+This combination is powerful: **the SKILL.md defines what the tool does (for AI) and the skill.package.yml defines how to run it (for containers)**. Enact handles building the container, injecting inputs as environment variables or files, capturing stdout as JSON, and exposing everything via [Model Context Protocol (MCP)](https://modelcontextprotocol.io/).
 
 The result? **Any language with an interpreter can become an MCP tool**. Even Brainfuck.
 
@@ -816,7 +816,7 @@ Every one of these is a silent failure waiting to happen.
 The solution is not to write more defensive shell scripts. We already know this from years of experience with DevOps and scripting.
 It's to **stop depending on the host environment entirely**.
 
-This is where Enact comes in. Enact extends the [SKILL.md standard](https://github.com/anthropics/skills/issues/157) with a \`skill.yaml\` file for containerized execution (\`from\`, \`hooks.build\`, and \`scripts\`) so skills can define their own runtime. Think of it as npm for AI: a registry to share tools, plus a runtime to execute them in containers.
+This is where Enact comes in. Enact extends the [SKILL.md standard](https://github.com/anthropics/skills/issues/157) with a \`skill.package.yml\` file for containerized execution (\`from\`, \`hooks.build\`, and \`scripts\`) so skills can define their own runtime. Think of it as npm for AI: a registry to share tools, plus a runtime to execute them in containers.
 
 Instead of skills being just instructions that hope the right tools exist, an Enact skill specifies everything needed to run. We just published \`enact/firecrawl\`, a full-featured Firecrawl tool that handles scraping, crawling, searching, and AI-powered extraction:
 
@@ -1182,7 +1182,7 @@ Every one of these is a silent failure waiting to happen.
 
 The solution is not to write more defensive shell scripts. It's to **stop depending on the host environment entirely**.
 
-This is where Enact comes in. Enact extends the [SKILL.md standard](https://github.com/anthropics/skills/issues/157) with a \`skill.yaml\` file for containerized execution (\`from\`, \`hooks.build\`, and \`scripts\`) so skills can define their own runtime. Think of it as npm for AI: a registry to share tools, plus a runtime to execute them in containers.
+This is where Enact comes in. Enact extends the [SKILL.md standard](https://github.com/anthropics/skills/issues/157) with a \`skill.package.yml\` file for containerized execution (\`from\`, \`hooks.build\`, and \`scripts\`) so skills can define their own runtime. Think of it as npm for AI: a registry to share tools, plus a runtime to execute them in containers.
 
 Instead of skills being just instructions that hope the right tools exist, an Enact skill specifies everything needed to run. We just published \`enact/firecrawl\`, a full-featured Firecrawl tool that handles scraping, crawling, searching, and AI-powered extraction:
 
@@ -1526,7 +1526,7 @@ secret-scanner/
     └── scan.py        # Implementation code
 \`\`\`
 
-The \`skill.yaml\` file bundles the **contract** (the MCP schema) with the **execution config** (the container image, build steps, and scripts):
+The \`skill.package.yml\` file bundles the **contract** (the MCP schema) with the **execution config** (the container image, build steps, and scripts):
 
 \`\`\`yaml
 ---

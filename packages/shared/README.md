@@ -5,7 +5,7 @@ Core business logic and utilities for Enact.
 ## Overview
 
 This package provides:
-- Manifest parsing (skill.yaml, SKILL.md, and legacy enact.yaml/enact.md)
+- Manifest parsing (skill.package.yml, SKILL.md, and legacy enact.yaml/enact.md)
 - Configuration management (~/.enact/config.yaml)
 - Environment variable management (package-scoped)
 - Tool resolution (local, user-level, registry)

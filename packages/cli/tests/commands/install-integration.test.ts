@@ -46,7 +46,7 @@ describe("install integration", () => {
     mkdirSync(join(TEST_GLOBAL_HOME, ".enact", "cache"), { recursive: true });
 
     // Create sample tool source
-    writeFileSync(join(TEST_TOOL_SRC, "skill.yaml"), SAMPLE_MANIFEST);
+    writeFileSync(join(TEST_TOOL_SRC, "skill.package.yml"), SAMPLE_MANIFEST);
   });
 
   beforeEach(() => {
@@ -92,7 +92,7 @@ describe("install integration", () => {
 
       // Verify installation
       expect(existsSync(destPath)).toBe(true);
-      expect(existsSync(join(destPath, "skill.yaml"))).toBe(true);
+      expect(existsSync(join(destPath, "skill.package.yml"))).toBe(true);
 
       // Verify manifest can be loaded from destination
       const installedManifest = loadManifestFromDir(destPath);
@@ -118,7 +118,7 @@ describe("install integration", () => {
       // Create v2 source
       const v2Source = join(TEST_BASE, "source-tool-v2");
       mkdirSync(v2Source, { recursive: true });
-      writeFileSync(join(v2Source, "skill.yaml"), SAMPLE_MANIFEST_V2);
+      writeFileSync(join(v2Source, "skill.package.yml"), SAMPLE_MANIFEST_V2);
 
       // Simulate force overwrite
       rmSync(destPath, { recursive: true, force: true });
@@ -240,7 +240,7 @@ describe("install integration", () => {
       const cachePath = join(TEST_GLOBAL_HOME, ".enact", "cache", "test", "cached-tool", "v1.0.0");
       mkdirSync(cachePath, { recursive: true });
       writeFileSync(
-        join(cachePath, "skill.yaml"),
+        join(cachePath, "skill.package.yml"),
         `
 name: test/cached-tool
 version: 1.0.0
@@ -251,7 +251,7 @@ command: echo "cached"
 
       // The resolver should be able to find this tool once it's registered
       // Note: Full resolver testing is in resolver.test.ts
-      expect(existsSync(join(cachePath, "skill.yaml"))).toBe(true);
+      expect(existsSync(join(cachePath, "skill.package.yml"))).toBe(true);
     });
   });
 });

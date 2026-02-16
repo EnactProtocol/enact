@@ -25,7 +25,7 @@ describe("tool resolver", () => {
 
     // Create a project-level tool
     writeFileSync(
-      join(PROJECT_ENACT_DIR, "tools", "test", "project-tool", "skill.yaml"),
+      join(PROJECT_ENACT_DIR, "tools", "test", "project-tool", "skill.package.yml"),
       `
 name: test/project-tool
 description: A project-level test tool
@@ -37,7 +37,7 @@ version: "1.0.0"
     // Create a direct tool directory for path-based resolution
     mkdirSync(join(TEST_DIR, "direct-tool"), { recursive: true });
     writeFileSync(
-      join(TEST_DIR, "direct-tool", "skill.yaml"),
+      join(TEST_DIR, "direct-tool", "skill.package.yml"),
       `
 name: test/direct-tool
 description: A directly referenced tool
@@ -91,8 +91,8 @@ Documentation here.
         expect(toolNameToPath("acme/greeter")).toBe("acme/greeter");
       });
 
-      test("strips @ prefix for disk paths", () => {
-        expect(toolNameToPath("@acme/greeter")).toBe("acme/greeter");
+      test("preserves @ prefix for npm-style disk layout", () => {
+        expect(toolNameToPath("@acme/greeter")).toBe("@acme/greeter");
       });
 
       test("normalizes backslashes", () => {
@@ -146,7 +146,7 @@ Documentation here.
     });
 
     test("resolves tool from manifest file directly", () => {
-      const manifestPath = join(TEST_DIR, "direct-tool", "skill.yaml");
+      const manifestPath = join(TEST_DIR, "direct-tool", "skill.package.yml");
       const result = resolveToolFromPath(manifestPath);
 
       expect(result.manifest.name).toBe("test/direct-tool");

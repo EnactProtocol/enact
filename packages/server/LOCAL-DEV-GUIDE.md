@@ -205,7 +205,7 @@ In production, you can only publish under your own username.
 
 You're trying to publish a version that already exists.
 
-**Fix**: Bump the version in your `skill.yaml` manifest.
+**Fix**: Bump the version in your `skill.package.yml` manifest.
 
 ### Edge functions not picking up env changes
 

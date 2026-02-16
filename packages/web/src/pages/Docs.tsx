@@ -1063,20 +1063,20 @@ function ManifestReference() {
         <h1 className="text-3xl font-bold text-gray-600 mb-2">Skill Package Reference</h1>
         <p className="text-lg text-gray-500">
           Each skill package has two files:{" "}
-          <code className="bg-teal-100 text-teal-600 px-2 py-0.5 rounded">skill.yaml</code> for
-          execution config and{" "}
+          <code className="bg-teal-100 text-teal-600 px-2 py-0.5 rounded">skill.package.yml</code>{" "}
+          for execution config and{" "}
           <code className="bg-pink-100 text-pink-600 px-2 py-0.5 rounded">SKILL.md</code> for
           agent-facing documentation.
         </p>
       </div>
 
-      {/* skill.yaml Example */}
+      {/* skill.package.yml Example */}
       <div className="bg-gray-800 rounded-2xl overflow-hidden shadow-xl">
         <div className="bg-gray-700 px-4 py-2 border-b border-gray-600 flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-brand-red" />
           <div className="w-3 h-3 rounded-full bg-brand-yellow" />
           <div className="w-3 h-3 rounded-full bg-brand-green" />
-          <span className="text-gray-400 text-sm ml-2 font-mono">skill.yaml</span>
+          <span className="text-gray-400 text-sm ml-2 font-mono">skill.package.yml</span>
         </div>
         <pre className="p-6 text-sm overflow-x-auto">
           <code className="text-gray-100">
@@ -1137,7 +1137,7 @@ enact run owner/category/tool:process --args '{"input": "hello"}'
         </pre>
       </div>
 
-      {/* skill.yaml Field Reference */}
+      {/* skill.package.yml Field Reference */}
       <div className="grid gap-6">
         <div>
           <h2 className="text-xl font-semibold text-gray-600 mb-4 flex items-center gap-2">

@@ -333,7 +333,7 @@ export default function Home() {
               </div>
               <h2 className="text-3xl font-bold mb-4 text-gray-6">Simple Skill Packages</h2>
               <p className="text-gray-5 max-w-2xl mx-auto">
-                Each skill package is just a SKILL.md, a skill.yaml, and your code—that's it.
+                Each skill package is just a SKILL.md, a skill.package.yml, and your code—that's it.
               </p>
             </div>
 
@@ -352,7 +352,7 @@ export default function Home() {
                     color: "text-teal-600",
                   },
                   {
-                    name: "skill.yaml",
+                    name: "skill.package.yml",
                     type: "file",
                     depth: 1,
                     highlight: true,
@@ -375,7 +375,7 @@ export default function Home() {
                     color: "text-teal-600",
                   },
                   {
-                    name: "skill.yaml",
+                    name: "skill.package.yml",
                     type: "file",
                     depth: 1,
                     highlight: true,
@@ -397,7 +397,7 @@ export default function Home() {
                     highlight: true,
                     color: "text-teal-600",
                   },
-                  { name: "skill.yaml", type: "file", depth: 1, highlight: true },
+                  { name: "skill.package.yml", type: "file", depth: 1, highlight: true },
                   { name: "src", type: "folder", depth: 1 },
                   { name: "extractors", type: "folder", depth: 2 },
                   { name: "utils", type: "folder", depth: 2 },
@@ -411,7 +411,9 @@ export default function Home() {
                 The{" "}
                 <code className="bg-gray-100 px-2 py-1 rounded font-mono text-sm">SKILL.md</code>{" "}
                 defines your tool for AI agents, and{" "}
-                <code className="bg-gray-100 px-2 py-1 rounded font-mono text-sm">skill.yaml</code>{" "}
+                <code className="bg-gray-100 px-2 py-1 rounded font-mono text-sm">
+                  skill.package.yml
+                </code>{" "}
                 configures its runtime and execution.
               </p>
               <Link

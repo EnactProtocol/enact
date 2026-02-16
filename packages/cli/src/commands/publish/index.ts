@@ -320,7 +320,10 @@ async function publishHandler(
     const currentUsername = await getCurrentUsername();
     if (currentUsername) {
       const toolNamespace = extractNamespace(toolName);
-      if (toolNamespace !== currentUsername) {
+      if (toolNamespace.startsWith("@")) {
+        // Org-scoped tool — server will enforce org membership
+        dim(`Publishing to organization namespace "${toolNamespace}"...`);
+      } else if (toolNamespace !== currentUsername) {
         error(
           `Namespace mismatch: Tool namespace "${toolNamespace}" does not match your username "${currentUsername}".`
         );

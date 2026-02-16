@@ -3,12 +3,19 @@
  */
 
 /**
- * Validate tool name format (namespace/path)
+ * Validate tool name format (namespace/path or @org/tool)
  */
 export function isValidToolName(name: string): boolean {
-  // Format: username/path/to/tool
-  // Example: alice/utils/greeter
-  return /^[a-z0-9_-]+(?:\/[a-z0-9_-]+)+$/.test(name);
+  // Format: username/path/to/tool or @org/tool
+  // Examples: alice/utils/greeter, @anthropic/my-tool
+  return /^@?[a-z0-9_-]+(?:\/[a-z0-9_-]+)+$/.test(name);
+}
+
+/**
+ * Check if a tool name is org-scoped (starts with @)
+ */
+export function isOrgScoped(name: string): boolean {
+  return name.startsWith("@");
 }
 
 /**

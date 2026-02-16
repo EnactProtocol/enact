@@ -108,3 +108,17 @@ export {
   userTrustsAuditor,
   getMyTrustedAuditors,
 } from "./trust";
+
+// =============================================================================
+// Organizations
+// =============================================================================
+
+export {
+  createOrg,
+  getOrg,
+  listOrgMembers,
+  addOrgMember,
+  removeOrgMember,
+  updateOrgMemberRole,
+} from "./organizations";
+export type { CreateOrgOptions, AddOrgMemberOptions } from "./organizations";

@@ -126,7 +126,7 @@ describe("E2E: Tool Installation Flow", () => {
     expect(manifest.name).toBe("test/greeter");
     expect(existsSync(destPath)).toBe(true);
     expect(
-      existsSync(join(destPath, "enact.yaml")) || existsSync(join(destPath, "skill.yaml"))
+      existsSync(join(destPath, "enact.yaml")) || existsSync(join(destPath, "skill.package.yml"))
     ).toBe(true);
 
     // Verify installed manifest can be loaded

@@ -15,19 +15,75 @@ AI agents shouldn't come preloaded with every tool they might need. They should 
 - **Trust** — Cryptographic signing and verification on every package.
 - **Portable Execution** — Skills declare what they need. You decide where they run.
 
+## Where Enact Sits in the Stack
+
+Enact is not just a registry. It is a **policy-enforcing execution layer** for AI agents.
+
+```
+Model (Claude, GPT, etc.)
+    ↓
+Host (Claude Code, Cursor, VS Code, etc.)
+    ↓
+Tool Call (MCP or CLI)
+    ↓
+Enact Runtime
+    ├── Package resolution
+    ├── Signature verification (Sigstore)
+    ├── Trust policy enforcement
+    ├── Backend selection (local / docker / remote)
+    └── Secret injection
+    ↓
+Isolated execution
+```
+
+The model decides *what* to run. Enact decides *whether and how* it runs.
+
+### Why This Matters
+
+**Without Enact:**
+- Tools are pre-wired
+- Trust is implicit
+- Execution environment is ad hoc
+- Secrets handling is custom
+
+**With Enact:**
+- Skills are signed and verified
+- Trust policies are configurable
+- Execution is portable and isolated
+- Secrets never pass through the agent
+- The runtime enforces policy — not the model
+
+Enact shifts control from prompt discipline to **runtime guarantees**.
+
+### Not Just MCP
+
+Enact works:
+- Via **MCP** (structured tool calls)
+- Via **CLI** invocation
+- Via **SDK**
+- Against **self-hosted registries**
+
+MCP is the transport. Enact is the execution authority.
+
+### A Better Mental Model
+
+Enact is to AI agents what `apt` + `Docker` + `Sigstore` are to servers — but unified behind a single agent-native interface. It's a package manager, trust layer, and execution engine designed for autonomous systems.
+
+> Agents should request capabilities. The runtime should enforce trust. Enact makes that boundary explicit.
+
 ## What's a Skill Package?
 
-A skill package is a directory with two key files — `SKILL.md` for agent-facing documentation and `skill.yaml` for package metadata — plus your code:
+A skill package is a directory with two key files — `SKILL.md` for agent-facing documentation and `skill.package.yml` for package metadata — plus your code:
 
 ```
 my-scraper/
 ├── SKILL.md          # Agent-facing documentation
-├── skill.yaml        # Package manifest (identity, execution, secrets)
+├── skill.package.yml        # Package manifest (identity, execution, secrets)
 ├── requirements.txt
 └── scrape.py
 ```
 
-**skill.yaml** defines identity, execution, and secrets:
+**skill.package.yml** defines identity, execution, and secrets:
 
 ```yaml
 enact: "2.0.0"
@@ -177,7 +233,7 @@ When a skill is from a trusted scope, it runs locally. Otherwise, it runs in a c
 
 Secrets are first-class. Skills declare what they need in the manifest — secrets are injected at runtime without being exposed in logs, manifests, or to the agent.
 
-Declare in `skill.yaml`:
+Declare in `skill.package.yml`:
 
 ```yaml
 env:
@@ -217,7 +273,7 @@ Packages are `scope/name`. Scripts within a package are `scope/name:script`.
 ## Documentation
 
 - **[Getting Started](./GETTING-STARTED.md)** — Installation and first skill
-- **[Protocol Spec](./docs/SPEC.md)** — The `skill.yaml` format and execution semantics
+- **[Protocol Spec](./docs/SPEC.md)** — The `skill.package.yml` format and execution semantics
 - **[API Reference](./docs/API.md)** — Registry API
 - **[Trust & Signing](./docs/TRUST.md)** — Sigstore-based verification
 - **[Dev Setup](./DEV-SETUP.md)** — Contributing to Enact

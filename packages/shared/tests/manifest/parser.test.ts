@@ -260,10 +260,11 @@ Body here.
 
   describe("detectFormat", () => {
     test("detects .yaml extension", () => {
-      expect(detectFormat("skill.yaml")).toBe("yaml");
+      expect(detectFormat("skill.package.yaml")).toBe("yaml");
+      expect(detectFormat("skill.package.yml")).toBe("yaml");
       expect(detectFormat("enact.yaml")).toBe("yaml");
       expect(detectFormat("tool.yaml")).toBe("yaml");
-      expect(detectFormat("/path/to/skill.yaml")).toBe("yaml");
+      expect(detectFormat("/path/to/skill.package.yml")).toBe("yaml");
     });
 
     test("detects .yml extension", () => {
@@ -298,7 +299,7 @@ Body here.
 name: org/tool
 description: Test
 `;
-      const result = parseManifestAuto(yaml, "skill.yaml");
+      const result = parseManifestAuto(yaml, "skill.package.yml");
       expect(result.manifest.name).toBe("org/tool");
       expect(result.format).toBe("yaml");
     });

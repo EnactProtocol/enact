@@ -12,6 +12,7 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { closeDatabase, initDatabase } from "./db.js";
 import { auth } from "./routes/auth.js";
+import { orgs } from "./routes/orgs.js";
 import { tools } from "./routes/tools.js";
 import { initStorage } from "./storage.js";
 
@@ -37,6 +38,7 @@ export function createApp(dataDir: string): Hono {
 
   // Mount routes
   app.route("/tools", tools);
+  app.route("/orgs", orgs);
   app.route("/auth", auth);
 
   return app;

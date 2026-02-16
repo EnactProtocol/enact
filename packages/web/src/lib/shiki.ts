@@ -100,7 +100,8 @@ export function getFileIcon(filePath: string): string {
   if (
     filename.endsWith(".enact.yaml") ||
     filename.endsWith(".enact.yml") ||
-    filename === "skill.yaml" ||
+    filename === "skill.package.yaml" ||
+    filename === "skill.package.yml" ||
     filename === "skill.yml"
   )
     return "enact";

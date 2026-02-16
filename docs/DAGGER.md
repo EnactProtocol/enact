@@ -11,11 +11,11 @@ Enact's promise of "publish once, run anywhere" relies on Dagger's core capabili
 1.  **Abstract the Environment:** Tools run in containers defined by code, ensuring they work identically on macOS, Linux, and Windows.
 2.  **Guarantee Determinism:** Dagger uses a Directed Acyclic Graph (DAG) where every step is content-addressed. If the inputs (files, args, container hash) are the same, the output is guaranteed to be the same.
 3.  **Smart Caching:** Dagger caches every operation. If you run a tool twice with the same inputs, the second run is instant because Dagger returns the cached result.
-4.  **Programmatic Control:** Unlike static Dockerfiles, Dagger allows Enact to dynamically construct execution pipelines based on the `skill.yaml` configuration.
+4.  **Programmatic Control:** Unlike static Dockerfiles, Dagger allows Enact to dynamically construct execution pipelines based on the `skill.package.yml` configuration.
 
 ## How Enact Maps to Dagger
 
-When you execute `enact run tool`, the CLI translates the `skill.yaml` manifest into a Dagger pipeline on the fly.
+When you execute `enact run tool`, the CLI translates the `skill.package.yml` manifest into a Dagger pipeline on the fly.
 
 | Enact Manifest Field | Dagger API Equivalent | Description |
 | :--- | :--- | :--- |
@@ -27,7 +27,7 @@ When you execute `enact run tool`, the CLI translates the `skill.yaml` manifest 
 
 ## Execution Flow
 
-1.  **Parse:** The Enact CLI reads `skill.yaml` and validates the input arguments against the script's `inputSchema` (or auto-inferred from `{{param}}` patterns).
+1.  **Parse:** The Enact CLI reads `skill.package.yml` and validates the input arguments against the script's `inputSchema` (or auto-inferred from `{{param}}` patterns).
 2.  **Connect:** Enact connects to the local Dagger Engine (automatically starting it if necessary).
 3.  **Construct:** A Dagger graph is built programmatically:
     *   **Base:** Pull the image specified in `from`.

@@ -81,10 +81,18 @@ export default function Tool() {
   });
 
   // Find the documentation file with explicit priority order
-  // SKILL.md is preferred, then skill.yaml, then legacy formats as last resort
+  // SKILL.md is preferred, then skill.package.yml, then legacy formats as last resort
   const enactFile = (() => {
     if (!filesData) return undefined;
-    const priority = ["SKILL.md", "skill.yaml", "skill.yml", "enact.md", "enact.yaml", "enact.yml"];
+    const priority = [
+      "SKILL.md",
+      "skill.package.yaml",
+      "skill.package.yml",
+      "skill.yml",
+      "enact.md",
+      "enact.yaml",
+      "enact.yml",
+    ];
     for (const name of priority) {
       const match = filesData.files.find((f) => f.path === name);
       if (match) return match;
