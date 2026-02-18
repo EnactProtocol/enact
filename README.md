@@ -1,23 +1,60 @@
 # Enact
 
+**Runtime and Registry for Agent Skills**
+
 [![Discord](https://img.shields.io/discord/1312642330502627348?color=5865F2&logo=discord&logoColor=white&label=Discord)](https://discord.com/invite/mMfxvMtHyS)
 
-A package manager for agent skills. See the registry: **[enact.tools](https://enact.tools)**
+Discover, verify, and execute capabilities on demand.
 
-Enact is a skills registry with containerized execution, cryptographic verification, and native MCP support. Publish once, run anywhere — securely.
+Enact packages tools as portable skill bundles and runs them securely — locally, in containers, or remotely — with policy enforcement and cryptographic verification.
 
-## Why Enact
+**[Browse Skills](https://enact.tools)** · **[Get Started](./GETTING-STARTED.md)**
 
-AI agents shouldn't come preloaded with every tool they might need. They should discover capabilities at runtime — search for what they need, read the docs, and run it. Enact makes that possible.
+---
 
-- **Self-hosted** — Run your own registry with a single command. No external dependencies.
-- **Semantic Discovery** — Skills are indexed with vector embeddings. Agents find what they need by capability, not just keyword matches.
-- **Trust** — Cryptographic signing and verification on every package.
-- **Portable Execution** — Skills declare what they need. You decide where they run.
+## Built for Autonomous Agents
 
-## Where Enact Sits in the Stack
+Agents shouldn't ship with every tool preinstalled. They should acquire capabilities when needed.
 
-Enact is not just a registry. It is a **policy-enforcing execution layer** for AI agents.
+**Discover by capability** — Search the registry for skills that solve the task:
+
+```bash
+enact search "resize images"
+```
+
+**Run instantly** — Execute without manual setup or environment wiring:
+
+```bash
+enact run alice/resizer:resize -a '{"width": 800}'
+```
+
+**Know what's available** — Agents and developers can inspect installed capabilities:
+
+```bash
+enact list
+```
+
+---
+
+## A Runtime — Not Just a Registry
+
+Traditional package managers deliver code to developers. Enact delivers capabilities to autonomous systems with guarantees.
+
+| Without Enact | With Enact |
+|---|---|
+| Manual integration | Drop-in execution |
+| Implicit trust | Verified signatures |
+| Environment drift | Reproducible runtime |
+| Secrets in code | Secure injection |
+| Static installs | On-demand capabilities |
+
+> npx launches code. A runtime governs execution.
+
+---
+
+## Policy-Enforced Execution
+
+The model decides what to run. Enact decides **whether and how** it runs.
 
 ```
 Model (Claude, GPT, etc.)
@@ -27,60 +64,54 @@ Host (Claude Code, Cursor, VS Code, etc.)
 Tool Call (MCP or CLI)
     ↓
 Enact Runtime
-    ├── Package resolution
     ├── Signature verification (Sigstore)
     ├── Trust policy enforcement
     ├── Backend selection (local / docker / remote)
-    └── Secret injection
-    ↓
-Isolated execution
+    ├── Secret injection
+    └── Isolated execution
 ```
 
-The model decides *what* to run. Enact decides *whether and how* it runs.
+Before execution, Enact:
 
-### Why This Matters
+- **Verifies signatures** via [Sigstore](https://www.sigstore.dev/)
+- **Applies trust policies** per your configuration
+- **Selects an execution backend** based on policy and environment
+- **Injects secrets securely** without exposing them to the agent
+- **Runs in isolation** when needed
 
-**Without Enact:**
-- Tools are pre-wired
-- Trust is implicit
-- Execution environment is ad hoc
-- Secrets handling is custom
+---
 
-**With Enact:**
-- Skills are signed and verified
-- Trust policies are configurable
-- Execution is portable and isolated
-- Secrets never pass through the agent
-- The runtime enforces policy — not the model
+## Run Anywhere
 
-Enact shifts control from prompt discipline to **runtime guarantees**.
+Skills are portable across environments. Write once, run anywhere.
 
-### Not Just MCP
+| Backend | When to use |
+|---------|-------------|
+| **Local** | Fast, trusted workflows |
+| **Docker** | Isolation for untrusted code, reproducible environments |
+| **Remote** | No local runtime required |
 
-Enact works:
-- Via **MCP** (structured tool calls)
-- Via **CLI** invocation
-- Via **SDK**
-- Against **self-hosted registries**
+Enact automatically chooses the safest available option based on policy and environment.
 
-MCP is the transport. Enact is the execution authority.
+```yaml
+# ~/.enact/config.yaml
+execution:
+  default: docker
+  fallback: remote
+  trusted_scopes: ["my-org/*"]
+```
 
-### A Better Mental Model
+---
 
-Enact is to AI agents what `apt` + `Docker` + `Sigstore` are to servers — but unified behind a single agent-native interface. It's a package manager, trust layer, and execution engine designed for autonomous systems.
+## Simple Skill Packages
 
-> Agents should request capabilities. The runtime should enforce trust. Enact makes that boundary explicit.
-
-## What's a Skill Package?
-
-A skill package is a directory with two key files — `SKILL.md` for agent-facing documentation and `skill.package.yml` for package metadata — plus your code:
+A skill is just agent-facing documentation, a runtime manifest, and implementation code. No special framework required.
 
 ```
-my-scraper/
-├── SKILL.md          # Agent-facing documentation
-├── skill.package.yml        # Package manifest (identity, execution, secrets)
-├── requirements.txt
-└── scrape.py
+my-skill/
+├── SKILL.md              # Agent-facing documentation
+├── skill.package.yml     # Runtime manifest
+└── code/
 ```
 
 **skill.package.yml** defines identity, execution, and secrets:
@@ -104,41 +135,54 @@ scripts:
   scrape: "python /workspace/scrape.py {{url}}"
 ```
 
-**SKILL.md** teaches the agent how to use it:
+**SKILL.md** teaches the agent how to use the skill — plain markdown, no special syntax.
 
-```markdown
-# Web Scraper
+Package anything from a small script to a full application.
 
-Scrape URLs and convert web pages to clean markdown.
+---
 
-## Usage
+## Built-In Trust
 
-Scrape a single URL:
+Every published skill is cryptographically signed and transparently verified.
 
-  enact run acme/scraper -a '{"url": "https://example.com"}'
+- **Publisher identity validation** — who signed this package
+- **Tamper detection** — the package hasn't been modified since publishing
+- **Transparency logs** — signatures are logged to a public ledger
+- **Configurable trust policies** — enforce, warn, or skip per your needs
 
-Returns the page content as clean markdown.
+```yaml
+# ~/.enact/config.yaml
+trust:
+  policy: enforce
+  auditors: ["my-org"]
 ```
 
-## Quick Start
+Use public registries, private registries, or fully self-hosted deployments.
+
+---
+
+## Secrets
+
+Skills declare what they need in the manifest — secrets are injected at runtime without being exposed in logs, manifests, or to the agent.
+
+```yaml
+# skill.package.yml
+env:
+  FIRECRAWL_API_KEY:
+    secret: true
+```
 
 ```bash
-# Install
-npm install -g @enactprotocol/cli
-
-# Find a tool
-enact search scraper
-
-# Read its documentation
-enact learn enact/firecrawl
-
-# Run it
-enact run enact/firecrawl:scrape -a '{"url": "https://example.com"}'
+enact env set FIRECRAWL_API_KEY fc-your-key --secret --namespace enact
 ```
 
-## MCP Integration
+The skill sees a normal environment variable. The agent never sees the value.
 
-Enact has native [Model Context Protocol](https://modelcontextprotocol.io/) support so AI agents can discover and run tools from the registry.
+---
+
+## Native Agent Integration
+
+Enact integrates with the [Model Context Protocol](https://modelcontextprotocol.io/), allowing AI clients to discover and execute skills dynamically through a standardized interface. No preconfiguration required.
 
 **Setup for Claude Code:**
 
@@ -148,16 +192,19 @@ claude mcp add enact -- npx -y @enactprotocol/mcp-server
 
 Run `enact mcp install` for setup instructions for Claude Desktop, Cursor, VS Code, and other clients.
 
-Once connected, agents get four tools:
+Agents can:
+
+- **Search** for capabilities
+- **Read** documentation
+- **Execute** tools
+- **Install** frequently used skills
 
 | Tool | Description |
 |------|-------------|
-| `enact_search` | Find tools by keyword or capability |
-| `enact_learn` | Read a tool's documentation and usage |
-| `enact_run` | Execute a tool from the registry |
-| `enact_install` | Install a tool for faster subsequent runs |
-
-The agent workflow is: **search → learn → run**. No preloading, no static config. The agent discovers what it needs, when it needs it.
+| `enact_search` | Find skills by keyword or capability |
+| `enact_learn` | Read a skill's documentation and usage |
+| `enact_run` | Execute a skill from the registry |
+| `enact_install` | Cache a skill locally for faster runs |
 
 **Example:**
 
@@ -170,101 +217,77 @@ Agent runs    → enact/firecrawl:scrape with url: "https://anthropic.com"
 Agent summarizes the returned markdown
 ```
 
-## Create a Skill
+---
+
+## CLI
+
+Manage skills from the terminal.
 
 ```bash
-# Scaffold a new skill
-enact init
-
-# Test it locally
-enact run ./
-
-# Login and publish
-enact login
-enact publish
+enact search "pdf parser"      # Find skills
+enact learn alice/parser       # Read docs
+enact run alice/parser:parse   # Execute
+enact install alice/parser     # Cache locally
+enact publish                  # Share your skill
 ```
 
-## Host Your Own Registry
+### Create a Skill
 
 ```bash
-# Start a local registry
-enact serve
+enact init          # Scaffold a new skill
+enact run ./        # Test locally
+enact login         # Authenticate
+enact publish       # Publish to registry
+```
 
-# Or with options
+---
+
+## Self-Host or Use the Public Registry
+
+Run your own registry with a single command, or use the public ecosystem.
+
+```bash
 enact serve --port 8080 --data ./registry-data
 ```
-
-That's it. SQLite + local file storage. No external dependencies. Point your CLI at it:
 
 ```bash
 enact config set registry http://localhost:8080
 ```
 
-Now `enact publish`, `enact search`, and `enact run` all work against your private registry.
+- No external dependencies — SQLite + local file storage
+- Local or private deployments
+- Mirror or curate skills
+- Full control over trust policies
 
-A public registry is available at [enact.tools](https://enact.tools) as a curated starter library you can pull from or mirror.
+A public registry is available at **[enact.tools](https://enact.tools)**.
 
-## Execution
+---
 
-Skills declare what they need. The execution backend is up to you.
+## Why Enact
 
-The same skill works across any backend without changes:
+| | |
+|---|---|
+| **Portable** | Skills run across environments without modification |
+| **Secure by default** | Verification and policy enforcement before execution |
+| **Agent-native** | Designed for dynamic capability discovery |
+| **Flexible** | Works locally, in containers, or remotely |
+| **Open** | Self-host, extend, or integrate into your stack |
 
-| Backend | When to use |
-|---------|-------------|
-| **Local** | Trusted skills, simple scripts, fastest execution |
-| **Docker** | Isolation for untrusted skills, reproducible environments |
-| **Dagger** | Smart local/remote execution with transparent context streaming |
-| **Remote** | No local container runtime, hosted execution |
+---
 
-Configure your default:
+## Get Started
 
-```yaml
-# ~/.enact/config.yaml
-execution:
-  default: docker
-  fallback: remote
-  trusted_scopes: ["my-org/*"]
-```
-
-When a skill is from a trusted scope, it runs locally. Otherwise, it runs in a container. If no container runtime is available, Enact falls back to remote execution transparently.
-
-## Secrets
-
-Secrets are first-class. Skills declare what they need in the manifest — secrets are injected at runtime without being exposed in logs, manifests, or to the agent.
-
-Declare in `skill.package.yml`:
-
-```yaml
-env:
-  FIRECRAWL_API_KEY:
-    secret: true
-```
-
-Configure locally:
+Install the CLI and run your first skill in seconds.
 
 ```bash
-enact env set FIRECRAWL_API_KEY fc-your-key --secret --namespace enact
+npm install -g @enactprotocol/cli
+enact search scraper
+enact run enact/firecrawl:scrape -a '{"url":"https://example.com"}'
 ```
 
-At runtime, secrets are read from local secure storage and injected into the execution environment. The skill sees a normal environment variable. The agent never sees the value.
+**[Read the Docs](./GETTING-STARTED.md)** · **[Browse Skills](https://enact.tools)**
 
-## Trust & Signing
-
-Every published package is cryptographically signed via [Sigstore](https://www.sigstore.dev/). Verification happens automatically — before a skill runs, Enact checks:
-
-- **Publisher identity** — who signed this package
-- **Integrity** — the package hasn't been tampered with since publishing
-- **Transparency** — signatures are logged to a public transparency ledger
-
-Configure trust policies per your environment:
-
-```yaml
-# ~/.enact/config.yaml
-trust:
-  policy: enforce
-  auditors: ["my-org"]
-```
+---
 
 ## Addressing
 

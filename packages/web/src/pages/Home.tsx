@@ -2,21 +2,26 @@ import SearchBar from "@/components/ui/SearchBar";
 import {
   ArrowRight,
   Bot,
+  Check,
   ChevronRight,
+  Cloud,
+  Container,
   Copy,
   Download,
   File,
   Folder,
   FolderOpen,
   Globe,
+  Laptop,
+  Layers,
   List,
+  Lock,
   Package,
   Play,
   Plug,
   Search,
   Shield,
   Terminal,
-  Zap,
 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -30,11 +35,12 @@ export default function Home() {
           <div className="max-w-4xl mx-auto text-center">
             <img src="/black-logo.svg" alt="Enact" className="h-24 mx-auto mb-8 animate-float" />
             <h1 className="text-5xl md:text-6xl font-bold mb-6 text-gray-6">
-              The npm for <span className="text-brand-blue">AI Tools</span>
+              The <span className="text-brand-blue">Agent Skills</span> Platform
             </h1>
             <p className="text-xl text-gray-5 mb-8 max-w-2xl mx-auto">
-              Browse, discover, and safely run AI-executable tools with cryptographic verification.
-              Built on Sigstore for transparency and trust.
+              Discover, verify, and execute capabilities on demand. Enact packages tools as portable
+              skill bundles and runs them securely — locally, in containers, or remotely — with
+              policy enforcement and cryptographic verification.
             </p>
             <div className="max-w-2xl mx-auto mb-8">
               <SearchBar placeholder="Search for tools..." />
@@ -58,10 +64,10 @@ export default function Home() {
               <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <Bot className="w-8 h-8 text-purple-600" />
               </div>
-              <h2 className="text-3xl font-bold mb-4 text-gray-6">Made for Agents</h2>
+              <h2 className="text-3xl font-bold mb-4 text-gray-6">Built for Autonomous Agents</h2>
               <p className="text-gray-5 max-w-2xl mx-auto">
-                AI agents can discover, install, and run tools dynamically. Your agent gets the
-                tools it needs, when it needs them.
+                Agents shouldn't ship with every tool preinstalled. They should acquire capabilities
+                when needed.
               </p>
             </div>
 
@@ -75,9 +81,9 @@ export default function Home() {
                       <Search className="w-5 h-5 text-purple-600" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-gray-6 mb-1">Discover on the fly</h4>
+                      <h4 className="font-semibold text-gray-6 mb-1">Discover by capability</h4>
                       <p className="text-sm text-gray-5">
-                        Agents can search the registry to find the right tool for any task
+                        Search the registry for skills that solve the task
                       </p>
                       <code className="text-xs bg-gray-100 px-2 py-1 rounded mt-2 inline-block font-mono">
                         enact search "resize images"
@@ -94,7 +100,7 @@ export default function Home() {
                     <div>
                       <h4 className="font-semibold text-gray-6 mb-1">Run instantly</h4>
                       <p className="text-sm text-gray-5">
-                        Execute any tool without pre-installation—Enact handles it automatically
+                        Execute without manual setup or environment wiring
                       </p>
                       <code className="text-xs bg-gray-100 px-2 py-1 rounded mt-2 inline-block font-mono">
                         enact run alice/resizer:resize --args '{"{"}width: 800{"}"}'
@@ -109,9 +115,9 @@ export default function Home() {
                       <List className="w-5 h-5 text-teal-600" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-gray-6 mb-1">See available tools</h4>
+                      <h4 className="font-semibold text-gray-6 mb-1">Know what's available</h4>
                       <p className="text-sm text-gray-5">
-                        Agents know what tools are installed and ready to use
+                        Agents and developers can inspect installed capabilities
                       </p>
                       <code className="text-xs bg-gray-100 px-2 py-1 rounded mt-2 inline-block font-mono">
                         enact list
@@ -199,10 +205,10 @@ export default function Home() {
                   <Terminal className="w-6 h-6 text-purple-600" />
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-6">MCP Integration</h4>
+                  <h4 className="font-semibold text-gray-6">Native Agent Integration</h4>
                   <p className="text-sm text-gray-5">
-                    Enact integrates with the Model Context Protocol, giving AI models direct access
-                    to tools through a standardized interface.
+                    Enact integrates with the Model Context Protocol, allowing AI clients to
+                    discover and execute skills dynamically. No preconfiguration required.
                   </p>
                 </div>
               </div>
@@ -211,7 +217,161 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* Policy-Enforced Execution Section */}
+      <section className="py-20 bg-gray-1">
+        <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-12">
+              <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Shield className="w-8 h-8 text-red-600" />
+              </div>
+              <h2 className="text-3xl font-bold mb-4 text-gray-6">Policy-Enforced Execution</h2>
+              <p className="text-gray-5 max-w-2xl mx-auto">
+                The model decides what to run. Enact decides <strong>whether and how</strong> it
+                runs.
+              </p>
+            </div>
+
+            <div className="grid lg:grid-cols-2 gap-8">
+              {/* Stack diagram */}
+              <div className="card bg-gray-900 text-gray-100 font-mono text-sm">
+                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-700">
+                  <div className="w-3 h-3 rounded-full bg-red-500" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                  <div className="w-3 h-3 rounded-full bg-green-500" />
+                  <span className="text-gray-400 text-xs ml-2">execution-stack</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-purple-400">
+                    Model <span className="text-gray-500">(Claude, GPT, etc.)</span>
+                  </div>
+                  <div className="text-gray-500 pl-4">↓</div>
+                  <div className="text-blue-400 pl-4">
+                    Host <span className="text-gray-500">(Claude Code, Cursor, etc.)</span>
+                  </div>
+                  <div className="text-gray-500 pl-8">↓</div>
+                  <div className="text-teal-400 pl-8">
+                    Tool Call <span className="text-gray-500">(MCP or CLI)</span>
+                  </div>
+                  <div className="text-gray-500 pl-12">↓</div>
+                  <div className="text-yellow-400 pl-12 font-bold">Enact Runtime</div>
+                  <div className="text-gray-400 pl-16 space-y-1">
+                    <div>├── Signature verification (Sigstore)</div>
+                    <div>├── Trust policy enforcement</div>
+                    <div>├── Backend selection</div>
+                    <div>├── Secret injection</div>
+                    <div>└── Isolated execution</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Before execution checklist */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-6">Before execution, Enact:</h3>
+                <div className="space-y-3">
+                  <div className="card border-l-4 border-red-400">
+                    <div className="flex items-center gap-3">
+                      <Check className="w-5 h-5 text-red-500 flex-shrink-0" />
+                      <div>
+                        <span className="font-medium text-gray-6">Verifies signatures</span>
+                        <span className="text-sm text-gray-5 ml-2">via Sigstore</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="card border-l-4 border-orange-400">
+                    <div className="flex items-center gap-3">
+                      <Check className="w-5 h-5 text-orange-500 flex-shrink-0" />
+                      <div>
+                        <span className="font-medium text-gray-6">Applies trust policies</span>
+                        <span className="text-sm text-gray-5 ml-2">per your configuration</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="card border-l-4 border-yellow-400">
+                    <div className="flex items-center gap-3">
+                      <Check className="w-5 h-5 text-yellow-500 flex-shrink-0" />
+                      <div>
+                        <span className="font-medium text-gray-6">Selects execution backend</span>
+                        <span className="text-sm text-gray-5 ml-2">
+                          based on policy & environment
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="card border-l-4 border-green-400">
+                    <div className="flex items-center gap-3">
+                      <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
+                      <div>
+                        <span className="font-medium text-gray-6">Injects secrets securely</span>
+                        <span className="text-sm text-gray-5 ml-2">never exposed to the agent</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="card border-l-4 border-blue-400">
+                    <div className="flex items-center gap-3">
+                      <Check className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                      <div>
+                        <span className="font-medium text-gray-6">Runs in isolation</span>
+                        <span className="text-sm text-gray-5 ml-2">when needed</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Run Anywhere Section */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-12">
+              <div className="w-16 h-16 bg-blueLight-1 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Globe className="w-8 h-8 text-brand-blue" />
+              </div>
+              <h2 className="text-3xl font-bold mb-4 text-gray-6">Run Anywhere</h2>
+              <p className="text-gray-5 max-w-2xl mx-auto">
+                Skills are portable across environments. Write once, run anywhere. Enact
+                automatically chooses the safest available option based on policy and environment.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="card-hover text-center">
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <Laptop className="w-6 h-6 text-green-600" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2 text-gray-6">Local</h3>
+                <p className="text-gray-5">
+                  Fast, trusted workflows. Direct execution for verified skills.
+                </p>
+              </div>
+
+              <div className="card-hover text-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <Container className="w-6 h-6 text-blue-600" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2 text-gray-6">Containerized</h3>
+                <p className="text-gray-5">
+                  Isolation for untrusted code. Reproducible environments every time.
+                </p>
+              </div>
+
+              <div className="card-hover text-center">
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <Cloud className="w-6 h-6 text-purple-600" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2 text-gray-6">Remote</h3>
+                <p className="text-gray-5">
+                  No local runtime required. Hosted execution when you need it.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* npm for AI Tools Section */}
       <section className="py-20 bg-gray-1">
@@ -430,45 +590,49 @@ export default function Home() {
       <section className="py-20 bg-gray-1">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12 text-gray-6">Why Enact?</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
             <div className="card-hover text-center">
               <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Shield className="w-6 h-6 text-teal-600" />
+                <Package className="w-6 h-6 text-teal-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 text-gray-6">Verified</h3>
+              <h3 className="text-xl font-semibold mb-2 text-gray-6">Portable</h3>
+              <p className="text-gray-5">Skills run across environments without modification</p>
+            </div>
+
+            <div className="card-hover text-center">
+              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Shield className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-gray-6">Secure by Default</h3>
               <p className="text-gray-5">
-                Cryptographic verification with Sigstore ensures tools are authentic and trustworthy
+                Verification and policy enforcement before every execution
               </p>
             </div>
 
             <div className="card-hover text-center">
-              <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Package className="w-6 h-6 text-pink-600" />
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Bot className="w-6 h-6 text-purple-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 text-gray-6">Portable</h3>
+              <h3 className="text-xl font-semibold mb-2 text-gray-6">Agent-Native</h3>
               <p className="text-gray-5">
-                Containerized execution ensures tools run consistently across any environment
+                Designed for dynamic capability discovery by autonomous systems
               </p>
             </div>
 
             <div className="card-hover text-center">
               <div className="w-12 h-12 bg-blueLight-1 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Terminal className="w-6 h-6 text-brand-blue" />
+                <Layers className="w-6 h-6 text-brand-blue" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 text-gray-6">AI-Ready</h3>
-              <p className="text-gray-5">
-                Built for AI agents with structured manifests and MCP integration
-              </p>
+              <h3 className="text-xl font-semibold mb-2 text-gray-6">Flexible</h3>
+              <p className="text-gray-5">Works locally, in containers, or remotely — your choice</p>
             </div>
 
             <div className="card-hover text-center">
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Zap className="w-6 h-6 text-brand-green" />
+                <Lock className="w-6 h-6 text-green-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 text-gray-6">Fast</h3>
-              <p className="text-gray-5">
-                Quick discovery, installation, and execution with smart caching
-              </p>
+              <h3 className="text-xl font-semibold mb-2 text-gray-6">Open</h3>
+              <p className="text-gray-5">Self-host, extend, or integrate into your stack</p>
             </div>
           </div>
         </div>
@@ -482,10 +646,11 @@ export default function Home() {
               <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <Plug className="w-8 h-8 text-purple-600" />
               </div>
-              <h2 className="text-3xl font-bold mb-4 text-gray-6">Using Enact with MCP</h2>
+              <h2 className="text-3xl font-bold mb-4 text-gray-6">Native Agent Integration</h2>
               <p className="text-gray-5 max-w-2xl mx-auto">
-                Connect Enact to any MCP-compatible AI client. Your agent gets access to thousands
-                of verified tools through a standardized interface.
+                Enact integrates with the Model Context Protocol, allowing AI clients to discover
+                and execute skills dynamically through a standardized interface. No preconfiguration
+                required.
               </p>
             </div>
 
@@ -516,9 +681,9 @@ export default function Home() {
               </div>
 
               <div className="card">
-                <h3 className="text-xl font-semibold text-gray-6 mb-4">Built-in Meta-Tools</h3>
+                <h3 className="text-xl font-semibold text-gray-6 mb-4">Agent Capabilities</h3>
                 <p className="text-sm text-gray-5 mb-4">
-                  The MCP server provides meta-tools for progressive discovery:
+                  Agents can search, learn, execute, and install — all through MCP:
                 </p>
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
@@ -574,11 +739,11 @@ export default function Home() {
                   <Bot className="w-6 h-6 text-purple-600" />
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-semibold text-gray-6 mb-2">Progressive Tool Discovery</h4>
+                  <h4 className="font-semibold text-gray-6 mb-2">Dynamic Capability Discovery</h4>
                   <p className="text-sm text-gray-5">
-                    AI agents can dynamically discover and use tools as needed. Ask Claude to "find
-                    a tool for web scraping" and it will search, learn, and run the right tool—all
-                    through MCP. No pre-configuration required.
+                    Agents acquire capabilities at runtime. Ask Claude to "find a tool for web
+                    scraping" and it will search, learn, and run the right skill — all through MCP.
+                    No preconfiguration required.
                   </p>
                 </div>
                 <div className="flex-shrink-0">
@@ -600,10 +765,10 @@ export default function Home() {
             <div className="card">
               <div className="space-y-4">
                 <CodeBlock title="1. Install the CLI" code="npm install -g enact-cli" />
-                <CodeBlock title="2. Initialize your project" code="git init" />
+                <CodeBlock title="2. Find a skill" code="enact search scraper" />
                 <CodeBlock
-                  title="3. Ask Claude how to use Enact"
-                  code='claude "explain how I can use enact"'
+                  title="3. Run it"
+                  code='enact run enact/firecrawl:scrape -a &apos;{"url":"https://example.com"}&apos;'
                 />
               </div>
             </div>
