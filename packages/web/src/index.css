@@ -228,3 +228,62 @@
 .animate-float {
   animation: float 3s ease-in-out infinite;
 }
+
+/* ── Scroll-reveal animations ── */
+.scroll-reveal {
+  opacity: 0;
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.scroll-reveal-fade-up {
+  transform: translateY(32px);
+}
+.scroll-reveal-fade-down {
+  transform: translateY(-32px);
+}
+.scroll-reveal-fade-left {
+  transform: translateX(-32px);
+}
+.scroll-reveal-fade-right {
+  transform: translateX(32px);
+}
+.scroll-reveal-zoom-in {
+  transform: scale(0.92);
+}
+.scroll-reveal-fade {
+  /* no transform, just opacity */
+}
+
+/* Revealed state */
+.scroll-reveal.scroll-revealed {
+  opacity: 1;
+  transform: translateY(0) translateX(0) scale(1);
+}
+
+/* Staggered children utility – cards within a grid */
+.scroll-reveal-stagger > * {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.scroll-reveal-stagger.scroll-revealed > *:nth-child(1) { transition-delay: 0ms; opacity: 1; transform: none; }
+.scroll-reveal-stagger.scroll-revealed > *:nth-child(2) { transition-delay: 80ms; opacity: 1; transform: none; }
+.scroll-reveal-stagger.scroll-revealed > *:nth-child(3) { transition-delay: 160ms; opacity: 1; transform: none; }
+.scroll-reveal-stagger.scroll-revealed > *:nth-child(4) { transition-delay: 240ms; opacity: 1; transform: none; }
+.scroll-reveal-stagger.scroll-revealed > *:nth-child(5) { transition-delay: 320ms; opacity: 1; transform: none; }
+.scroll-reveal-stagger.scroll-revealed > *:nth-child(6) { transition-delay: 400ms; opacity: 1; transform: none; }
+
+/* Prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .scroll-reveal,
+  .scroll-reveal-stagger > * {
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}

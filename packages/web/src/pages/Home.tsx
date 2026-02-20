@@ -1,4 +1,5 @@
 import SearchBar from "@/components/ui/SearchBar";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 import {
   ArrowRight,
   Bot,
@@ -27,25 +28,34 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 export default function Home() {
+  const reveal = useScrollReveal();
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
       <section className="section-gradient py-20">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
-            <img src="/black-logo.svg" alt="Enact" className="h-24 mx-auto mb-8 animate-float" />
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 text-gray-6">
+            <img
+              ref={reveal("fade-down")}
+              src="/black-logo.svg"
+              alt="Enact"
+              className="h-24 mx-auto mb-8 animate-float"
+            />
+            <h1
+              ref={reveal("fade-up", 100)}
+              className="text-5xl md:text-6xl font-bold mb-6 text-gray-6"
+            >
               The <span className="text-brand-blue">Agent Skills</span> Platform
             </h1>
-            <p className="text-xl text-gray-5 mb-8 max-w-2xl mx-auto">
+            <p ref={reveal("fade-up", 200)} className="text-xl text-gray-5 mb-8 max-w-2xl mx-auto">
               Discover, verify, and execute capabilities on demand. Enact packages tools as portable
               skill bundles and runs them securely — locally, in containers, or remotely — with
               policy enforcement and cryptographic verification.
             </p>
-            <div className="max-w-2xl mx-auto mb-8">
+            <div ref={reveal("fade-up", 300)} className="max-w-2xl mx-auto mb-8">
               <SearchBar placeholder="Search for tools..." />
             </div>
-            <div className="flex flex-wrap justify-center gap-4">
+            <div ref={reveal("fade-up", 400)} className="flex flex-wrap justify-center gap-4">
               <Link to="/browse" className="btn-primary">
                 Browse Tools
               </Link>
@@ -61,11 +71,16 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-12">
-              <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <div
+                ref={reveal("zoom-in")}
+                className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-6"
+              >
                 <Bot className="w-8 h-8 text-purple-600" />
               </div>
-              <h2 className="text-3xl font-bold mb-4 text-gray-6">Built for Autonomous Agents</h2>
-              <p className="text-gray-5 max-w-2xl mx-auto">
+              <h2 ref={reveal("fade-up", 100)} className="text-3xl font-bold mb-4 text-gray-6">
+                Built for Autonomous Agents
+              </h2>
+              <p ref={reveal("fade-up", 200)} className="text-gray-5 max-w-2xl mx-auto">
                 Agents shouldn't ship with every tool preinstalled. They should acquire capabilities
                 when needed.
               </p>
@@ -74,7 +89,7 @@ export default function Home() {
             {/* Agent workflow demo */}
             <div className="grid lg:grid-cols-2 gap-8 mb-12">
               {/* Left side - Agent capabilities */}
-              <div className="space-y-6">
+              <div ref={reveal("fade-right")} className="space-y-6">
                 <div className="card border-l-4 border-purple-500">
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -128,7 +143,10 @@ export default function Home() {
               </div>
 
               {/* Right side - Terminal demo */}
-              <div className="card bg-gray-900 text-gray-100 font-mono text-sm">
+              <div
+                ref={reveal("fade-left", 150)}
+                className="card bg-gray-900 text-gray-100 font-mono text-sm"
+              >
                 <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-700">
                   <div className="w-3 h-3 rounded-full bg-red-500" />
                   <div className="w-3 h-3 rounded-full bg-yellow-500" />
@@ -199,7 +217,10 @@ export default function Home() {
             </div>
 
             {/* MCP integration note */}
-            <div className="card bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200">
+            <div
+              ref={reveal("fade-up", 100)}
+              className="card bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200"
+            >
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
                   <Terminal className="w-6 h-6 text-purple-600" />
@@ -222,11 +243,16 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-12">
-              <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <div
+                ref={reveal("zoom-in")}
+                className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6"
+              >
                 <Shield className="w-8 h-8 text-red-600" />
               </div>
-              <h2 className="text-3xl font-bold mb-4 text-gray-6">Policy-Enforced Execution</h2>
-              <p className="text-gray-5 max-w-2xl mx-auto">
+              <h2 ref={reveal("fade-up", 100)} className="text-3xl font-bold mb-4 text-gray-6">
+                Policy-Enforced Execution
+              </h2>
+              <p ref={reveal("fade-up", 200)} className="text-gray-5 max-w-2xl mx-auto">
                 The model decides what to run. Enact decides <strong>whether and how</strong> it
                 runs.
               </p>
@@ -234,7 +260,10 @@ export default function Home() {
 
             <div className="grid lg:grid-cols-2 gap-8">
               {/* Stack diagram */}
-              <div className="card bg-gray-900 text-gray-100 font-mono text-sm">
+              <div
+                ref={reveal("fade-right")}
+                className="card bg-gray-900 text-gray-100 font-mono text-sm"
+              >
                 <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-700">
                   <div className="w-3 h-3 rounded-full bg-red-500" />
                   <div className="w-3 h-3 rounded-full bg-yellow-500" />
@@ -266,7 +295,7 @@ export default function Home() {
               </div>
 
               {/* Before execution checklist */}
-              <div className="space-y-4">
+              <div ref={reveal("fade-left", 150)} className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-6">Before execution, Enact:</h3>
                 <div className="space-y-3">
                   <div className="card border-l-4 border-red-400">
@@ -328,17 +357,25 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-12">
-              <div className="w-16 h-16 bg-blueLight-1 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <div
+                ref={reveal("zoom-in")}
+                className="w-16 h-16 bg-blueLight-1 rounded-2xl flex items-center justify-center mx-auto mb-6"
+              >
                 <Globe className="w-8 h-8 text-brand-blue" />
               </div>
-              <h2 className="text-3xl font-bold mb-4 text-gray-6">Run Anywhere</h2>
-              <p className="text-gray-5 max-w-2xl mx-auto">
+              <h2 ref={reveal("fade-up", 100)} className="text-3xl font-bold mb-4 text-gray-6">
+                Run Anywhere
+              </h2>
+              <p ref={reveal("fade-up", 200)} className="text-gray-5 max-w-2xl mx-auto">
                 Skills are portable across environments. Write once, run anywhere. Enact
                 automatically chooses the safest available option based on policy and environment.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div
+              ref={reveal("fade-up", 300)}
+              className="grid md:grid-cols-3 gap-6 scroll-reveal-stagger"
+            >
               <div className="card-hover text-center">
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                   <Laptop className="w-6 h-6 text-green-600" />
@@ -377,15 +414,21 @@ export default function Home() {
       <section className="py-20 bg-gray-1">
         <div className="container mx-auto px-4">
           <div className="max-w-5xl mx-auto">
-            <h2 className="text-3xl font-bold text-center mb-4 text-gray-6">
+            <h2 ref={reveal("fade-up")} className="text-3xl font-bold text-center mb-4 text-gray-6">
               Like npm, but for AI Tools
             </h2>
-            <p className="text-center text-gray-5 mb-6 max-w-2xl mx-auto">
+            <p
+              ref={reveal("fade-up", 100)}
+              className="text-center text-gray-5 mb-6 max-w-2xl mx-auto"
+            >
               If you know npm, you already know Enact. Same familiar workflow, designed for AI
               agents.
             </p>
 
-            <div className="grid md:grid-cols-3 mb-12 gap-6">
+            <div
+              ref={reveal("fade-up", 200)}
+              className="grid md:grid-cols-3 mb-12 gap-6 scroll-reveal-stagger"
+            >
               <div className="text-center p-6">
                 <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Download className="w-6 h-6 text-teal-600" />
@@ -416,7 +459,7 @@ export default function Home() {
             </div>
 
             {/* Enact Commands */}
-            <div className="card border-2 border-brand-blue mb-12">
+            <div ref={reveal("fade-up")} className="card border-2 border-brand-blue mb-12">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 bg-blueLight-1 rounded-lg flex items-center justify-center">
                   <Terminal className="w-5 h-5 text-brand-blue" />
@@ -488,16 +531,24 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-12">
-              <div className="w-16 h-16 bg-teal-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <div
+                ref={reveal("zoom-in")}
+                className="w-16 h-16 bg-teal-100 rounded-2xl flex items-center justify-center mx-auto mb-6"
+              >
                 <FolderOpen className="w-8 h-8 text-teal-600" />
               </div>
-              <h2 className="text-3xl font-bold mb-4 text-gray-6">Simple Skill Packages</h2>
-              <p className="text-gray-5 max-w-2xl mx-auto">
+              <h2 ref={reveal("fade-up", 100)} className="text-3xl font-bold mb-4 text-gray-6">
+                Simple Skill Packages
+              </h2>
+              <p ref={reveal("fade-up", 200)} className="text-gray-5 max-w-2xl mx-auto">
                 Each skill package is just a SKILL.md, a skill.package.yml, and your code—that's it.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div
+              ref={reveal("fade-up", 300)}
+              className="grid md:grid-cols-3 gap-6 scroll-reveal-stagger"
+            >
               {/* Simple Tool */}
               <FileTreeCard
                 title="Simple Tool"
@@ -589,8 +640,13 @@ export default function Home() {
 
       <section className="py-20 bg-gray-1">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12 text-gray-6">Why Enact?</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
+          <h2 ref={reveal("fade-up")} className="text-3xl font-bold text-center mb-12 text-gray-6">
+            Why Enact?
+          </h2>
+          <div
+            ref={reveal("fade-up", 150)}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 scroll-reveal-stagger"
+          >
             <div className="card-hover text-center">
               <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <Package className="w-6 h-6 text-teal-600" />
@@ -643,11 +699,16 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-12">
-              <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <div
+                ref={reveal("zoom-in")}
+                className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-6"
+              >
                 <Plug className="w-8 h-8 text-purple-600" />
               </div>
-              <h2 className="text-3xl font-bold mb-4 text-gray-6">Native Agent Integration</h2>
-              <p className="text-gray-5 max-w-2xl mx-auto">
+              <h2 ref={reveal("fade-up", 100)} className="text-3xl font-bold mb-4 text-gray-6">
+                Native Agent Integration
+              </h2>
+              <p ref={reveal("fade-up", 200)} className="text-gray-5 max-w-2xl mx-auto">
                 Enact integrates with the Model Context Protocol, allowing AI clients to discover
                 and execute skills dynamically through a standardized interface. No preconfiguration
                 required.
@@ -656,7 +717,7 @@ export default function Home() {
 
             {/* Configuration Example */}
             <div className="grid lg:grid-cols-2 gap-8 mb-12">
-              <div className="card">
+              <div ref={reveal("fade-right")} className="card">
                 <h3 className="text-xl font-semibold text-gray-6 mb-4">Claude Desktop Setup</h3>
                 <p className="text-sm text-gray-5 mb-4">
                   Add Enact to your Claude Desktop configuration to give Claude access to all Enact
@@ -680,7 +741,7 @@ export default function Home() {
                 </p>
               </div>
 
-              <div className="card">
+              <div ref={reveal("fade-left", 150)} className="card">
                 <h3 className="text-xl font-semibold text-gray-6 mb-4">Agent Capabilities</h3>
                 <p className="text-sm text-gray-5 mb-4">
                   Agents can search, learn, execute, and install — all through MCP:
@@ -733,7 +794,10 @@ export default function Home() {
             </div>
 
             {/* How it works */}
-            <div className="card bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200">
+            <div
+              ref={reveal("fade-up")}
+              className="card bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200"
+            >
               <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
                 <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
                   <Bot className="w-6 h-6 text-purple-600" />
@@ -761,8 +825,10 @@ export default function Home() {
       <section id="quick-start" className="py-20 bg-gray-1">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto">
-            <h2 className="text-3xl font-bold text-center mb-8 text-gray-6">Quick Start</h2>
-            <div className="card">
+            <h2 ref={reveal("fade-up")} className="text-3xl font-bold text-center mb-8 text-gray-6">
+              Quick Start
+            </h2>
+            <div ref={reveal("fade-up", 150)} className="card">
               <div className="space-y-4">
                 <CodeBlock title="1. Install the CLI" code="npm install -g enact-cli" />
                 <CodeBlock title="2. Find a skill" code="enact search scraper" />
