@@ -16,7 +16,7 @@ enact run ./path/to/tool --args '{}'              # Run local tool
 enact search "pdf extraction"                     # Search registry
 enact info author/category/tool                   # View tool info
 enact learn author/category/tool                  # View tool documentation
-enact install author/category/tool                # Add to project (.enact/tools.json)
+enact install author/category/tool                # Add to project (agents/skills.json)
 enact install author/category/tool --global       # Add globally
 enact list                                        # List project tools
 \`\`\`

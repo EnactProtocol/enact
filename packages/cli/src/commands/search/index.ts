@@ -379,8 +379,8 @@ export function configureSearchCommand(program: Command): void {
   program
     .command("search <query>")
     .description("Search the Enact registry for tools")
-    .option("--local", "Search project tools (.enact/tools/) instead of registry")
-    .option("-g, --global", "Search global tools (~/.enact/tools/) instead of registry")
+    .option("--local", "Search project skills (agents/skills/) instead of registry")
+    .option("-g, --global", "Search global skills (~/.agents/skills/) instead of registry")
     .option("-t, --tags <tags>", "Filter by tags (comma-separated, registry only)")
     .option("-l, --limit <number>", "Maximum results to return (default: 20, registry only)")
     .option("-o, --offset <number>", "Pagination offset (default: 0, registry only)")

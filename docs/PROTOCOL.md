@@ -245,7 +245,7 @@ Where Enact stores things:
 | -------------------------------- | ---------------------------------------------------- |
 | `.enact/`                        | Project-installed tools (commit `.enact/tools.json`) |
 | `~/.enact/tools/`                | Global installs                                      |
-| `~/.agent/skills/`               | Installed skills (Agent Skills standard)             |
+| `~/.agents/skills/`               | Installed skills (Agent Skills standard)             |
 | `~/.enact/config.yaml`           | Trust configuration (identities, policies)           |
 | `~/.enact/.env`                  | Global environment variables                         |
 

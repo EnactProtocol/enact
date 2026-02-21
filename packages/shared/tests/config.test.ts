@@ -534,7 +534,7 @@ describe("configuration manager", () => {
       expect(existsSync(enactHome)).toBe(true);
     });
 
-    test("creates ~/.agent/skills/ directory", () => {
+    test("creates ~/.agents/skills/ directory", () => {
       const enactHome = getEnactHome();
       const cacheDir = getCacheDir();
 

@@ -96,7 +96,7 @@ When installing by name, the command searches for the tool in this order:
 
 1. Project tools (`.enact/tools/`)
 2. User tools (`~/.enact/tools/`)
-3. Skills directory (`~/.agent/skills/`)
+3. Skills directory (`~/.agents/skills/`)
 4. Registry (future)
 
 ## Directory Structure

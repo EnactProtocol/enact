@@ -15,6 +15,8 @@ import { error, formatError, info, success, warning } from "../../utils";
 import {
   agentAgentsTemplate,
   claudeTemplate,
+  defaultSkillPackageTemplate,
+  defaultSkillScriptTemplate,
   toolAgentsTemplate,
   toolSkillTemplate,
 } from "./templates";
@@ -38,6 +40,8 @@ const TEMPLATES: Record<string, string> = {
   "tool-agents.md": toolAgentsTemplate,
   "agent-agents.md": agentAgentsTemplate,
   "claude.md": claudeTemplate,
+  "skill-package.yaml": defaultSkillPackageTemplate,
+  "skill-script.py": defaultSkillScriptTemplate,
 };
 
 interface InitOptions extends GlobalOptions {
@@ -66,26 +70,26 @@ function loadTemplate(templateName: string, replacements: Record<string, string>
 }
 
 /**
- * Create .enact/tools.json for project tool tracking
+ * Create agents/skills.json for project skill tracking
  */
-function createEnactProjectDir(targetDir: string, force: boolean): boolean {
-  const enactDir = join(targetDir, ".enact");
-  const toolsJsonPath = join(enactDir, "tools.json");
+function createAgentsSkillsJson(targetDir: string, force: boolean): boolean {
+  const agentsDir = join(targetDir, "agents");
+  const skillsJsonPath = join(agentsDir, "skills.json");
 
-  // Check if tools.json already exists
-  if (existsSync(toolsJsonPath) && !force) {
-    info(".enact/tools.json already exists, skipping");
+  // Check if skills.json already exists
+  if (existsSync(skillsJsonPath) && !force) {
+    info("agents/skills.json already exists, skipping");
     return false;
   }
 
-  // Create .enact directory if it doesn't exist
-  if (!existsSync(enactDir)) {
-    mkdirSync(enactDir, { recursive: true });
+  // Create agents directory if it doesn't exist
+  if (!existsSync(agentsDir)) {
+    mkdirSync(agentsDir, { recursive: true });
   }
 
-  // Write empty tools.json
-  const toolsJson = { tools: {} };
-  writeFileSync(toolsJsonPath, `${JSON.stringify(toolsJson, null, 2)}\n`, "utf-8");
+  // Write empty skills.json
+  const skillsJson = { tools: {} };
+  writeFileSync(skillsJsonPath, `${JSON.stringify(skillsJson, null, 2)}\n`, "utf-8");
   return true;
 }
 
@@ -173,10 +177,10 @@ async function getCurrentUsername(): Promise<string | null> {
 async function initHandler(options: InitOptions, ctx: CommandContext): Promise<void> {
   const targetDir = ctx.cwd;
 
-  // Determine mode: --tool, --claude, or --agent (default)
+  // Determine mode: --tool, --claude, --agent, or default (skill)
   const isToolMode = options.tool;
   const isClaudeMode = options.claude;
-  // Default to agent mode if no flag specified
+  const isAgentMode = options.agent;
 
   // Handle --tool mode: create SKILL.md + AGENTS.md for tool development
   if (isToolMode) {
@@ -261,9 +265,9 @@ async function initHandler(options: InitOptions, ctx: CommandContext): Promise<v
       success(`Created CLAUDE.md: ${claudePath}`);
     }
 
-    // Create .enact/tools.json
-    if (createEnactProjectDir(targetDir, options.force ?? false)) {
-      success("Created .enact/tools.json");
+    // Create agents/skills.json
+    if (createAgentsSkillsJson(targetDir, options.force ?? false)) {
+      success("Created agents/skills.json");
     }
 
     info("");
@@ -271,41 +275,94 @@ async function initHandler(options: InitOptions, ctx: CommandContext): Promise<v
     return;
   }
 
-  // Handle default (agent) mode: create or append to AGENTS.md for projects using Enact tools
-  const agentsPath = join(targetDir, "AGENTS.md");
-  const agentsTemplateContent = loadTemplate("agent-agents.md");
+  // Handle --agent mode: create or append to AGENTS.md for projects using Enact tools
+  if (isAgentMode) {
+    const agentsPath = join(targetDir, "AGENTS.md");
+    const agentsTemplateContent = loadTemplate("agent-agents.md");
 
-  if (existsSync(agentsPath)) {
-    const existingContent = readFileSync(agentsPath, "utf-8");
-    // Check if Enact content is already present
-    if (existingContent.includes("This project uses Enact tools")) {
-      if (options.force) {
-        writeFileSync(agentsPath, agentsTemplateContent, "utf-8");
-        success(`Overwrote AGENTS.md: ${agentsPath}`);
+    if (existsSync(agentsPath)) {
+      const existingContent = readFileSync(agentsPath, "utf-8");
+      if (existingContent.includes("This project uses Enact tools")) {
+        if (options.force) {
+          writeFileSync(agentsPath, agentsTemplateContent, "utf-8");
+          success(`Overwrote AGENTS.md: ${agentsPath}`);
+        } else {
+          info("AGENTS.md already contains Enact configuration, skipping");
+          info("Use --force to overwrite");
+        }
       } else {
-        info("AGENTS.md already contains Enact configuration, skipping");
-        info("Use --force to overwrite");
+        const newContent = `${existingContent.trimEnd()}\n\n${agentsTemplateContent}`;
+        writeFileSync(agentsPath, newContent, "utf-8");
+        success(`Appended Enact configuration to existing AGENTS.md: ${agentsPath}`);
       }
     } else {
-      // Append Enact content to existing file
-      const newContent = `${existingContent.trimEnd()}\n\n${agentsTemplateContent}`;
-      writeFileSync(agentsPath, newContent, "utf-8");
-      success(`Appended Enact configuration to existing AGENTS.md: ${agentsPath}`);
+      writeFileSync(agentsPath, agentsTemplateContent, "utf-8");
+      success(`Created AGENTS.md: ${agentsPath}`);
     }
-  } else {
-    writeFileSync(agentsPath, agentsTemplateContent, "utf-8");
-    success(`Created AGENTS.md: ${agentsPath}`);
+
+    if (createAgentsSkillsJson(targetDir, options.force ?? false)) {
+      success("Created agents/skills.json");
+    }
+
+    info("");
+    info("This file helps AI agents understand how to use Enact tools in your project.");
+    info("Run 'enact search <query>' to find tools, 'enact learn <tool>' to view docs,");
+    info("and 'enact install <tool>' to add them.");
+    return;
   }
 
-  // Create .enact/tools.json
-  if (createEnactProjectDir(targetDir, options.force ?? false)) {
-    success("Created .enact/tools.json");
+  // Handle default mode: create skill.package.yaml + hello.py
+  const packagePath = join(targetDir, "skill.package.yaml");
+  const scriptPath = join(targetDir, "hello.py");
+
+  if (existsSync(packagePath) && !options.force) {
+    warning(`skill.package.yaml already exists at: ${packagePath}`);
+    info("Use --force to overwrite");
+    return;
+  }
+
+  // Get username for the tool name
+  let toolName = options.name;
+
+  if (!toolName) {
+    const username = await getCurrentUsername();
+    if (username) {
+      toolName = `${username}/my-tool`;
+      info(`Using logged-in username: ${username}`);
+    } else {
+      toolName = "my-tool";
+      info("Not logged in - using generic tool name");
+      info("Run 'enact auth login' to use your username in tool names");
+    }
+  }
+
+  // Load templates with placeholder replacement
+  const replacements = { TOOL_NAME: toolName };
+  const packageContent = loadTemplate("skill-package.yaml", replacements);
+  const scriptContent = loadTemplate("skill-script.py");
+
+  // Ensure directory exists
+  if (!existsSync(targetDir)) {
+    mkdirSync(targetDir, { recursive: true });
+  }
+
+  // Write skill.package.yaml
+  writeFileSync(packagePath, packageContent, "utf-8");
+  success(`Created skill.package.yaml: ${packagePath}`);
+
+  // Write hello.py (only if it doesn't exist or --force is used)
+  if (!existsSync(scriptPath) || options.force) {
+    writeFileSync(scriptPath, scriptContent, "utf-8");
+    success(`Created hello.py: ${scriptPath}`);
+  } else {
+    info("hello.py already exists, skipping (use --force to overwrite)");
   }
 
   info("");
-  info("This file helps AI agents understand how to use Enact tools in your project.");
-  info("Run 'enact search <query>' to find tools, 'enact learn <tool>' to view docs,");
-  info("and 'enact install <tool>' to add them.");
+  info("Next steps:");
+  info("  1. Edit skill.package.yaml to customize your tool");
+  info("  2. Run 'enact run ./' to test your tool");
+  info("  3. Run 'enact publish' to share your tool");
 }
 
 /**
@@ -318,8 +375,8 @@ export function configureInitCommand(program: Command): void {
     .option("-n, --name <name>", "Tool name (default: username/my-tool)")
     .option("-f, --force", "Overwrite existing files")
     .option("--tool", "Create a new Enact tool (SKILL.md + AGENTS.md)")
-    .option("--agent", "Create AGENTS.md + .enact/tools.json (default)")
-    .option("--claude", "Create CLAUDE.md + .enact/tools.json")
+    .option("--agent", "Create AGENTS.md + agents/skills.json")
+    .option("--claude", "Create CLAUDE.md + agents/skills.json")
     .option("-v, --verbose", "Show detailed output")
     .action(async (options: InitOptions) => {
       const ctx: CommandContext = {

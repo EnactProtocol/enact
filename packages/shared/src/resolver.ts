@@ -3,9 +3,9 @@
  *
  * Resolution order:
  * 1. Direct file path (if provided path exists)
- * 2. Project tools (.enact/tools/{name}/)
- * 3. Global tools (via ~/.enact/tools.json → ~/.agent/skills/)
- * 4. Skills directory (~/.agent/skills/{name}/)
+ * 2. Project skills (agents/skills/{name}/)
+ * 3. Global tools (via ~/.enact/tools.json → ~/.agents/skills/)
+ * 4. Skills directory (~/.agents/skills/{name}/)
  */
 
 import { existsSync } from "node:fs";
@@ -18,7 +18,7 @@ import {
   loadManifestFromDir,
 } from "./manifest/loader";
 import { manifestScriptsToActionsManifest } from "./manifest/scripts";
-import { getProjectEnactDir, getSkillsDir } from "./paths";
+import { getProjectAgentsDir, getSkillsDir } from "./paths";
 import { getInstalledVersion, getToolCachePath, resolveAlias } from "./registry";
 import type { ToolLocation, ToolResolution } from "./types/manifest";
 
@@ -336,12 +336,12 @@ export function resolveTool(toolName: string, options: ResolveOptions = {}): Too
     }
   }
 
-  // 1. Try project tools (.enact/tools/{name}/)
+  // 1. Try project skills (agents/skills/{name}/)
   if (!options.skipProject) {
-    const projectDir = getProjectEnactDir(options.startDir);
-    if (projectDir) {
-      const projectToolsDir = join(projectDir, "tools");
-      const toolDir = getToolPath(projectToolsDir, normalizedName);
+    const agentsDir = getProjectAgentsDir(options.startDir);
+    if (agentsDir) {
+      const projectSkillsDir = join(agentsDir, "skills");
+      const toolDir = getToolPath(projectSkillsDir, normalizedName);
       searchedLocations.push(toolDir);
 
       const result = tryLoadFromDir(toolDir, "project");
@@ -351,7 +351,7 @@ export function resolveTool(toolName: string, options: ResolveOptions = {}): Too
     }
   }
 
-  // 2. Try global tools (via ~/.enact/tools.json → ~/.agent/skills/)
+  // 2. Try global tools (via ~/.enact/tools.json → ~/.agents/skills/)
   if (!options.skipUser) {
     const globalVersion = getInstalledVersion(normalizedName, "global");
     if (globalVersion) {
@@ -365,7 +365,7 @@ export function resolveTool(toolName: string, options: ResolveOptions = {}): Too
     }
   }
 
-  // 3. Try skills directory (~/.agent/skills/{name}/)
+  // 3. Try skills directory (~/.agents/skills/{name}/)
   if (!options.skipCache) {
     const skillsDir = getSkillsDir();
     const skillDir = getToolPath(skillsDir, normalizedName);
@@ -561,11 +561,11 @@ export function getToolSearchPaths(toolName: string, options: ResolveOptions = {
   const normalizedName = normalizeToolName(toolName);
   const paths: string[] = [];
 
-  // Project tools
+  // Project skills
   if (!options.skipProject) {
-    const projectDir = getProjectEnactDir(options.startDir);
-    if (projectDir) {
-      paths.push(join(projectDir, "tools", toolNameToPath(normalizedName)));
+    const agentsDir = getProjectAgentsDir(options.startDir);
+    if (agentsDir) {
+      paths.push(join(agentsDir, "skills", toolNameToPath(normalizedName)));
     }
   }
 

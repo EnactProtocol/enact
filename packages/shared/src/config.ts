@@ -327,7 +327,7 @@ export function ensureGlobalSetup(): boolean {
     performedSetup = true;
   }
 
-  // Ensure ~/.agent/skills/ directory exists
+  // Ensure ~/.agents/skills/ directory exists
   if (!existsSync(cacheDir)) {
     mkdirSync(cacheDir, { recursive: true });
     performedSetup = true;

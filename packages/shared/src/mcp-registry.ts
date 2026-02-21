@@ -133,7 +133,7 @@ export function getMcpToolVersion(toolName: string): string | null {
 
 /**
  * Get the install path for an MCP tool
- * Skills are stored at ~/.agent/skills/{name}/ (flat, no version subdirectory)
+ * Skills are stored at ~/.agents/skills/{name}/ (flat, no version subdirectory)
  */
 function getMcpToolCachePath(toolName: string, _version: string): string {
   const skillsDir = getCacheDir();

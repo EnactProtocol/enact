@@ -162,7 +162,7 @@ export default function Home() {
                   <div className="text-gray-400 pl-4 border-l-2 border-gray-700">
                     <div className="flex items-center gap-2">
                       <FolderOpen className="w-4 h-4" />
-                      <span>Project tools (.enact/tools.json)</span>
+                      <span>Project tools (.agents/skills.json)</span>
                     </div>
                     <div className="pl-6 text-gray-300 space-y-1">
                       <div>
@@ -189,7 +189,7 @@ export default function Home() {
                   <div className="text-gray-400 pl-4 border-l-2 border-gray-700">
                     <div className="flex items-center gap-2">
                       <Globe className="w-4 h-4" />
-                      <span>Global tools (~/.enact/tools.json)</span>
+                      <span>Global tools (~/.agents/skills.json)</span>
                     </div>
                     <div className="pl-6 text-gray-300 space-y-1">
                       <div>

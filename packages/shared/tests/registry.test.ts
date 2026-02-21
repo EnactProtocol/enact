@@ -24,12 +24,12 @@ import {
 
 const TEST_DIR = join(import.meta.dir, "temp-registry-test");
 const PROJECT_DIR = join(TEST_DIR, "project");
-const PROJECT_ENACT_DIR = join(PROJECT_DIR, ".enact");
+const PROJECT_AGENTS_DIR = join(PROJECT_DIR, "agents");
 
 describe("registry", () => {
   beforeAll(() => {
     // Create test directory structure
-    mkdirSync(PROJECT_ENACT_DIR, { recursive: true });
+    mkdirSync(PROJECT_AGENTS_DIR, { recursive: true });
   });
 
   afterAll(() => {
@@ -47,14 +47,14 @@ describe("registry", () => {
       expect(path).toEndWith("tools.json");
     });
 
-    test("returns path for project scope when .enact exists", () => {
+    test("returns path for project scope when agents/ exists", () => {
       const path = getToolsJsonPath("project", PROJECT_DIR);
       expect(path).not.toBeNull();
-      expect(path).toContain(PROJECT_ENACT_DIR);
-      expect(path).toEndWith("tools.json");
+      expect(path).toContain(PROJECT_AGENTS_DIR);
+      expect(path).toEndWith("skills.json");
     });
 
-    test("returns null for project scope when no .enact", () => {
+    test("returns null for project scope when no agents/", () => {
       const path = getToolsJsonPath("project", "/tmp/nonexistent-test-path");
       expect(path).toBeNull();
     });
@@ -63,7 +63,7 @@ describe("registry", () => {
   describe("loadToolsRegistry", () => {
     test("returns empty registry when file does not exist", () => {
       // Ensure tools.json doesn't exist from previous tests
-      const toolsJsonPath = join(PROJECT_ENACT_DIR, "tools.json");
+      const toolsJsonPath = join(PROJECT_AGENTS_DIR, "skills.json");
       if (existsSync(toolsJsonPath)) {
         rmSync(toolsJsonPath);
       }
@@ -73,7 +73,7 @@ describe("registry", () => {
 
     test("loads existing registry", () => {
       // Create a test registry file
-      const registryPath = join(PROJECT_ENACT_DIR, "tools.json");
+      const registryPath = join(PROJECT_AGENTS_DIR, "skills.json");
       writeFileSync(
         registryPath,
         JSON.stringify({
@@ -93,7 +93,7 @@ describe("registry", () => {
     });
 
     test("returns empty registry on parse error", () => {
-      const registryPath = join(PROJECT_ENACT_DIR, "tools.json");
+      const registryPath = join(PROJECT_AGENTS_DIR, "skills.json");
       writeFileSync(registryPath, "invalid json");
 
       const registry = loadToolsRegistry("project", PROJECT_DIR);
@@ -114,7 +114,7 @@ describe("registry", () => {
 
       saveToolsRegistry(registry, "project", PROJECT_DIR);
 
-      const registryPath = join(PROJECT_ENACT_DIR, "tools.json");
+      const registryPath = join(PROJECT_AGENTS_DIR, "skills.json");
       expect(existsSync(registryPath)).toBe(true);
 
       const loaded = loadToolsRegistry("project", PROJECT_DIR);
@@ -133,7 +133,7 @@ describe("registry", () => {
       expect(registry.tools["test/add"]).toBe("1.0.0");
 
       // Clean up
-      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+      rmSync(join(PROJECT_AGENTS_DIR, "skills.json"));
     });
 
     test("updates existing tool version", () => {
@@ -144,7 +144,7 @@ describe("registry", () => {
       expect(registry.tools["test/update"]).toBe("2.0.0");
 
       // Clean up
-      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+      rmSync(join(PROJECT_AGENTS_DIR, "skills.json"));
     });
   });
 
@@ -159,7 +159,7 @@ describe("registry", () => {
       expect(registry.tools["test/remove"]).toBeUndefined();
 
       // Clean up
-      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+      rmSync(join(PROJECT_AGENTS_DIR, "skills.json"));
     });
 
     test("returns false for non-existent tool", () => {
@@ -174,7 +174,7 @@ describe("registry", () => {
       expect(isToolInstalled("test/installed", "project", PROJECT_DIR)).toBe(true);
 
       // Clean up
-      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+      rmSync(join(PROJECT_AGENTS_DIR, "skills.json"));
     });
 
     test("returns false for non-installed tool", () => {
@@ -189,7 +189,7 @@ describe("registry", () => {
       expect(version).toBe("3.0.0");
 
       // Clean up
-      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+      rmSync(join(PROJECT_AGENTS_DIR, "skills.json"));
     });
 
     test("returns null for non-installed tool", () => {
@@ -199,9 +199,9 @@ describe("registry", () => {
   });
 
   describe("getToolCachePath", () => {
-    test("returns skill path under ~/.agent/skills/", () => {
+    test("returns skill path under ~/.agents/skills/", () => {
       const path = getToolCachePath("org/tool", "1.0.0");
-      expect(path).toContain(".agent");
+      expect(path).toContain(".agents");
       expect(path).toContain("skills");
       expect(path).toContain("org/tool");
       // No version subdirectory in new layout
@@ -226,7 +226,7 @@ describe("registry", () => {
       expect(tools.find((t) => t.name === "test/list2")).toBeTruthy();
 
       // Clean up
-      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+      rmSync(join(PROJECT_AGENTS_DIR, "skills.json"));
     });
 
     test("returns empty list when no tools installed", () => {
@@ -244,7 +244,7 @@ describe("registry", () => {
       expect(registry.aliases?.mytool).toBe("test/aliased-tool");
 
       // Clean up
-      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+      rmSync(join(PROJECT_AGENTS_DIR, "skills.json"));
     });
 
     test("throws error when alias already exists for different tool", () => {
@@ -257,7 +257,7 @@ describe("registry", () => {
       }).toThrow('Alias "shared" already exists for tool "test/tool1"');
 
       // Clean up
-      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+      rmSync(join(PROJECT_AGENTS_DIR, "skills.json"));
     });
 
     test("allows adding same alias for same tool (idempotent)", () => {
@@ -270,7 +270,7 @@ describe("registry", () => {
       }).not.toThrow();
 
       // Clean up
-      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+      rmSync(join(PROJECT_AGENTS_DIR, "skills.json"));
     });
   });
 
@@ -286,7 +286,7 @@ describe("registry", () => {
       expect(registry.aliases?.removeme).toBeUndefined();
 
       // Clean up
-      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+      rmSync(join(PROJECT_AGENTS_DIR, "skills.json"));
     });
 
     test("returns false for non-existent alias", () => {
@@ -304,7 +304,7 @@ describe("registry", () => {
       expect(resolved).toBe("org/full-name");
 
       // Clean up
-      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+      rmSync(join(PROJECT_AGENTS_DIR, "skills.json"));
     });
 
     test("returns null for non-existent alias", () => {
@@ -325,7 +325,7 @@ describe("registry", () => {
       expect(aliases.length).toBe(2);
 
       // Clean up
-      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+      rmSync(join(PROJECT_AGENTS_DIR, "skills.json"));
     });
 
     test("returns empty array for tool without aliases", () => {
@@ -335,7 +335,7 @@ describe("registry", () => {
       expect(aliases).toEqual([]);
 
       // Clean up
-      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+      rmSync(join(PROJECT_AGENTS_DIR, "skills.json"));
     });
   });
 
@@ -353,7 +353,7 @@ describe("registry", () => {
       expect(registry.aliases?.cleanup2).toBeUndefined();
 
       // Clean up
-      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+      rmSync(join(PROJECT_AGENTS_DIR, "skills.json"));
     });
 
     test("returns 0 for tool without aliases", () => {
@@ -363,7 +363,7 @@ describe("registry", () => {
       expect(removed).toBe(0);
 
       // Clean up
-      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+      rmSync(join(PROJECT_AGENTS_DIR, "skills.json"));
     });
 
     test("does not remove aliases for other tools", () => {
@@ -379,13 +379,13 @@ describe("registry", () => {
       expect(registry.aliases?.removeme).toBeUndefined();
 
       // Clean up
-      rmSync(join(PROJECT_ENACT_DIR, "tools.json"));
+      rmSync(join(PROJECT_AGENTS_DIR, "skills.json"));
     });
   });
 
   describe("loadToolsRegistry with aliases", () => {
     test("loads existing registry with aliases", () => {
-      const registryPath = join(PROJECT_ENACT_DIR, "tools.json");
+      const registryPath = join(PROJECT_AGENTS_DIR, "skills.json");
       writeFileSync(
         registryPath,
         JSON.stringify({
@@ -407,7 +407,7 @@ describe("registry", () => {
     });
 
     test("returns empty aliases when not present in file", () => {
-      const registryPath = join(PROJECT_ENACT_DIR, "tools.json");
+      const registryPath = join(PROJECT_AGENTS_DIR, "skills.json");
       writeFileSync(
         registryPath,
         JSON.stringify({

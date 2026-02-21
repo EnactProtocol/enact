@@ -3,7 +3,7 @@
  * Manages org creation, membership, and listing.
  */
 
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { getDatabase } from "../db.js";
 import { getAuthenticatedUser } from "./auth.js";
 
@@ -17,7 +17,7 @@ function randomId(): string {
     .join("");
 }
 
-function requireAuth(c: any): string | null {
+function requireAuth(c: Context): string | null {
   const apiKey = process.env.ENACT_REGISTRY_API_KEY;
   const userId = getAuthenticatedUser(c.req.header("Authorization"), apiKey);
   if (!userId && apiKey) {

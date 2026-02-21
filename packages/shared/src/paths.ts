@@ -4,7 +4,7 @@
 
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 /**
  * Scope for tool directories
@@ -49,43 +49,80 @@ export function getProjectEnactDir(startDir?: string): string | null {
 }
 
 /**
+ * Get the project-level agents directory
+ * Searches up from current working directory to find agents/
+ * @param startDir - Directory to start searching from (defaults to cwd)
+ * @returns Absolute path to agents/ or null if not found
+ */
+export function getProjectAgentsDir(startDir?: string): string | null {
+  let currentDir = resolve(startDir ?? process.cwd());
+  const root = resolve("/");
+
+  while (currentDir !== root) {
+    const agentsDir = join(currentDir, "agents");
+    if (existsSync(agentsDir)) {
+      return agentsDir;
+    }
+    const parentDir = resolve(currentDir, "..");
+    if (parentDir === currentDir) {
+      break;
+    }
+    currentDir = parentDir;
+  }
+
+  return null;
+}
+
+/**
+ * Get the project root directory by searching for agents/ directory
+ * @param startDir - Directory to start searching from (defaults to cwd)
+ * @returns Absolute path to the project root or the startDir/cwd as fallback
+ */
+export function getProjectRoot(startDir?: string): string {
+  const agentsDir = getProjectAgentsDir(startDir);
+  if (agentsDir) {
+    return dirname(agentsDir);
+  }
+  return resolve(startDir ?? process.cwd());
+}
+
+/**
  * Get the tools directory for specified scope
  *
  * NOTE: For global scope ("user"), this is DEPRECATED.
- * Global tools are now tracked in ~/.enact/tools.json and stored in cache.
+ * Global tools are now tracked in ~/.enact/tools.json and stored in cache (~/.agents/skills/).
  * Use getToolsJsonPath("global") and getToolCachePath() from ./registry instead.
  *
- * For project scope, this returns .enact/tools/ where project tools are copied.
+ * For project scope, this returns agents/skills/ where project tools are installed.
  *
- * @param scope - 'user' for ~/.enact/tools/ (deprecated) or 'project' for .enact/tools/
+ * @param scope - 'user' for ~/.agents/skills/ or 'project' for agents/skills/
  * @param startDir - For project scope, directory to start searching from
  * @returns Absolute path to tools directory or null if project scope and not found
  * @deprecated Use registry.ts functions for global tools
  */
 export function getToolsDir(scope: ToolScope, startDir?: string): string | null {
   if (scope === "user") {
-    // DEPRECATED: Global tools now use tools.json + cache
-    // This path is kept for backward compatibility during migration
-    return join(getEnactHome(), "tools");
+    // Global tools use ~/.agents/skills/
+    return getSkillsDir();
   }
 
-  const projectDir = getProjectEnactDir(startDir);
-  return projectDir ? join(projectDir, "tools") : null;
+  const agentsDir = getProjectAgentsDir(startDir);
+  return agentsDir ? join(agentsDir, "skills") : null;
 }
 
 /**
- * Get the skills directory (~/.agent/skills/)
+ * Get the skills directory (~/.agents/skills/)
  * This is the standard Agent Skills location for installed skills.
- * @returns Absolute path to ~/.agent/skills/
+ * @returns Absolute path to ~/.agents/skills/
  */
 export function getSkillsDir(): string {
-  return join(homedir(), ".agent", "skills");
+  return join(homedir(), ".agents", "skills");
 }
 
 /**
- * Get the cache directory (~/.agent/skills/)
+ * Get the cache directory (~/.agents/skills/)
  * @deprecated Use getSkillsDir() instead
- * @returns Absolute path to ~/.agent/skills/
+ * @returns Absolute path to ~/.agents/skills/
  */
 export function getCacheDir(): string {
   return getSkillsDir();

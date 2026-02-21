@@ -6,6 +6,7 @@ import BlogPost from "./pages/BlogPost";
 import Browse from "./pages/Browse";
 import Docs from "./pages/Docs";
 import Home from "./pages/Home";
+import Marketplace from "./pages/Marketplace";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
 import Tool from "./pages/Tool";
@@ -24,6 +25,7 @@ export default function App() {
       <Route path="/" element={<Layout />}>
         <Route index element={<Home />} />
         <Route path="browse" element={<Browse />} />
+        <Route path="marketplace" element={<Marketplace />} />
         <Route path="blog" element={<Blog />} />
         <Route path="blog/:slug" element={<BlogPost />} />
         <Route path="docs" element={<Docs />} />

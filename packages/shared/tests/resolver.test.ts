@@ -16,16 +16,16 @@ import {
 
 const TEST_DIR = join(import.meta.dir, "temp-resolver-test");
 const PROJECT_DIR = join(TEST_DIR, "project");
-const PROJECT_ENACT_DIR = join(PROJECT_DIR, ".enact");
+const PROJECT_AGENTS_DIR = join(PROJECT_DIR, "agents");
 
 describe("tool resolver", () => {
   beforeAll(() => {
     // Create test directories
-    mkdirSync(join(PROJECT_ENACT_DIR, "tools", "test", "project-tool"), { recursive: true });
+    mkdirSync(join(PROJECT_AGENTS_DIR, "skills", "test", "project-tool"), { recursive: true });
 
     // Create a project-level tool
     writeFileSync(
-      join(PROJECT_ENACT_DIR, "tools", "test", "project-tool", "skill.package.yml"),
+      join(PROJECT_AGENTS_DIR, "skills", "test", "project-tool", "skill.package.yml"),
       `
 name: test/project-tool
 description: A project-level test tool
@@ -289,7 +289,7 @@ Documentation here.
       } finally {
         // Clean up
         removeAlias("pt", "project", PROJECT_DIR);
-        rmSync(join(PROJECT_ENACT_DIR, "tools.json"), { force: true });
+        rmSync(join(PROJECT_AGENTS_DIR, "skills.json"), { force: true });
       }
     });
 
@@ -311,7 +311,7 @@ Documentation here.
         expect(mixedResult.manifest.name).toBe("test/project-tool");
       } finally {
         removeAlias("mytool", "project", PROJECT_DIR);
-        rmSync(join(PROJECT_ENACT_DIR, "tools.json"), { force: true });
+        rmSync(join(PROJECT_AGENTS_DIR, "skills.json"), { force: true });
       }
     });
 
@@ -326,7 +326,7 @@ Documentation here.
         expect(result.manifest.name).toBe("test/project-tool");
       } finally {
         removeAlias("test/project-tool", "project", PROJECT_DIR);
-        rmSync(join(PROJECT_ENACT_DIR, "tools.json"), { force: true });
+        rmSync(join(PROJECT_AGENTS_DIR, "skills.json"), { force: true });
       }
     });
 
@@ -340,7 +340,7 @@ Documentation here.
         expect(result?.manifest.name).toBe("test/project-tool");
       } finally {
         removeAlias("try-alias", "project", PROJECT_DIR);
-        rmSync(join(PROJECT_ENACT_DIR, "tools.json"), { force: true });
+        rmSync(join(PROJECT_AGENTS_DIR, "skills.json"), { force: true });
       }
     });
 

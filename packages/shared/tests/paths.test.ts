@@ -21,6 +21,7 @@ describe("path utilities", () => {
     // Create test directory structure
     mkdirSync(NESTED_DIR, { recursive: true });
     mkdirSync(join(TEST_DIR, ".enact"), { recursive: true });
+    mkdirSync(join(TEST_DIR, "agents"), { recursive: true });
   });
 
   afterAll(() => {
@@ -81,36 +82,35 @@ describe("path utilities", () => {
   });
 
   describe("getToolsDir", () => {
-    test("returns ~/.enact/tools/ for user scope", () => {
+    test("returns ~/.agents/skills/ for user scope", () => {
       const result = getToolsDir("user");
-      const expected = join(homedir(), ".enact", "tools");
+      const expected = join(homedir(), ".agents", "skills");
       expect(result).toBe(expected);
     });
 
-    test("returns .enact/tools/ for project scope", () => {
+    test("returns agents/skills/ for project scope", () => {
       const result = getToolsDir("project", TEST_DIR);
-      expect(result).toBe(join(TEST_DIR, ".enact", "tools"));
+      expect(result).toBe(join(TEST_DIR, "agents", "skills"));
     });
 
     test("finds project tools in parent directory", () => {
       const result = getToolsDir("project", NESTED_DIR);
-      expect(result).toBe(join(TEST_DIR, ".enact", "tools"));
+      expect(result).toBe(join(TEST_DIR, "agents", "skills"));
     });
 
-    test("returns null for project scope when .enact not found", () => {
-      // Similar to above - may find ~/.enact/ if it exists
-      const result = getToolsDir("project", "/tmp/no-enact-unlikely-path");
-      // Result will be null or a valid tools directory
+    test("returns null for project scope when agents/ not found", () => {
+      const result = getToolsDir("project", "/tmp/no-agents-unlikely-path");
+      // Result will be null or a valid skills directory
       if (result !== null) {
-        expect(result.endsWith("tools")).toBe(true);
+        expect(result.endsWith("skills")).toBe(true);
       }
     });
   });
 
   describe("getSkillsDir", () => {
-    test("returns ~/.agent/skills/ path", () => {
+    test("returns ~/.agents/skills/ path", () => {
       const result = getSkillsDir();
-      const expected = join(homedir(), ".agent", "skills");
+      const expected = join(homedir(), ".agents", "skills");
       expect(result).toBe(expected);
     });
   });

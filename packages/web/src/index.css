@@ -232,9 +232,8 @@
 /* ── Scroll-reveal animations ── */
 .scroll-reveal {
   opacity: 0;
-  transition:
-    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s
+    cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity, transform;
 }
 
@@ -267,16 +266,39 @@
 .scroll-reveal-stagger > * {
   opacity: 0;
   transform: translateY(24px);
-  transition:
-    opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s
+    cubic-bezier(0.16, 1, 0.3, 1);
 }
-.scroll-reveal-stagger.scroll-revealed > *:nth-child(1) { transition-delay: 0ms; opacity: 1; transform: none; }
-.scroll-reveal-stagger.scroll-revealed > *:nth-child(2) { transition-delay: 80ms; opacity: 1; transform: none; }
-.scroll-reveal-stagger.scroll-revealed > *:nth-child(3) { transition-delay: 160ms; opacity: 1; transform: none; }
-.scroll-reveal-stagger.scroll-revealed > *:nth-child(4) { transition-delay: 240ms; opacity: 1; transform: none; }
-.scroll-reveal-stagger.scroll-revealed > *:nth-child(5) { transition-delay: 320ms; opacity: 1; transform: none; }
-.scroll-reveal-stagger.scroll-revealed > *:nth-child(6) { transition-delay: 400ms; opacity: 1; transform: none; }
+.scroll-reveal-stagger.scroll-revealed > *:nth-child(1) {
+  transition-delay: 0ms;
+  opacity: 1;
+  transform: none;
+}
+.scroll-reveal-stagger.scroll-revealed > *:nth-child(2) {
+  transition-delay: 80ms;
+  opacity: 1;
+  transform: none;
+}
+.scroll-reveal-stagger.scroll-revealed > *:nth-child(3) {
+  transition-delay: 160ms;
+  opacity: 1;
+  transform: none;
+}
+.scroll-reveal-stagger.scroll-revealed > *:nth-child(4) {
+  transition-delay: 240ms;
+  opacity: 1;
+  transform: none;
+}
+.scroll-reveal-stagger.scroll-revealed > *:nth-child(5) {
+  transition-delay: 320ms;
+  opacity: 1;
+  transform: none;
+}
+.scroll-reveal-stagger.scroll-revealed > *:nth-child(6) {
+  transition-delay: 400ms;
+  opacity: 1;
+  transform: none;
+}
 
 /* Prefer reduced motion */
 @media (prefers-reduced-motion: reduce) {

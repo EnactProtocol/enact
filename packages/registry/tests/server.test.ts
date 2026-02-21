@@ -63,7 +63,7 @@ describe("Registry Server", () => {
       const res = await request("GET", "/health");
       expect(res.status).toBe(200);
 
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       expect(body.status).toBe("ok");
       expect(body.version).toBe("2.2.4");
     });
@@ -74,7 +74,7 @@ describe("Registry Server", () => {
       const res = await request("GET", "/tools/search?q=test");
       expect(res.status).toBe(200);
 
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       expect(body.tools).toBeArray();
       expect(body.tools.length).toBe(0);
       expect(body.total).toBe(0);
@@ -84,7 +84,7 @@ describe("Registry Server", () => {
       const res = await request("GET", "/tools/search");
       expect(res.status).toBe(200);
 
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       expect(body.search_type).toBe("browse");
     });
 
@@ -92,7 +92,7 @@ describe("Registry Server", () => {
       const res = await request("GET", "/tools/search?limit=5");
       expect(res.status).toBe(200);
 
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       expect(body.limit).toBe(5);
     });
   });
@@ -116,7 +116,7 @@ describe("Registry Server", () => {
       const res = await request("POST", "/tools/@test/hello/versions", formData);
       expect(res.status).toBe(201);
 
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       expect(body.name).toBe("@test/hello");
       expect(body.version).toBe("1.0.0");
       expect(body.bundle_hash).toMatch(/^sha256:/);
@@ -127,7 +127,7 @@ describe("Registry Server", () => {
       const res = await request("GET", "/tools/@test/hello");
       expect(res.status).toBe(200);
 
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       expect(body.name).toBe("@test/hello");
       expect(body.description).toBe("A test tool");
       expect(body.tags).toContain("test");
@@ -141,7 +141,7 @@ describe("Registry Server", () => {
       const res = await request("GET", "/tools/@test/hello/versions/1.0.0");
       expect(res.status).toBe(200);
 
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       expect(body.name).toBe("@test/hello");
       expect(body.version).toBe("1.0.0");
       expect(body.manifest).toBeDefined();
@@ -175,7 +175,7 @@ describe("Registry Server", () => {
       const res = await request("POST", "/tools/@test/hello/versions", formData);
       expect(res.status).toBe(409);
 
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       expect(body.error.code).toBe("CONFLICT");
     });
   });
@@ -185,7 +185,7 @@ describe("Registry Server", () => {
       const res = await request("GET", "/tools/search?q=hello");
       expect(res.status).toBe(200);
 
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       expect(body.tools.length).toBeGreaterThanOrEqual(1);
       expect(body.tools[0].name).toBe("@test/hello");
     });
@@ -194,7 +194,7 @@ describe("Registry Server", () => {
       const res = await request("GET", "/tools/search");
       expect(res.status).toBe(200);
 
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       expect(body.tools.length).toBeGreaterThanOrEqual(1);
     });
   });
@@ -204,7 +204,7 @@ describe("Registry Server", () => {
       const res = await request("GET", "/tools/@test/nonexistent");
       expect(res.status).toBe(404);
 
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       expect(body.error.code).toBe("NOT_FOUND");
     });
 
@@ -212,7 +212,7 @@ describe("Registry Server", () => {
       const res = await request("GET", "/tools/@test/hello/versions/99.99.99");
       expect(res.status).toBe(404);
 
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       expect(body.error.code).toBe("NOT_FOUND");
     });
   });
@@ -225,7 +225,7 @@ describe("Registry Server", () => {
       });
       expect(res.status).toBe(200);
 
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       expect(body.yanked).toBe(true);
       expect(body.reason).toBe("Security issue");
     });
@@ -234,7 +234,7 @@ describe("Registry Server", () => {
       const res = await request("GET", "/tools/@test/hello/versions/1.0.0/download");
       expect(res.status).toBe(410);
 
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       expect(body.error.code).toBe("VERSION_YANKED");
     });
 
@@ -250,7 +250,7 @@ describe("Registry Server", () => {
       const res = await request("POST", "/tools/@test/hello/versions/1.0.0/unyank");
       expect(res.status).toBe(200);
 
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       expect(body.yanked).toBe(false);
     });
   });
@@ -260,7 +260,7 @@ describe("Registry Server", () => {
       const res = await request("GET", "/tools/@test/hello/versions/1.0.0/attestations");
       expect(res.status).toBe(200);
 
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       expect(body.attestations).toBeArray();
       expect(body.attestations.length).toBe(0);
     });
@@ -274,7 +274,7 @@ describe("Registry Server", () => {
       });
       expect(res.status).toBe(201);
 
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       expect(body.auditor).toBe("github:alice");
       expect(body.verification.verified).toBe(true);
     });
@@ -283,7 +283,7 @@ describe("Registry Server", () => {
       const res = await request("GET", "/tools/@test/hello/versions/1.0.0/attestations");
       expect(res.status).toBe(200);
 
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       expect(body.attestations.length).toBe(1);
       expect(body.attestations[0].auditor).toBe("github:alice");
     });
@@ -296,7 +296,7 @@ describe("Registry Server", () => {
       });
       expect(res.status).toBe(200);
 
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       expect(body.visibility).toBe("private");
     });
 
@@ -304,7 +304,7 @@ describe("Registry Server", () => {
       const res = await request("GET", "/tools/search?q=hello");
       expect(res.status).toBe(200);
 
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       // Tool is now private, shouldn't appear in public search
       const found = body.tools.find((t: { name: string }) => t.name === "@test/hello");
       expect(found).toBeUndefined();
@@ -316,7 +316,7 @@ describe("Registry Server", () => {
       });
 
       const res = await request("GET", "/tools/search?q=hello");
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       expect(body.tools.length).toBeGreaterThanOrEqual(1);
     });
   });
@@ -355,7 +355,7 @@ describe("Registry Server", () => {
       const res = await request("GET", "/auth/me");
       expect(res.status).toBe(200);
 
-      const body: any = await res.json();
+      const body = (await res.json()) as any;
       expect(body.username).toBe("admin");
       expect(body.namespaces).toContain("admin");
     });

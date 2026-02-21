@@ -606,7 +606,7 @@ Signing with Sigstore...
 
 **Storage locations:**
 - Active tools: `~/.enact/tools/{org}/{path}/{tool}/` - No signature required (user-controlled)
-- Installed skills: `~/.agent/skills/{org}/{path}/{tool}/` - Verified on download from registry
+- Installed skills: `~/.agents/skills/{org}/{path}/{tool}/` - Verified on download from registry
 - Signature bundles: Stored alongside cached bundles as `.sigstore-bundle`
 
 **Security benefits:**
@@ -771,7 +771,7 @@ The presence of a `scripts` field in `skill.package.yml` determines the executio
 
 ### Installed Skills
 ```
-~/.agent/skills/
+~/.agents/skills/
 └── {org}/
     └── {path}/                      # Arbitrary depth hierarchy
         └── {to}/
@@ -784,8 +784,8 @@ The presence of a `scripts` field in `skill.package.yml` determines the executio
 
 **Examples:**
 ```
-~/.agent/skills/acme-corp/api/slack-notifier/
-~/.agent/skills/mycompany/ai/nlp/sentiment/analyzer/
+~/.agents/skills/acme-corp/api/slack-notifier/
+~/.agents/skills/mycompany/ai/nlp/sentiment/analyzer/
 ```
 
 **Notes:**

@@ -167,9 +167,9 @@ describe("install integration", () => {
     test("global install extracts to skills path", async () => {
       const { getToolCachePath } = await import("@enactprotocol/shared");
 
-      // Verify skill path structure (~/.agent/skills/{name}/, no version subdir)
+      // Verify skill path structure (~/.agents/skills/{name}/, no version subdir)
       const skillPath = getToolCachePath("test/sample-tool", "1.0.0");
-      expect(skillPath).toContain(".agent");
+      expect(skillPath).toContain(".agents");
       expect(skillPath).toContain("skills");
       expect(skillPath).toContain("test/sample-tool");
     });
@@ -260,7 +260,7 @@ describe("tools.json edge cases", () => {
   const EDGE_TEST_DIR = join(TEST_BASE, "edge-cases");
 
   beforeAll(() => {
-    mkdirSync(join(EDGE_TEST_DIR, ".enact"), { recursive: true });
+    mkdirSync(join(EDGE_TEST_DIR, "agents"), { recursive: true });
   });
 
   afterAll(() => {
@@ -270,10 +270,10 @@ describe("tools.json edge cases", () => {
   });
 
   beforeEach(() => {
-    // Ensure .enact directory exists
-    mkdirSync(join(EDGE_TEST_DIR, ".enact"), { recursive: true });
+    // Ensure agents directory exists
+    mkdirSync(join(EDGE_TEST_DIR, "agents"), { recursive: true });
 
-    const jsonPath = join(EDGE_TEST_DIR, ".enact", "tools.json");
+    const jsonPath = join(EDGE_TEST_DIR, "agents", "skills.json");
     if (existsSync(jsonPath)) {
       rmSync(jsonPath);
     }

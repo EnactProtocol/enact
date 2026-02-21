@@ -39,7 +39,7 @@ This document provides a comprehensive overview of all available commands in the
 
 ## Overview
 
-Enact CLI manages containerized tools with cryptographic signing. It supports local development and automatic installation of registry tools to `~/.agent/skills/`.
+Enact CLI manages containerized tools with cryptographic signing. It supports local development and automatic installation of registry tools to `~/.agents/skills/`.
 
 ## Global Options
 
@@ -152,7 +152,7 @@ Tools with `hooks.build` benefit from Dagger's layer caching:
 - Subsequent runs: Cached build → only script executes (instant)
 - Use `--no-cache` to force a fresh build
 
-**Resolution order**: Project `.enact/` → `~/.enact/tools/` (user-level) → `~/.agent/skills/` → download from registry
+**Resolution order**: Project `.enact/` → `~/.enact/tools/` (user-level) → `~/.agents/skills/` → download from registry
 
 **Examples**:
 ```bash
@@ -199,7 +199,7 @@ enact run myorg/utils/hello --args '{"name":"Alice"}' --quiet
 **⚠️ Security Warning**:
 This command bypasses the deterministic execution guarantee of the signed manifest. It allows running *any* command inside the container. Use with caution, especially when automating tool execution.
 
-**Resolution order**: Project `.enact/` → `~/.enact/tools/` (user-level) → `~/.agent/skills/` → download from registry
+**Resolution order**: Project `.enact/` → `~/.enact/tools/` (user-level) → `~/.agents/skills/` → download from registry
 
 **Examples**:
 ```bash
@@ -234,24 +234,24 @@ enact exec kgroves88/ai/pdf-extract "python extract.py --file=doc.pdf --pages=1-
 
 **Behavior**:
 
-All tools are installed to `~/.agent/skills/{tool}/` and tracked via `tools.json` files.
+All tools are installed to `~/.agents/skills/{tool}/` and tracked via `tools.json` files.
 
 **Project-level (default):**
-- `enact install <tool-name>` → Installs to `~/.agent/skills/`, adds to `./.enact/tools.json`
+- `enact install <tool-name>` → Installs to `~/.agents/skills/`, adds to `./.enact/tools.json`
 - `enact install` → Installs all tools from `./.enact/tools.json`
-- `enact install .` → Packages current directory to `~/.agent/skills/`, adds to `./.enact/tools.json`
+- `enact install .` → Packages current directory to `~/.agents/skills/`, adds to `./.enact/tools.json`
 
 **User-level (--global):**
-- `enact install <tool-name> --global` → Installs to `~/.agent/skills/`, adds to `~/.enact/tools.json`
-- `enact install . --global` → Packages current directory to `~/.agent/skills/`, adds to `~/.enact/tools.json`
+- `enact install <tool-name> --global` → Installs to `~/.agents/skills/`, adds to `~/.enact/tools.json`
+- `enact install . --global` → Packages current directory to `~/.agents/skills/`, adds to `~/.enact/tools.json`
 
-**Resolution order**: `./.enact/tools.json` (project) → `~/.enact/tools.json` (global) → `~/.agent/skills/` → download from registry
+**Resolution order**: `./.enact/tools.json` (project) → `~/.enact/tools.json` (global) → `~/.agents/skills/` → download from registry
 
 **Examples**:
 ```bash
 # Install tool for current project (like npm install <package>)
 enact install acme-corp/data/csv-processor
-# Installs to ~/.agent/skills/acme-corp/data/csv-processor/
+# Installs to ~/.agents/skills/acme-corp/data/csv-processor/
 # Adds to ./.enact/tools.json
 
 # Install all project tools (like npm install)
@@ -260,19 +260,19 @@ enact install
 
 # Install tool globally (like npm install -g <package>)
 enact install acme-corp/data/csv-processor --global
-# Installs to ~/.agent/skills/acme-corp/data/csv-processor/
+# Installs to ~/.agents/skills/acme-corp/data/csv-processor/
 # Adds to ~/.enact/tools.json
 
 # Install current directory globally (like npm install -g .)
 cd my-tool/
 enact install . --global
-# Installs to ~/.agent/skills/myorg/category/my-tool/
+# Installs to ~/.agents/skills/myorg/category/my-tool/
 # Adds to ~/.enact/tools.json
 
 # Install current directory to project
 cd my-tool/
 enact install .
-# Installs to ~/.agent/skills/myorg/category/my-tool/
+# Installs to ~/.agents/skills/myorg/category/my-tool/
 # Adds to ./.enact/tools.json
 ```
 
@@ -434,7 +434,7 @@ enact learn acme-corp/workflows/data-pipeline --format md
 **Behavior**:
 - Default: Opens the tool's page in your browser for quick review
 - With `--download`: Downloads the tool bundle and extracts to a local directory
-- Does NOT install to ~/.agent/skills/ or update tools.json
+- Does NOT install to ~/.agents/skills/ or update tools.json
 - Does NOT require trust verification (purpose is to audit before trusting)
 
 **Use cases**:
@@ -703,7 +703,7 @@ Lookup:
 
 **Common settings**:
 - `registry.url` - Registry URL (default: https://enact.tools)
-- `cache.dir` - Skills directory (default: ~/.agent/skills)
+- `cache.dir` - Skills directory (default: ~/.agents/skills)
 - `tools.dir` - User-level tools directory (default: ~/.enact/tools)
 
 **Examples**:
@@ -823,7 +823,7 @@ enact run . --args '{"name":"World"}'
 
 # 5. Install globally when ready
 enact install . --global
-# Installs to ~/.agent/skills/myorg/utils/my-tool/
+# Installs to ~/.agents/skills/myorg/utils/my-tool/
 # Adds to ~/.enact/tools.json
 
 # 6. Test the installed version
@@ -847,7 +847,7 @@ cd my-project
 # 2. Install tools for project
 enact install acme-corp/data/csv-processor
 enact install myorg/utils/formatter
-# Creates ./.enact/tools.json, installs to ~/.agent/skills/
+# Creates ./.enact/tools.json, installs to ~/.agents/skills/
 
 # 3. Team members clone and install
 git clone https://github.com/myorg/my-project
@@ -927,7 +927,7 @@ registry:
   url: https://enact.tools
 
 skills:
-  dir: ~/.agent/skills
+  dir: ~/.agents/skills
 ```
 
 ### ~/.enact/tools.json
@@ -946,7 +946,7 @@ When executing a tool, Enact searches in this order:
 
 1. **Project tools** (`./.enact/tools.json`) - Tools installed for current project
 2. **Global tools** (`~/.enact/tools.json`) - Tools installed with `--global`
-3. **Skills directory** (`~/.agent/skills/`) - Any installed skill
+3. **Skills directory** (`~/.agents/skills/`) - Any installed skill
 4. **Registry** - Download, verify signature, install, execute
 
 ---
@@ -986,7 +986,7 @@ Enact uses standardized exit codes following Unix conventions:
 ## Environment Variables
 
 - `ENACT_REGISTRY_URL` - Override registry URL
-- `ENACT_SKILLS_DIR` - Override skills directory (default: ~/.agent/skills)
+- `ENACT_SKILLS_DIR` - Override skills directory (default: ~/.agents/skills)
 - `ENACT_TOOLS_DIR` - Override user-level tools directory
 - `ENACT_DEBUG` - Enable debug logging
 
@@ -995,7 +995,7 @@ Enact uses standardized exit codes following Unix conventions:
 ## Security Notes
 
 1. **User-level tools** (`~/.enact/tools/`) skip signature verification (user-controlled workspace)
-2. **Installed skills** (`~/.agent/skills/`) are verified on download from registry
+2. **Installed skills** (`~/.agents/skills/`) are verified on download from registry
 3. **Signature verification** happens automatically during install/run
 4. **Environment variables** are scoped to tool namespaces
 5. Use `enact trust check` to view trust status and attestations for any tool

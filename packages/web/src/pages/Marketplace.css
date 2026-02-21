@@ -1,0 +1,755 @@
+/* ── Marketplace Dark Theme ──
+   Scoped under .marketplace-page so it doesn't leak into the light-themed site.
+   Uses CSS custom properties for the warm dark palette from the design reference.
+*/
+
+.marketplace-page {
+  --mp-bg: hsl(30, 3.3%, 11.8%);
+  --mp-fg: hsl(48, 33.3%, 97.1%);
+  --mp-accent: hsl(15, 63.1%, 59.6%);
+  --mp-accent-dim: hsl(15 63.1% 59.6% / 0.1);
+  --mp-accent-mid: hsl(15 63.1% 59.6% / 0.35);
+  --mp-surface: hsl(60, 2.7%, 14.5%);
+  --mp-surface-2: hsl(60, 2.1%, 18.4%);
+  --mp-surface-3: hsl(48, 3.4%, 29.2%);
+  --mp-border: hsl(48, 3.4%, 29.2%);
+  --mp-border-2: hsl(60, 2.5%, 23.3%);
+  --mp-muted: hsl(48, 4.8%, 59.2%);
+  --mp-muted-2: hsl(51, 3.1%, 43.7%);
+  --mp-red: hsl(0, 67%, 59.6%);
+  --mp-blue: hsl(210, 70.9%, 51.6%);
+  --mp-purple: hsl(251, 40.2%, 54.1%);
+  --mp-amber: hsl(40, 71%, 50%);
+  --mp-gold: hsl(39, 93.4%, 55%);
+
+  background: var(--mp-bg);
+  color: var(--mp-fg);
+  font-family: "Outfit", system-ui, -apple-system, sans-serif;
+  line-height: 1.6;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ── Ambient Blobs ── */
+.mp-ambient-blobs {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.mp-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.05;
+  animation: mp-drift linear infinite;
+}
+
+.mp-blob-1 {
+  width: 600px;
+  height: 600px;
+  background: hsl(15, 63%, 50%);
+  top: -200px;
+  left: -100px;
+  animation-duration: 28s;
+}
+
+.mp-blob-2 {
+  width: 500px;
+  height: 500px;
+  background: hsl(251, 40%, 50%);
+  top: 20%;
+  right: -150px;
+  animation-duration: 34s;
+  animation-delay: -10s;
+}
+
+.mp-blob-3 {
+  width: 400px;
+  height: 400px;
+  background: hsl(210, 70%, 45%);
+  bottom: 10%;
+  left: 30%;
+  animation-duration: 40s;
+  animation-delay: -20s;
+}
+
+.mp-blob-4 {
+  width: 300px;
+  height: 300px;
+  background: hsl(39, 80%, 50%);
+  bottom: -100px;
+  right: 20%;
+  animation-duration: 32s;
+  animation-delay: -5s;
+}
+
+@keyframes mp-drift {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  25% {
+    transform: translate(60px, -80px) scale(1.08);
+  }
+  50% {
+    transform: translate(-40px, 60px) scale(0.95);
+  }
+  75% {
+    transform: translate(80px, 40px) scale(1.05);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+/* ── Canvas ── */
+.mp-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* All content sections above canvas/blobs */
+.mp-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Hero ── */
+.mp-hero {
+  padding: 80px 48px 64px;
+  max-width: 1100px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.mp-hero-eyebrow {
+  font-family: "JetBrains Mono", var(--fonts-mono);
+  font-size: 11px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--mp-accent);
+  margin-bottom: 20px;
+}
+
+.mp-hero h1 {
+  font-size: clamp(36px, 5vw, 64px);
+  font-weight: 900;
+  letter-spacing: -2px;
+  line-height: 1.05;
+  margin-bottom: 20px;
+}
+
+.mp-hero h1 em {
+  font-style: normal;
+  background: linear-gradient(135deg, var(--mp-accent), var(--mp-blue));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.mp-hero-sub {
+  font-size: 18px;
+  color: var(--mp-muted);
+  max-width: 560px;
+  margin: 0 auto 48px;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+/* ── Search ── */
+.mp-search-wrap {
+  max-width: 680px;
+  margin: 0 auto 16px;
+  position: relative;
+}
+
+.mp-search-box {
+  width: 100%;
+  background: var(--mp-surface-2);
+  border: 1px solid var(--mp-border-2);
+  border-radius: 14px;
+  padding: 18px 140px 18px 56px;
+  font-family: "Outfit", system-ui, sans-serif;
+  font-size: 16px;
+  color: var(--mp-fg);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.mp-search-box::placeholder {
+  color: var(--mp-muted-2);
+}
+
+.mp-search-box:focus {
+  border-color: var(--mp-accent-mid);
+  box-shadow: 0 0 0 3px var(--mp-accent-dim);
+}
+
+.mp-search-icon {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--mp-muted);
+  font-size: 18px;
+  pointer-events: none;
+}
+
+.mp-search-submit {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--mp-accent);
+  color: var(--mp-bg);
+  font-family: "JetBrains Mono", var(--fonts-mono);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 18px;
+  border-radius: 9px;
+  border: none;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: opacity 0.2s;
+}
+
+.mp-search-submit:hover {
+  opacity: 0.85;
+}
+
+.mp-search-examples {
+  font-size: 13px;
+  color: var(--mp-muted);
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mp-search-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: "JetBrains Mono", var(--fonts-mono);
+  font-size: 12px;
+  color: var(--mp-muted);
+  background: var(--mp-surface-2);
+  border: 1px solid var(--mp-border);
+  border-radius: 20px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mp-search-pill:hover {
+  color: var(--mp-accent);
+  border-color: var(--mp-accent-mid);
+  background: var(--mp-accent-dim);
+}
+
+/* ── Stats Row ── */
+.mp-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--mp-border);
+  border: 1px solid var(--mp-border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.mp-stat-cell {
+  background: var(--mp-surface);
+  padding: 28px 24px;
+  text-align: center;
+}
+
+.mp-stat-big {
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: -1px;
+  color: var(--mp-accent);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.mp-stat-label {
+  font-size: 13px;
+  color: var(--mp-muted);
+}
+
+/* ── Sections ── */
+.mp-section {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 56px 48px;
+}
+
+.mp-section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.mp-section-title {
+  font-size: 13px;
+  font-family: "JetBrains Mono", var(--fonts-mono);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--mp-accent);
+  margin-bottom: 8px;
+}
+
+.mp-section-heading {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.mp-section-link {
+  font-family: "JetBrains Mono", var(--fonts-mono);
+  font-size: 12px;
+  color: var(--mp-muted);
+  transition: color 0.2s;
+}
+
+.mp-section-link:hover {
+  color: var(--mp-accent);
+}
+
+/* ── Publishers Row ── */
+.mp-publishers-row {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: none;
+}
+
+.mp-publishers-row::-webkit-scrollbar {
+  display: none;
+}
+
+.mp-publisher-card {
+  flex-shrink: 0;
+  width: 200px;
+  background: var(--mp-surface);
+  border: 1px solid var(--mp-border);
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.mp-publisher-card:hover {
+  border-color: var(--mp-accent-mid);
+  transform: translateY(-2px);
+}
+
+.mp-publisher-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "JetBrains Mono", var(--fonts-mono);
+  font-size: 14px;
+  font-weight: 700;
+  overflow: hidden;
+}
+
+.mp-publisher-logo-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.mp-publisher-name {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.mp-publisher-skills {
+  font-size: 12px;
+  color: var(--mp-muted);
+  margin-bottom: 10px;
+}
+
+/* ── Badges ── */
+.mp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: "JetBrains Mono", var(--fonts-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.mp-badge-official {
+  background: rgba(244, 197, 66, 0.12);
+  color: var(--mp-gold);
+  border: 1px solid rgba(244, 197, 66, 0.25);
+}
+
+.mp-badge-verified {
+  background: hsl(15 63.1% 59.6% / 0.08);
+  color: var(--mp-accent);
+  border: 1px solid var(--mp-accent-mid);
+}
+
+.mp-badge-community {
+  background: var(--mp-surface-3);
+  color: var(--mp-muted);
+  border: 1px solid var(--mp-border);
+}
+
+/* ── Skill Cards ── */
+.mp-skills-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.mp-skill-card {
+  background: var(--mp-surface);
+  border: 1px solid var(--mp-border);
+  border-radius: 12px;
+  padding: 24px;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mp-skill-card:hover {
+  border-color: var(--mp-border-2);
+  transform: translateY(-2px);
+}
+
+.mp-skill-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mp-skill-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--mp-surface-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+
+.mp-skill-name-wrap {
+  flex: 1;
+}
+
+.mp-skill-name {
+  font-family: "JetBrains Mono", var(--fonts-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mp-fg);
+  margin-bottom: 2px;
+}
+
+.mp-skill-publisher {
+  font-size: 12px;
+  color: var(--mp-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.mp-v-mark {
+  color: var(--mp-accent);
+  font-size: 11px;
+}
+.mp-o-mark {
+  color: var(--mp-gold);
+  font-size: 11px;
+}
+
+.mp-skill-desc {
+  font-size: 13px;
+  color: var(--mp-muted);
+  line-height: 1.5;
+}
+
+.mp-skill-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid var(--mp-border);
+}
+
+.mp-skill-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.mp-tag {
+  font-family: "JetBrains Mono", var(--fonts-mono);
+  font-size: 10px;
+  color: var(--mp-muted);
+  background: var(--mp-surface-3);
+  border: 1px solid var(--mp-border);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+
+.mp-skill-stats {
+  font-family: "JetBrains Mono", var(--fonts-mono);
+  font-size: 11px;
+  color: var(--mp-muted-2);
+  white-space: nowrap;
+}
+
+.mp-pulse-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  background: var(--mp-accent);
+  border-radius: 50%;
+  margin-right: 5px;
+  animation: mp-pulse 2s infinite;
+}
+
+@keyframes mp-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* ── Trust Bar ── */
+.mp-trust-bar {
+  background: var(--mp-surface);
+  border-top: 1px solid var(--mp-border);
+  border-bottom: 1px solid var(--mp-border);
+  padding: 14px 48px;
+}
+
+.mp-trust-bar-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.mp-trust-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--mp-muted);
+}
+
+.mp-trust-item strong {
+  color: var(--mp-fg);
+  font-weight: 600;
+}
+
+.mp-trust-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--mp-border-2);
+}
+
+/* ── Provenance Banner ── */
+.mp-provenance-banner {
+  background: linear-gradient(135deg, var(--mp-surface), hsl(15 20% 13%));
+  border: 1px solid hsl(15 63.1% 59.6% / 0.15);
+  border-radius: 16px;
+  padding: 40px 48px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .mp-provenance-banner {
+    grid-template-columns: 1fr;
+  }
+  .mp-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .mp-hero {
+    padding: 48px 24px 40px;
+  }
+  .mp-section {
+    padding: 40px 24px;
+  }
+  .mp-trust-bar {
+    padding: 14px 24px;
+  }
+  .mp-trust-bar-inner {
+    gap: 16px;
+  }
+  .mp-trust-divider {
+    display: none;
+  }
+  .mp-provenance-banner {
+    padding: 24px;
+  }
+}
+
+.mp-provenance-banner h2 {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 12px;
+  line-height: 1.2;
+}
+
+.mp-provenance-banner h2 strong {
+  color: var(--mp-accent);
+}
+
+.mp-provenance-banner .mp-prov-desc {
+  font-size: 15px;
+  color: var(--mp-muted);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.mp-provenance-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mp-prov-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.mp-prov-step-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--mp-accent-dim);
+  border: 1px solid var(--mp-accent-mid);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.mp-prov-step-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.mp-prov-step-text {
+  font-size: 13px;
+  color: var(--mp-muted);
+  line-height: 1.4;
+}
+
+.mp-sigstore-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: "JetBrains Mono", var(--fonts-mono);
+  font-size: 12px;
+  color: var(--mp-accent);
+  background: var(--mp-accent-dim);
+  border: 1px solid var(--mp-accent-mid);
+  border-radius: 8px;
+  padding: 8px 14px;
+}
+
+/* ── Chain Graphic ── */
+.mp-chain-graphic {
+  background: var(--mp-surface-2);
+  border: 1px solid var(--mp-border-2);
+  border-radius: 12px;
+  padding: 24px;
+  font-family: "JetBrains Mono", var(--fonts-mono);
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.mp-chain-row {
+  display: flex;
+  align-items: stretch;
+}
+
+.mp-chain-left {
+  width: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.mp-chain-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.mp-chain-line {
+  width: 2px;
+  flex: 1;
+  min-height: 16px;
+}
+
+.mp-chain-content {
+  flex: 1;
+  padding: 4px 0 20px;
+}
+
+.mp-chain-label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.mp-chain-value {
+  font-size: 12px;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+/* Scroll reveal support inside marketplace */
+.marketplace-page .scroll-reveal {
+  opacity: 0;
+}
+.marketplace-page .scroll-reveal.scroll-revealed {
+  opacity: 1;
+}

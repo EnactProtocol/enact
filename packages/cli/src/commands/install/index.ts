@@ -2,8 +2,8 @@
  * enact install command
  *
  * Install a tool to the project or globally.
- * All tools are extracted to ~/.agent/skills/{tool}/
- * - Project install: Adds entry to .enact/tools.json
+ * All tools are extracted to ~/.agents/skills/{tool}/
+ * - Project install: Adds entry to agents/skills.json
  * - Global install: Adds entry to ~/.enact/tools.json
  *
  * Supports local paths and registry tools with verification.
@@ -27,7 +27,7 @@ import {
   addToolToRegistry,
   getInstalledVersion,
   getMinimumAttestations,
-  getProjectEnactDir,
+  getProjectAgentsDir,
   getToolCachePath,
   getTrustPolicy,
   getTrustedAuditors,
@@ -529,7 +529,7 @@ async function installFromRegistry(
   keyValue("Tool", toolName);
   keyValue("Version", targetVersion ?? "unknown");
   keyValue("Location", cachePath);
-  keyValue("Scope", isGlobal ? "global (~/.enact/tools.json)" : "project (.enact/tools.json)");
+  keyValue("Scope", isGlobal ? "global (~/.enact/tools.json)" : "project (agents/skills.json)");
   keyValue("Size", formatBytes(bundleResult.size));
   keyValue("Hash", `${bundleResult.hash.substring(0, 20)}...`);
   if (options.alias) {
@@ -543,8 +543,8 @@ async function installFromRegistry(
  * Install from a local path
  *
  * Both global and project installs:
- * 1. Copy tool to ~/.agent/skills/{tool}/
- * 2. Update tools.json (global: ~/.enact/tools.json, project: .enact/tools.json)
+ * 1. Copy tool to ~/.agents/skills/{tool}/
+ * 2. Update registry (global: ~/.enact/tools.json, project: agents/skills.json)
  */
 async function installFromPath(
   sourcePath: string,
@@ -653,7 +653,7 @@ async function installFromPath(
   keyValue("Tool", manifest.name);
   keyValue("Version", manifest.version ?? "unversioned");
   keyValue("Location", cachePath);
-  keyValue("Scope", isGlobal ? "global (~/.enact/tools.json)" : "project (.enact/tools.json)");
+  keyValue("Scope", isGlobal ? "global (~/.enact/tools.json)" : "project (agents/skills.json)");
   if (options.alias) {
     keyValue("Alias", options.alias);
   }
@@ -681,36 +681,36 @@ async function installFromName(
 }
 
 /**
- * Install all tools from project .enact/tools.json
+ * Install all tools from project agents/skills.json
  */
 async function installProjectTools(options: InstallOptions, ctx: CommandContext): Promise<void> {
-  const projectDir = getProjectEnactDir(ctx.cwd);
+  const agentsDir = getProjectAgentsDir(ctx.cwd);
 
-  if (!projectDir) {
-    info("No .enact/ directory found. Nothing to install.");
+  if (!agentsDir) {
+    info("No agents/ directory found. Nothing to install.");
     suggest("Run 'enact install <tool>' to install a specific tool.");
     return;
   }
 
-  const toolsJsonPath = join(projectDir, "tools.json");
+  const skillsJsonPath = join(agentsDir, "skills.json");
 
-  if (!existsSync(toolsJsonPath)) {
-    info("No .enact/tools.json found. Nothing to install.");
+  if (!existsSync(skillsJsonPath)) {
+    info("No agents/skills.json found. Nothing to install.");
     suggest("Run 'enact install <tool>' to install a specific tool.");
     return;
   }
 
-  // Parse tools.json
+  // Parse skills.json
   let toolsConfig: { tools?: Record<string, string> };
   try {
-    const content = await Bun.file(toolsJsonPath).text();
+    const content = await Bun.file(skillsJsonPath).text();
     toolsConfig = JSON.parse(content);
   } catch (err) {
-    throw new ManifestError(`Failed to parse .enact/tools.json: ${formatError(err)}`);
+    throw new ManifestError(`Failed to parse agents/skills.json: ${formatError(err)}`);
   }
 
   if (!toolsConfig.tools || Object.keys(toolsConfig.tools).length === 0) {
-    info("No tools specified in .enact/tools.json");
+    info("No tools specified in agents/skills.json");
     return;
   }
 

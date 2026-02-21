@@ -1,17 +1,16 @@
 /**
  * Local tool registry management
  *
- * Manages tools.json files for tracking installed tools:
+ * Manages skills.json files for tracking installed tools:
  * - Global: ~/.enact/tools.json (installed with -g)
- * - Project: .enact/tools.json (project dependencies)
+ * - Project: agents/skills.json (project dependencies)
  *
- * Tools are stored in cache and referenced by version in tools.json.
- * This eliminates the need for a separate ~/.enact/tools/ directory.
+ * Tools are stored in cache and referenced by version in the registry.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { getCacheDir, getEnactHome, getProjectEnactDir } from "./paths";
+import { dirname, join, resolve } from "node:path";
+import { getCacheDir, getEnactHome, getProjectAgentsDir } from "./paths";
 
 /**
  * Structure of tools.json file
@@ -39,15 +38,17 @@ export interface InstalledToolInfo {
 }
 
 /**
- * Get the path to tools.json for the specified scope
+ * Get the path to the registry file for the specified scope
+ * - Global: ~/.enact/tools.json
+ * - Project: agents/skills.json
  */
 export function getToolsJsonPath(scope: RegistryScope, startDir?: string): string | null {
   if (scope === "global") {
     return join(getEnactHome(), "tools.json");
   }
 
-  const projectDir = getProjectEnactDir(startDir);
-  return projectDir ? join(projectDir, "tools.json") : null;
+  const agentsDir = getProjectAgentsDir(startDir);
+  return agentsDir ? join(agentsDir, "skills.json") : null;
 }
 
 /**
@@ -84,12 +85,12 @@ export function saveToolsRegistry(
 ): void {
   let registryPath = getToolsJsonPath(scope, startDir);
 
-  // For project scope, create .enact/ directory if it doesn't exist
+  // For project scope, create agents/ directory if it doesn't exist
   if (!registryPath && scope === "project") {
-    const projectRoot = startDir ?? process.cwd();
-    const enactDir = join(projectRoot, ".enact");
-    mkdirSync(enactDir, { recursive: true });
-    registryPath = join(enactDir, "tools.json");
+    const projectRoot = resolve(startDir ?? process.cwd());
+    const agentsDir = join(projectRoot, "agents");
+    mkdirSync(agentsDir, { recursive: true });
+    registryPath = join(agentsDir, "skills.json");
   }
 
   if (!registryPath) {
@@ -166,7 +167,7 @@ export function getInstalledVersion(
 
 /**
  * Get the install path for a skill
- * Skills are stored at ~/.agent/skills/{name}/ (flat, no version subdirectory)
+ * Skills are stored at ~/.agents/skills/{name}/ (flat, no version subdirectory)
  */
 export function getToolCachePath(toolName: string, _version: string): string {
   const skillsDir = getCacheDir();

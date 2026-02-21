@@ -24,6 +24,8 @@ export {
 export {
   getEnactHome,
   getProjectEnactDir,
+  getProjectAgentsDir,
+  getProjectRoot,
   getToolsDir,
   getSkillsDir,
   getCacheDir,
