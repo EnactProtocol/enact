@@ -362,21 +362,26 @@ describe("File system helpers", () => {
       expect(readTextFile(filePath)).toBe("");
     });
 
-    test("updates existing file mtime", () => {
+    test("updates existing file mtime without modifying content", async () => {
       const filePath = join(TEST_DIR, "touched-existing.txt");
       writeFileSync(filePath, "content", "utf-8");
 
-      // Wait a bit to ensure mtime changes
-      const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+      const statsBefore = getStats(filePath);
+      expect(statsBefore).not.toBeNull();
 
-      return delay(10).then(() => {
-        touchFile(filePath);
-        const statsAfter = getStats(filePath);
-        // Content should be preserved
-        expect(readTextFile(filePath)).toBe("content");
-        // mtime should be updated (or at least stats should exist)
-        expect(statsAfter).not.toBeNull();
-      });
+      // Wait long enough for the OS clock to tick so mtime will differ
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      touchFile(filePath);
+
+      const statsAfter = getStats(filePath);
+      expect(statsAfter).not.toBeNull();
+
+      // Content must be preserved — utimesSync does not touch file data
+      expect(readTextFile(filePath)).toBe("content");
+
+      // mtime must have advanced
+      expect(statsAfter!.modified.getTime()).toBeGreaterThan(statsBefore!.modified.getTime());
     });
 
     test("creates parent directories", () => {
