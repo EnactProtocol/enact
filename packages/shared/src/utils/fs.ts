@@ -12,6 +12,7 @@ import {
   readdirSync,
   rmSync,
   statSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
@@ -268,13 +269,16 @@ export function getFileSize(filePath: string): number | null {
 }
 
 /**
- * Touch a file (create if not exists, update mtime if exists)
+ * Touch a file (create if not exists, update atime/mtime if exists)
+ *
+ * Uses utimesSync to update timestamps without reading or rewriting the file,
+ * which avoids unnecessary I/O and eliminates the risk of data loss on large files.
  */
 export function touchFile(filePath: string): void {
   ensureParentDir(filePath);
   if (existsSync(filePath)) {
-    // Update access and modification time by rewriting the file
-    writeFileSync(filePath, readFileSync(filePath));
+    const now = new Date();
+    utimesSync(filePath, now, now);
   } else {
     writeFileSync(filePath, "", "utf-8");
   }
