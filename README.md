@@ -132,7 +132,7 @@ env:
     secret: true
 
 scripts:
-  scrape: "python /workspace/scrape.py {{url}}"
+  scrape: "python /workspace/scrape.py"
 ```
 
 **SKILL.md** teaches the agent how to use the skill — plain markdown, no special syntax.
