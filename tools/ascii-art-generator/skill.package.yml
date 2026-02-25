@@ -1,6 +1,6 @@
 enact: "2.0.0"
 name: enact/ascii-art-generator
-version: "1.0.1"
+version: "1.0.2"
 description: Generates ASCII art from a given text
 from: python:3.12-slim
 

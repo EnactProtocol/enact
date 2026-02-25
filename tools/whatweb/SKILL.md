@@ -1,3 +1,8 @@
+---
+name: whatweb
+description: Web scanner that identifies websites, CMS, frameworks, web servers, and embedded devices
+---
+
 # WhatWeb Scanner
 
 Next generation web scanner that identifies websites and detects web technologies, CMS platforms, JavaScript libraries, web servers, and embedded devices.
@@ -8,12 +13,12 @@ Next generation web scanner that identifies websites and detects web technologie
 
 Basic scan:
 ```bash
-enact run enact/scanner/whatweb -a '{"url": "https://github.com"}'
+enact run enact/scanner/whatweb:retrieve -a '{"url": "https://github.com"}'
 ```
 
 Aggressive scan with verbose output:
 ```bash
-enact run enact/scanner/whatweb -a '{"url": "https://example.com", "aggression": 3, "verbose": true}'
+enact run enact/scanner/whatweb:scan -a '{"url": "https://example.com", "aggression": 3, "verbose": true}'
 ```
 
 Custom plugins and user agent:

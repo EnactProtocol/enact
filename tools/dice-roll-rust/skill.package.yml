@@ -1,6 +1,6 @@
 enact: "2.0.0"
 name: enact/dice-roll-rust
-version: "1.0.1"
+version: "1.0.2"
 description: Roll dice with configurable sides and count - a simple Rust example tool
 from: rust:1.75-slim
 

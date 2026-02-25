@@ -1,3 +1,8 @@
+---
+name: hello-go
+description: A simple Go greeting tool
+---
+
 # Hello Go
 
 A simple Go tool that greets you by name. Demonstrates how to create an Enact tool with Go.

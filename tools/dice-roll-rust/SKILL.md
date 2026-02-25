@@ -1,3 +1,8 @@
+---
+name: dice-roll-rust
+description: Roll dice with configurable sides and count - a simple Rust example tool
+---
+
 # Dice Roll (Rust)
 
 A simple dice rolling tool written in Rust. Demonstrates how to create an Enact tool with Rust.

@@ -1,3 +1,8 @@
+---
+name: firecrawl
+description: Scrape, crawl, search, and extract structured data from websites using Firecrawl API - converts web pages to LLM-ready markdown
+---
+
 # Firecrawl Web Scraping Tool
 
 A powerful web scraping tool that uses the [Firecrawl API](https://firecrawl.dev) to convert websites into clean, LLM-ready markdown and extract structured data.

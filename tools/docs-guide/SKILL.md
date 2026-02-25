@@ -1,3 +1,8 @@
+---
+name: docs-guide
+description: LLM guide for creating, publishing, and running Enact tools
+---
+
 # Enact LLM Guide
 
 Enact: Containerized tools with structured I/O for AI agents.

@@ -1,6 +1,6 @@
 enact: "2.0.0"
 name: enact/hello-rust
-version: "1.0.1"
+version: "1.0.2"
 description: A simple Rust greeting tool
 from: rust:1.83-slim
 
@@ -10,3 +10,4 @@ hooks:
 
 scripts:
   greet: "/work/hello {{name}}"
+  

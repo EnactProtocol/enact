@@ -1,3 +1,8 @@
+---
+name: hello-js
+description: A simple JavaScript greeting tool
+---
+
 # Hello JS
 
 A simple JavaScript tool that greets you by name. Demonstrates how to create an Enact tool with Node.js.

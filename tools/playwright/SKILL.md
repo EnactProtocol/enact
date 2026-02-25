@@ -1,3 +1,8 @@
+---
+name: playwright
+description: Browser automation tool using Playwright - captures screenshots and extracts content from web pages
+---
+
 # Playwright Browser Automation
 
 A browser automation tool that uses Playwright to interact with web pages.

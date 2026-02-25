@@ -1,3 +1,8 @@
+---
+name: data-transformer
+description: Transform data between CSV and JSON formats with filtering and column selection
+---
+
 # Data Transformer
 
 A TypeScript-based tool that transforms data between CSV and JSON formats with advanced filtering and column selection capabilities.
