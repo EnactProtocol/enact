@@ -14,4 +14,4 @@ env:
     secret: true
 
 scripts:
-  scrape: "python /workspace/firecrawl.py {{action}} {{url}} {{formats}} {{limit}} {{only_main_content}} {{prompt}} {{schema}}"
+  scrape: "python /workspace/firecrawl.py"

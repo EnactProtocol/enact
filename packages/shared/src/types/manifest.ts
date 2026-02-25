@@ -65,8 +65,8 @@ export interface ToolHooks {
 /**
  * Script definition — either a simple command string or an expanded object
  *
- * Simple form: "python main.py {{url}}"
- * Expanded form: { command: "python main.py {{url}}", description: "Scrape a URL" }
+ * Simple form: "python main.py"
+ * Expanded form: { command: "python main.py", description: "Scrape a URL" }
  */
 export type ScriptDefinition =
   | string
@@ -170,13 +170,14 @@ export interface ToolManifest {
    * Inline executable scripts (each becomes an MCP tool via colon syntax)
    *
    * Scripts replace the need for a separate ACTIONS.yaml file.
-   * Each script maps a name to a command with {{param}} template syntax.
+   * Each script maps a name to a base command. Arguments are passed through
+   * from the CLI or converted from JSON to --key value flags.
    *
    * @example
    * scripts:
-   *   scrape: python scripts/scrape.py {{url}}
+   *   scrape: python scripts/scrape.py
    *   crawl:
-   *     command: python scripts/crawl.py {{url}} {{depth}}
+   *     command: python scripts/crawl.py
    *     description: Crawl a website to specified depth
    */
   scripts?: Record<string, ScriptDefinition>;

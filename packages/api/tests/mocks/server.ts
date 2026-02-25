@@ -107,7 +107,7 @@ export const MOCK_VERSIONS: Record<string, ToolVersionDetails> = {
       from: "alpine:latest",
       timeout: "30s",
       scripts: {
-        greet: "echo 'Hello, {{name}}!'",
+        greet: "echo Hello",
       },
     },
     rawManifest: `---
@@ -119,7 +119,7 @@ license: MIT
 from: alpine:latest
 timeout: 30s
 scripts:
-  greet: echo 'Hello, {{name}}!'
+  greet: echo Hello
 ---
 
 # Greeter Tool
@@ -175,7 +175,7 @@ enact run alice/greeter --name "World"
       from: "python:3.12-slim",
       timeout: "60s",
       scripts: {
-        parse: "python /app/parse.py {{input_file}}",
+        parse: "python /app/parse.py",
       },
     },
     // No rawManifest for this tool - tests the case where rawManifest is not provided

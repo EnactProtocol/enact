@@ -16,8 +16,9 @@ import { dirname, join, resolve } from "node:path";
 import {
   type ToolManifest,
   applyDefaults,
+  buildCommand,
+  jsonArgsToFlags,
   loadManifestFromDir,
-  prepareActionCommand,
   prepareCommand,
   scriptToAction,
   toolNameToPath,
@@ -246,12 +247,10 @@ describe("E2E: Input Validation Flow", () => {
   });
 
   test("validates greeter with default input", () => {
-    // Convert script to action to get its inputSchema
     const action = scriptToAction("greet", greeterManifest.scripts!.greet!);
     const withDefaults = applyDefaults({}, action.inputSchema);
     const result = validateInputs(withDefaults, action.inputSchema);
     expect(result.valid).toBe(true);
-    // Should have default applied
     expect(withDefaults.name).toBe("World");
   });
 
@@ -286,38 +285,47 @@ describe("E2E: Input Validation Flow", () => {
 });
 
 describe("E2E: Command Preparation Flow", () => {
-  test("prepares greeter command with input", () => {
-    const command = `echo '{"message": "Hello, \${name}!"}'`;
-    const prepared = prepareCommand(command, { name: "Alice" });
+  test("prepares greeter command with buildCommand and jsonArgsToFlags", () => {
+    const loaded = loadManifestFromDir(GREETER_TOOL);
+    const action = scriptToAction("greet", loaded!.manifest.scripts!.greet!);
 
-    // prepareCommand returns string[] - join to check content
-    const preparedStr = prepared.join(" ");
-    expect(preparedStr).toContain("Alice");
-    expect(preparedStr).not.toContain("${name}");
+    const flags = jsonArgsToFlags({ name: "Alice" });
+    const prepared = buildCommand(action.command, flags);
+
+    expect(prepared).toContain("--name");
+    expect(prepared).toContain("Alice");
   });
 
-  test("prepares calculator command with multiple inputs (scripts)", () => {
+  test("prepares calculator command with multiple inputs", () => {
     const loaded = loadManifestFromDir(CALCULATOR_TOOL);
     const action = scriptToAction("calculate", loaded!.manifest.scripts!.calculate!);
 
-    const prepared = prepareActionCommand(
-      action.command as string[],
-      { operation: "add", a: 5, b: 3 },
-      action.inputSchema
-    );
-    const preparedStr = prepared.join(" ");
+    const flags = jsonArgsToFlags({ operation: "add", a: 5, b: 3 });
+    const prepared = buildCommand(action.command, flags);
 
-    expect(preparedStr).toContain("add");
-    expect(preparedStr).toContain("5");
-    expect(preparedStr).toContain("3");
+    expect(prepared).toContain("--operation");
+    expect(prepared).toContain("add");
+    expect(prepared).toContain("--a");
+    expect(prepared).toContain("5");
+    expect(prepared).toContain("--b");
+    expect(prepared).toContain("3");
   });
 
-  test("escapes special characters in input", () => {
-    const command = `echo "\${text}"`;
+  test("prepares command with no args", () => {
+    const prepared = buildCommand("echo hello", []);
+    expect(prepared).toEqual(["echo", "hello"]);
+  });
+
+  test("prepares command with boolean flags", () => {
+    const flags = jsonArgsToFlags({ verbose: true, quiet: false });
+    const prepared = buildCommand("myapp", flags);
+    expect(prepared).toEqual(["myapp", "--verbose"]);
+  });
+
+  test("prepares legacy ${param} command with prepareCommand", () => {
+    const command = `echo '\${text}'`;
     const prepared = prepareCommand(command, { text: "hello; rm -rf /" });
     const preparedStr = prepared.join(" ");
-
-    // Should contain the text (escaped appropriately)
     expect(preparedStr).toContain("hello");
   });
 });
@@ -496,15 +504,11 @@ describe("E2E: Full Workflow", () => {
     const validation = validateInputs({ name: "TestUser" }, action.inputSchema);
     expect(validation.valid).toBe(true);
 
-    // 4. Prepare action command
-    const prepared = prepareActionCommand(
-      action.command as string[],
-      validation.coercedValues!,
-      action.inputSchema
-    );
-    const preparedStr = prepared.join(" ");
-    expect(preparedStr).toContain("TestUser");
-    expect(preparedStr).toContain("Hello");
+    // 4. Build command with passthrough args
+    const flags = jsonArgsToFlags(validation.coercedValues!);
+    const prepared = buildCommand(action.command, flags);
+    expect(prepared).toContain("--name");
+    expect(prepared).toContain("TestUser");
   });
 
   test("complete calculator workflow (scripts)", () => {
@@ -530,15 +534,14 @@ describe("E2E: Full Workflow", () => {
       const validation = validateInputs(inputs, action.inputSchema);
       expect(validation.valid).toBe(true);
 
-      const prepared = prepareActionCommand(
-        action.command as string[],
-        validation.coercedValues!,
-        action.inputSchema
-      );
-      const preparedStr = prepared.join(" ");
-      expect(preparedStr).toContain(inputs.operation);
-      expect(preparedStr).toContain(String(inputs.a));
-      expect(preparedStr).toContain(String(inputs.b));
+      const flags = jsonArgsToFlags(validation.coercedValues!);
+      const prepared = buildCommand(action.command, flags);
+      expect(prepared).toContain("--operation");
+      expect(prepared).toContain(inputs.operation);
+      expect(prepared).toContain("--a");
+      expect(prepared).toContain(String(inputs.a));
+      expect(prepared).toContain("--b");
+      expect(prepared).toContain(String(inputs.b));
     }
   });
 
@@ -552,18 +555,12 @@ describe("E2E: Full Workflow", () => {
     const resolution = tryResolveTool("test/echo-tool", { startDir: tempDir });
     expect(resolution).not.toBeNull();
 
-    // Convert script to action, validate, prepare
+    // Convert script to action, build command with args
     const action = scriptToAction("echo", manifest.scripts!.echo!);
-    const validation = validateInputs({ text: "Hello from markdown tool!" }, action.inputSchema);
-    expect(validation.valid).toBe(true);
-
-    const prepared = prepareActionCommand(
-      action.command as string[],
-      validation.coercedValues!,
-      action.inputSchema
-    );
-    const preparedStr = prepared.join(" ");
-    expect(preparedStr).toContain("Hello from markdown tool!");
+    const flags = jsonArgsToFlags({ text: "Hello from markdown tool!" });
+    const prepared = buildCommand(action.command, flags);
+    expect(prepared).toContain("--text");
+    expect(prepared).toContain("Hello from markdown tool!");
   });
 });
 

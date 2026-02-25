@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Firecrawl API v2 tool for web scraping, crawling, searching, and extracting."""
 
+import argparse
 import json
 import os
 import sys
@@ -38,7 +39,6 @@ def scrape(url: str, formats: list[str], only_main_content: bool, api_key: str) 
 
 def crawl(url: str, limit: int, formats: list[str], api_key: str) -> dict:
     """Crawl a website and return all pages."""
-    # Start the crawl job
     response = requests.post(
         f"{API_BASE}/crawl",
         headers={
@@ -63,8 +63,7 @@ def crawl(url: str, limit: int, formats: list[str], api_key: str) -> dict:
     if not job_id:
         return {"success": False, "error": "No job ID returned from crawl request"}
 
-    # Poll for completion
-    max_attempts = 60  # 5 minutes max
+    max_attempts = 60
     for _ in range(max_attempts):
         status_response = requests.get(
             f"{API_BASE}/crawl/{job_id}",
@@ -133,7 +132,6 @@ def extract(url: str, prompt: str, schema_str: str, api_key: str) -> dict:
         except json.JSONDecodeError:
             return {"success": False, "error": f"Invalid JSON schema: {schema_str}"}
 
-    # Start extract job
     response = requests.post(
         f"{API_BASE}/extract",
         headers={
@@ -150,10 +148,8 @@ def extract(url: str, prompt: str, schema_str: str, api_key: str) -> dict:
 
     job_id = result.get("id")
     if not job_id:
-        # Synchronous response
         return result
 
-    # Poll for completion
     max_attempts = 60
     for _ in range(max_attempts):
         status_response = requests.get(
@@ -174,25 +170,30 @@ def extract(url: str, prompt: str, schema_str: str, api_key: str) -> dict:
 
 
 def main():
-    if len(sys.argv) < 3:
-        print(json.dumps({
-            "success": False,
-            "error": "Usage: firecrawl.py <action> <url_or_query> [formats] [limit] [only_main_content] [prompt] [schema]"
-        }))
+    parser = argparse.ArgumentParser(description="Firecrawl API tool")
+    parser.add_argument("--action", default="scrape", help="Action: scrape, crawl, map, search, extract")
+    parser.add_argument("--url", help="URL to scrape/crawl/map/extract")
+    parser.add_argument("--query", help="Search query (for search action)")
+    parser.add_argument("--formats", default="markdown", help="Output formats, comma-separated")
+    parser.add_argument("--limit", type=int, default=10, help="Max pages for crawl/search")
+    parser.add_argument("--only_main_content", default="true", help="Only main content (true/false)")
+    parser.add_argument("--prompt", default="", help="Prompt for extract action")
+    parser.add_argument("--schema", default="", help="JSON schema for extract action")
+
+    args = parser.parse_args()
+
+    action = args.action
+    url_or_query = args.url or args.query or ""
+    formats = [f.strip() for f in args.formats.split(",")]
+    limit = args.limit
+    only_main_content = args.only_main_content.lower() == "true"
+    prompt = args.prompt
+    schema = args.schema
+
+    if not url_or_query:
+        print(json.dumps({"success": False, "error": "Missing --url or --query"}))
         sys.exit(1)
 
-    action = sys.argv[1]
-    url_or_query = sys.argv[2]
-    formats_str = sys.argv[3] if len(sys.argv) > 3 else "markdown"
-    limit = int(sys.argv[4]) if len(sys.argv) > 4 and sys.argv[4].isdigit() else 10
-    only_main_content = sys.argv[5].lower() == "true" if len(sys.argv) > 5 else True
-    prompt = sys.argv[6] if len(sys.argv) > 6 else ""
-    schema = sys.argv[7] if len(sys.argv) > 7 else ""
-
-    # Parse formats
-    formats = [f.strip() for f in formats_str.split(",")]
-
-    # Get API key
     api_key, error = get_api_key()
     if error:
         print(json.dumps({"success": False, "error": error}))
@@ -204,7 +205,6 @@ def main():
         elif action == "crawl":
             result = crawl(url_or_query, limit, formats, api_key)
         elif action == "map":
-            # For map, prompt can be used as search query
             result = map_urls(url_or_query, prompt, api_key)
         elif action == "search":
             result = search(url_or_query, limit, api_key)
@@ -213,7 +213,6 @@ def main():
         else:
             result = {"success": False, "error": f"Unknown action: {action}"}
 
-        # Add metadata to output
         output = {
             "success": result.get("success", True),
             "action": action,

@@ -1,249 +1,122 @@
 /**
- * Tests for the action command interpolation module.
- *
- * Covers {{param}} template parsing, interpolation, omission of optionals,
- * and the prepareActionCommand entry point.
+ * Tests for buildCommand and jsonArgsToFlags (passthrough arg model).
  */
 
 import { describe, expect, test } from "bun:test";
-import {
-  getActionCommandParams,
-  getMissingRequiredParams,
-  hasActionTemplates,
-  interpolateActionCommand,
-  parseActionArgument,
-  parseActionCommand,
-  prepareActionCommand,
-} from "../src/execution/action-command";
+import { buildCommand, jsonArgsToFlags } from "../src/execution/action-command";
 
-describe("hasActionTemplates", () => {
-  test("returns true for string with {{param}}", () => {
-    expect(hasActionTemplates("hello {{name}}")).toBe(true);
+describe("buildCommand", () => {
+  test("splits string command into array", () => {
+    expect(buildCommand("python main.py")).toEqual(["python", "main.py"]);
   });
 
-  test("returns false for plain string", () => {
-    expect(hasActionTemplates("echo hello")).toBe(false);
+  test("handles array command", () => {
+    expect(buildCommand(["python", "main.py"])).toEqual(["python", "main.py"]);
   });
 
-  test("returns false for ${param} syntax", () => {
-    expect(hasActionTemplates("echo ${name}")).toBe(false);
+  test("appends args to string command", () => {
+    expect(buildCommand("python main.py", ["--url", "https://example.com"])).toEqual([
+      "python",
+      "main.py",
+      "--url",
+      "https://example.com",
+    ]);
   });
 
-  test("returns true for standalone {{param}}", () => {
-    expect(hasActionTemplates("{{url}}")).toBe(true);
-  });
-});
-
-describe("parseActionArgument", () => {
-  test("parses a literal argument", () => {
-    const result = parseActionArgument("echo");
-    expect(result.tokens).toHaveLength(1);
-    expect(result.tokens[0]?.type).toBe("literal");
-    expect(result.tokens[0]?.type === "literal" && result.tokens[0].value).toBe("echo");
-    expect(result.parameters).toHaveLength(0);
+  test("appends args to array command", () => {
+    expect(buildCommand(["echo", "hello"], ["world"])).toEqual(["echo", "hello", "world"]);
   });
 
-  test("parses a standalone parameter", () => {
-    const result = parseActionArgument("{{url}}");
-    expect(result.tokens).toHaveLength(1);
-    expect(result.tokens[0]?.type).toBe("parameter");
-    expect(result.tokens[0]?.type === "parameter" && result.tokens[0].name).toBe("url");
-    expect(result.parameters).toEqual(["url"]);
+  test("returns base command when no args", () => {
+    expect(buildCommand("echo hello")).toEqual(["echo", "hello"]);
   });
 
-  test("parses mixed literal and parameter", () => {
-    const result = parseActionArgument("--name={{name}}");
-    expect(result.tokens).toHaveLength(2);
-    expect(result.tokens[0]?.type).toBe("literal");
-    expect(result.tokens[1]?.type).toBe("parameter");
-    expect(result.parameters).toEqual(["name"]);
+  test("returns base command with empty args", () => {
+    expect(buildCommand("echo hello", [])).toEqual(["echo", "hello"]);
   });
 
-  test("parses multiple parameters in one argument", () => {
-    const result = parseActionArgument("{{host}}:{{port}}");
-    expect(result.tokens).toHaveLength(3);
-    expect(result.parameters).toEqual(["host", "port"]);
+  test("handles extra whitespace in string command", () => {
+    expect(buildCommand("python   main.py   --verbose")).toEqual([
+      "python",
+      "main.py",
+      "--verbose",
+    ]);
   });
 
-  test("trims whitespace in parameter names", () => {
-    const result = parseActionArgument("{{ name }}");
-    expect(result.parameters).toEqual(["name"]);
+  test("does not modify original array", () => {
+    const original = ["python", "main.py"];
+    buildCommand(original, ["--flag"]);
+    expect(original).toEqual(["python", "main.py"]);
+  });
+
+  test("handles single-word command", () => {
+    expect(buildCommand("ls", ["-la"])).toEqual(["ls", "-la"]);
+  });
+
+  test("handles empty string command", () => {
+    expect(buildCommand("", ["arg"])).toEqual(["arg"]);
   });
 });
 
-describe("parseActionCommand", () => {
-  test("parses command with no templates", () => {
-    const result = parseActionCommand(["echo", "hello", "world"]);
-    expect(result.allParameters).toHaveLength(0);
-    expect(result.arguments).toHaveLength(3);
+describe("jsonArgsToFlags", () => {
+  test("converts string value to --key value", () => {
+    expect(jsonArgsToFlags({ url: "https://example.com" })).toEqual([
+      "--url",
+      "https://example.com",
+    ]);
   });
 
-  test("parses command with templates", () => {
-    const result = parseActionCommand(["python", "main.py", "{{url}}"]);
-    expect(result.allParameters).toEqual(["url"]);
+  test("converts number value to --key value", () => {
+    expect(jsonArgsToFlags({ limit: 10 })).toEqual(["--limit", "10"]);
   });
 
-  test("deduplicates parameter names", () => {
-    const result = parseActionCommand(["echo", "{{name}}", "{{name}}"]);
-    expect(result.allParameters).toEqual(["name"]);
+  test("converts true to flag-only --key", () => {
+    expect(jsonArgsToFlags({ verbose: true })).toEqual(["--verbose"]);
   });
 
-  test("collects all unique parameters", () => {
-    const result = parseActionCommand(["cmd", "{{a}}", "{{b}}", "{{c}}"]);
-    expect(result.allParameters).toEqual(["a", "b", "c"]);
-  });
-});
-
-describe("interpolateActionCommand", () => {
-  test("replaces parameter with value", () => {
-    const result = interpolateActionCommand(["echo", "{{name}}"], { name: "Alice" });
-    expect(result).toEqual(["echo", "Alice"]);
+  test("omits false values", () => {
+    expect(jsonArgsToFlags({ verbose: false })).toEqual([]);
   });
 
-  test("preserves literal arguments", () => {
-    const result = interpolateActionCommand(["python", "main.py", "--verbose"], {});
-    expect(result).toEqual(["python", "main.py", "--verbose"]);
+  test("omits null values", () => {
+    expect(jsonArgsToFlags({ name: null })).toEqual([]);
   });
 
-  test("handles mixed literal and parameter", () => {
-    const result = interpolateActionCommand(["--output={{format}}"], { format: "json" });
-    expect(result).toEqual(["--output=json"]);
-  });
-
-  test("converts number to string", () => {
-    const result = interpolateActionCommand(["echo", "{{count}}"], { count: 42 });
-    expect(result).toEqual(["echo", "42"]);
-  });
-
-  test("converts boolean to string", () => {
-    const result = interpolateActionCommand(["echo", "{{flag}}"], { flag: true });
-    expect(result).toEqual(["echo", "true"]);
+  test("omits undefined values", () => {
+    expect(jsonArgsToFlags({ name: undefined })).toEqual([]);
   });
 
   test("converts object to JSON string", () => {
-    const result = interpolateActionCommand(["echo", "{{data}}"], { data: { key: "value" } });
-    expect(result).toEqual(["echo", '{"key":"value"}']);
+    expect(jsonArgsToFlags({ config: { key: "value" } })).toEqual(["--config", '{"key":"value"}']);
   });
 
-  test("omits argument for optional param with no value", () => {
-    const schema = {
-      type: "object" as const,
-      properties: {
-        name: { type: "string" as const },
-        verbose: { type: "boolean" as const },
-      },
-      required: ["name"],
-    };
-
-    const result = interpolateActionCommand(
-      ["echo", "{{name}}", "{{verbose}}"],
-      { name: "Alice" },
-      { inputSchema: schema }
-    );
-    // "verbose" is optional with no value → omitted
-    expect(result).toEqual(["echo", "Alice"]);
+  test("converts array to JSON string", () => {
+    expect(jsonArgsToFlags({ items: [1, 2, 3] })).toEqual(["--items", "[1,2,3]"]);
   });
 
-  test("uses default value for optional param", () => {
-    const schema = {
-      type: "object" as const,
-      properties: {
-        format: { type: "string" as const, default: "text" },
-      },
-    };
-
-    const result = interpolateActionCommand(["echo", "{{format}}"], {}, { inputSchema: schema });
-    expect(result).toEqual(["echo", "text"]);
+  test("handles multiple params", () => {
+    expect(jsonArgsToFlags({ url: "https://example.com", limit: 5, verbose: true })).toEqual([
+      "--url",
+      "https://example.com",
+      "--limit",
+      "5",
+      "--verbose",
+    ]);
   });
 
-  test("does not split values with spaces into multiple args", () => {
-    const result = interpolateActionCommand(["echo", "{{msg}}"], {
-      msg: "hello world with spaces",
-    });
-    // Must remain a single argument — security property
-    expect(result).toEqual(["echo", "hello world with spaces"]);
-  });
-});
-
-describe("getMissingRequiredParams", () => {
-  test("returns empty when all required params provided", () => {
-    const schema = {
-      type: "object" as const,
-      required: ["name"],
-      properties: { name: { type: "string" as const } },
-    };
-    const missing = getMissingRequiredParams(["echo", "{{name}}"], { name: "hi" }, schema);
-    expect(missing).toHaveLength(0);
+  test("handles empty object", () => {
+    expect(jsonArgsToFlags({})).toEqual([]);
   });
 
-  test("returns missing required param names", () => {
-    const schema = {
-      type: "object" as const,
-      required: ["name", "age"],
-      properties: {
-        name: { type: "string" as const },
-        age: { type: "number" as const },
-      },
-    };
-    const missing = getMissingRequiredParams(
-      ["echo", "{{name}}", "{{age}}"],
-      { name: "Alice" },
-      schema
-    );
-    expect(missing).toEqual(["age"]);
-  });
-
-  test("does not report optional params as missing", () => {
-    const schema = {
-      type: "object" as const,
-      required: [],
-      properties: { verbose: { type: "boolean" as const } },
-    };
-    const missing = getMissingRequiredParams(["echo", "{{verbose}}"], {}, schema);
-    expect(missing).toHaveLength(0);
-  });
-});
-
-describe("getActionCommandParams", () => {
-  test("returns all parameter names from command", () => {
-    expect(getActionCommandParams(["cmd", "{{a}}", "{{b}}"])).toEqual(["a", "b"]);
-  });
-
-  test("returns empty for command without templates", () => {
-    expect(getActionCommandParams(["echo", "hello"])).toEqual([]);
-  });
-});
-
-describe("prepareActionCommand", () => {
-  test("interpolates and returns command array", () => {
-    const schema = {
-      type: "object" as const,
-      required: ["url"],
-      properties: { url: { type: "string" as const } },
-    };
-    const result = prepareActionCommand(
-      ["python", "main.py", "{{url}}"],
-      { url: "https://example.com" },
-      schema
-    );
-    expect(result).toEqual(["python", "main.py", "https://example.com"]);
-  });
-
-  test("throws when required parameters are missing", () => {
-    const schema = {
-      type: "object" as const,
-      required: ["url"],
-      properties: { url: { type: "string" as const } },
-    };
-    expect(() => prepareActionCommand(["python", "main.py", "{{url}}"], {}, schema)).toThrow(
-      "Missing required parameters: url"
-    );
-  });
-
-  test("works without schema (all params treated conservatively)", () => {
-    // Without schema, all params are treated as required
-    expect(() => prepareActionCommand(["echo", "{{name}}"], {})).toThrow(
-      "Missing required parameters: name"
-    );
+  test("handles mixed truthy and falsy values", () => {
+    expect(
+      jsonArgsToFlags({
+        name: "Alice",
+        debug: true,
+        quiet: false,
+        missing: null,
+        count: 3,
+      })
+    ).toEqual(["--name", "Alice", "--debug", "--count", "3"]);
   });
 });

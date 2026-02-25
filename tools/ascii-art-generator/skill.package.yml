@@ -9,4 +9,4 @@ hooks:
     - pip install pyfiglet
 
 scripts:
-  generate: "python /work/main.py {{text}}"
+  generate: "python /work/main.py"

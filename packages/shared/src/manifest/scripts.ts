@@ -5,42 +5,14 @@
  * objects so the existing execution pipeline works unchanged.
  */
 
-import type { JSONSchema7 } from "json-schema";
-import { getActionCommandParams } from "../execution/action-command";
 import type { Action, ActionEnvVars, ActionsManifest } from "../types/actions";
 import type { ScriptDefinition, ToolManifest } from "../types/manifest";
 
 /**
  * Convert a script command string to array form
- *
- * Splits on whitespace while preserving {{param}} tokens as single elements.
  */
 function scriptCommandToArray(command: string): string[] {
   return command.split(/\s+/).filter((s) => s.length > 0);
-}
-
-/**
- * Auto-infer an inputSchema from {{param}} patterns in a command array
- *
- * Every parameter found becomes a required string property.
- */
-function inferInputSchema(commandArray: string[]): JSONSchema7 {
-  const params = getActionCommandParams(commandArray);
-
-  if (params.length === 0) {
-    return { type: "object", properties: {} };
-  }
-
-  const properties: Record<string, JSONSchema7> = {};
-  for (const param of params) {
-    properties[param] = { type: "string" };
-  }
-
-  return {
-    type: "object",
-    required: params,
-    properties,
-  };
 }
 
 /**
@@ -52,7 +24,6 @@ export function scriptToAction(name: string, script: ScriptDefinition): Action {
     return {
       description: name,
       command: commandArray,
-      inputSchema: inferInputSchema(commandArray),
     };
   }
 
@@ -61,7 +32,7 @@ export function scriptToAction(name: string, script: ScriptDefinition): Action {
   return {
     description: script.description ?? name,
     command: commandArray,
-    inputSchema: script.inputSchema ?? inferInputSchema(commandArray),
+    ...(script.inputSchema && { inputSchema: script.inputSchema }),
     ...(script.outputSchema && { outputSchema: script.outputSchema }),
     ...(script.annotations && { annotations: script.annotations }),
   };

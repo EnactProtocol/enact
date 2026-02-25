@@ -316,18 +316,7 @@ export {
   applyDefaults,
   getRequiredParams,
   getParamInfo,
-  // Action command ({{param}} templates)
-  parseActionCommand,
-  parseActionArgument,
-  interpolateActionCommand,
-  prepareActionCommand,
-  getMissingRequiredParams,
-  getActionCommandParams,
-  hasActionTemplates,
-  type ActionCommandToken,
-  type ActionCommandLiteralToken,
-  type ActionCommandParamToken,
-  type ParsedArgument,
-  type ParsedActionCommand,
-  type ActionInterpolationOptions,
+  // Action command building (passthrough args)
+  buildCommand,
+  jsonArgsToFlags,
 } from "./execution";

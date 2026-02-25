@@ -6,7 +6,7 @@ from: python:3.12-alpine
 
 scripts:
   calculate:
-    command: "python3 -c \"import json; print(json.dumps({'result': eval('{{a}} + {{b}}' if '{{operation}}'=='add' else '{{a}} - {{b}}' if '{{operation}}'=='subtract' else '{{a}} * {{b}}' if '{{operation}}'=='multiply' else '{{a}} / {{b}}'), 'operation': '{{operation}}'}))\""
+    command: "python3 calc.py"
     inputSchema:
       type: object
       properties:

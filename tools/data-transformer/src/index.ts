@@ -4,9 +4,26 @@ import { parseCSV, toCSV } from "./csv-parser";
 import { parseJSON, toJSON } from "./json-handler";
 import type { DataRow, TransformOptions, TransformResult } from "./types";
 
+function parseArgs(argv: string[]): Record<string, string> {
+  const result: Record<string, string> = {};
+  const positional: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i].startsWith("--") && i + 1 < argv.length) {
+      result[argv[i].slice(2)] = argv[i + 1];
+      i++;
+    } else if (!argv[i].startsWith("--")) {
+      positional.push(argv[i]);
+    }
+  }
+  // Map positional args to named params for backwards compat
+  if (positional.length > 0 && !result.input) result.input = positional[0];
+  if (positional.length > 1 && !result["input-format"]) result["input-format"] = positional[1];
+  if (positional.length > 2 && !result["output-format"]) result["output-format"] = positional[2];
+  return result;
+}
+
 function transform(options: TransformOptions): TransformResult {
   try {
-    // Parse input based on format
     let data: DataRow[];
     if (options.inputFormat === "csv") {
       data = parseCSV(options.input);
@@ -14,12 +31,10 @@ function transform(options: TransformOptions): TransformResult {
       data = parseJSON(options.input);
     }
 
-    // Apply filters if specified
     if (options.filterColumn && options.filterValue) {
       data = data.filter((row) => String(row[options.filterColumn!]) === options.filterValue);
     }
 
-    // Select specific columns if specified
     if (options.selectColumns && options.selectColumns.length > 0) {
       data = data.map((row) => {
         const filtered: DataRow = {};
@@ -32,7 +47,6 @@ function transform(options: TransformOptions): TransformResult {
       });
     }
 
-    // Convert to output format
     let outputData: string;
     if (options.outputFormat === "csv") {
       outputData = toCSV(data);
@@ -57,27 +71,25 @@ function transform(options: TransformOptions): TransformResult {
   }
 }
 
-// Main execution
 function main() {
   try {
-    // Parse command line arguments
-    const inputData = process.argv[2];
-    const inputFormat = process.argv[3] as "csv" | "json";
-    const outputFormat = process.argv[4] as "csv" | "json";
-    const filterColumn = process.argv[5] && process.argv[5] !== "" ? process.argv[5] : undefined;
-    const filterValue = process.argv[6] && process.argv[6] !== "" ? process.argv[6] : undefined;
-    const selectColumnsArg = process.argv[7];
+    const args = parseArgs(process.argv.slice(2));
 
-    const selectColumns =
-      selectColumnsArg && selectColumnsArg !== ""
-        ? selectColumnsArg.split(",").map((s) => s.trim())
-        : undefined;
+    const inputData = args.input;
+    const inputFormat = (args["input-format"] || args.inputFormat) as "csv" | "json";
+    const outputFormat = (args["output-format"] || args.outputFormat) as "csv" | "json";
+    const filterColumn = args["filter-column"] || args.filterColumn || undefined;
+    const filterValue = args["filter-value"] || args.filterValue || undefined;
+    const selectColumnsStr = args["select-columns"] || args.selectColumns;
+    const selectColumns = selectColumnsStr
+      ? selectColumnsStr.split(",").map((s) => s.trim())
+      : undefined;
 
     if (!inputData || !inputFormat || !outputFormat) {
       console.log(
         JSON.stringify({
           status: "error",
-          error: "Missing required arguments: input, inputFormat, outputFormat",
+          error: "Missing required arguments: --input, --input-format, --output-format",
         })
       );
       process.exit(1);

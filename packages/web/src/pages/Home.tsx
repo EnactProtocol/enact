@@ -553,8 +553,11 @@ export default function Home() {
               <FileTreeCard
                 title="Simple Tool"
                 description="Minimal Python greeting tool"
+                expandAll
                 files={[
                   { name: "hello-python", type: "folder", depth: 0 },
+                  { name: "scripts", type: "folder", depth: 1 },
+                  { name: "hello.py", type: "file", depth: 2 },
                   {
                     name: "SKILL.md",
                     type: "file",
@@ -568,7 +571,6 @@ export default function Home() {
                     depth: 1,
                     highlight: true,
                   },
-                  { name: "hello.py", type: "file", depth: 1 },
                 ]}
               />
 
@@ -576,8 +578,11 @@ export default function Home() {
               <FileTreeCard
                 title="JavaScript Tool"
                 description="Node.js JSON formatter"
+                expandAll
                 files={[
                   { name: "json-formatter", type: "folder", depth: 0 },
+                  { name: "scripts", type: "folder", depth: 1 },
+                  { name: "format.js", type: "file", depth: 2 },
                   {
                     name: "SKILL.md",
                     type: "file",
@@ -591,7 +596,6 @@ export default function Home() {
                     depth: 1,
                     highlight: true,
                   },
-                  { name: "format.js", type: "file", depth: 1 },
                 ]}
               />
 
@@ -601,6 +605,15 @@ export default function Home() {
                 description="Data pipeline with modules"
                 files={[
                   { name: "data-pipeline", type: "folder", depth: 0 },
+                  { name: "src", type: "folder", depth: 1 },
+                  { name: "extractors", type: "folder", depth: 2 },
+                  { name: "csv-extractor.ts", type: "file", depth: 3 },
+                  { name: "json-extractor.ts", type: "file", depth: 3 },
+                  { name: "utils", type: "folder", depth: 2 },
+                  { name: "transform.ts", type: "file", depth: 3 },
+                  { name: "validate.ts", type: "file", depth: 3 },
+                  { name: "tests", type: "folder", depth: 1 },
+                  { name: "extractor.test.ts", type: "file", depth: 2 },
                   {
                     name: "SKILL.md",
                     type: "file",
@@ -609,10 +622,6 @@ export default function Home() {
                     color: "text-teal-600",
                   },
                   { name: "skill.package.yml", type: "file", depth: 1, highlight: true },
-                  { name: "src", type: "folder", depth: 1 },
-                  { name: "extractors", type: "folder", depth: 2 },
-                  { name: "utils", type: "folder", depth: 2 },
-                  { name: "tests", type: "folder", depth: 1 },
                 ]}
               />
             </div>
@@ -857,11 +866,53 @@ function FileTreeCard({
   title,
   description,
   files,
+  expandAll,
 }: {
   title: string;
   description: string;
   files: FileTreeItem[];
+  expandAll?: boolean;
 }) {
+  const [expanded, setExpanded] = useState<Set<string>>(() => {
+    if (expandAll) {
+      return new Set(files.filter((f) => f.type === "folder").map((f) => `${f.depth}-${f.name}`));
+    }
+    // Default: expand only root folder
+    const root = files.find((f) => f.type === "folder" && f.depth === 0);
+    return root ? new Set([`0-${root.name}`]) : new Set();
+  });
+
+  const toggleFolder = (key: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  // Determine visibility: a file/folder is visible if all its ancestor folders are expanded
+  const visibleFiles = files.filter((_, i) => {
+    // Always show root level
+    const file = files[i];
+    if (file.depth === 0) return true;
+    // Walk backwards to find the parent folder at depth - 1 and check if it's expanded
+    for (let d = file.depth; d > 0; d--) {
+      // Find the nearest ancestor folder at depth d - 1
+      let found = false;
+      for (let j = i - 1; j >= 0; j--) {
+        if (files[j].depth === d - 1 && files[j].type === "folder") {
+          const key = `${files[j].depth}-${files[j].name}`;
+          if (!expanded.has(key)) return false;
+          found = true;
+          break;
+        }
+      }
+      if (!found) return false;
+    }
+    return true;
+  });
+
   return (
     <div className="card hover:shadow-lg transition-shadow">
       <div className="mb-4">
@@ -869,22 +920,41 @@ function FileTreeCard({
         <p className="text-sm text-gray-5">{description}</p>
       </div>
       <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm">
-        {files.map((file) => {
+        {visibleFiles.map((file) => {
           const color = file.color || (file.highlight ? "text-brand-blue" : "text-gray-6");
+          const key = `${file.depth}-${file.name}`;
+          const isExpanded = expanded.has(key);
           return (
             <div
-              key={`${file.depth}-${file.name}`}
+              key={key}
               className={`flex items-center gap-2 py-1 ${color} ${file.highlight ? "font-medium" : ""}`}
               style={{ paddingLeft: `${file.depth * 16}px` }}
             >
               {file.type === "folder" ? (
-                <Folder className="w-4 h-4 text-amber-500" />
+                <button
+                  type="button"
+                  className="flex items-center gap-2 hover:opacity-70"
+                  onClick={() => toggleFolder(key)}
+                >
+                  <ChevronRight
+                    className={`w-3 h-3 text-gray-400 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                  />
+                  {isExpanded ? (
+                    <FolderOpen className="w-4 h-4 text-amber-500" />
+                  ) : (
+                    <Folder className="w-4 h-4 text-amber-500" />
+                  )}
+                  <span>{file.name}</span>
+                </button>
               ) : (
-                <File
-                  className={`w-4 h-4 ${file.color || (file.highlight ? "text-brand-blue" : "text-gray-400")}`}
-                />
+                <>
+                  <File
+                    className={`w-4 h-4 ${file.color || (file.highlight ? "text-brand-blue" : "text-gray-400")}`}
+                    style={{ marginLeft: "20px" }}
+                  />
+                  <span>{file.name}</span>
+                </>
               )}
-              <span>{file.name}</span>
             </div>
           );
         })}

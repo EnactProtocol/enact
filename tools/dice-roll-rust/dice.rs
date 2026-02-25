@@ -8,7 +8,6 @@ struct Rng {
 
 impl Rng {
     fn new() -> Self {
-        // Seed from system time
         let seed = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -17,7 +16,6 @@ impl Rng {
     }
 
     fn next(&mut self) -> u64 {
-        // LCG parameters (same as glibc)
         self.state = self.state.wrapping_mul(1103515245).wrapping_add(12345);
         self.state
     }
@@ -28,22 +26,38 @@ impl Rng {
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let args: Vec<String> = env::args().skip(1).collect();
+    let mut sides: u64 = 6;
+    let mut count: u64 = 1;
 
-    // Parse arguments with defaults
-    let sides: u64 = args.get(1)
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(6);
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--sides" if i + 1 < args.len() => {
+                sides = args[i + 1].parse().unwrap_or(6);
+                i += 2;
+            }
+            "--count" if i + 1 < args.len() => {
+                count = args[i + 1].parse().unwrap_or(1);
+                i += 2;
+            }
+            s if !s.starts_with("--") => {
+                if let Ok(val) = s.parse::<u64>() {
+                    if sides == 6 {
+                        sides = val;
+                    } else {
+                        count = val;
+                    }
+                }
+                i += 1;
+            }
+            _ => { i += 1; }
+        }
+    }
 
-    let count: u64 = args.get(2)
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(1);
-
-    // Validate inputs
     let sides = sides.clamp(2, 100);
     let count = count.clamp(1, 100);
 
-    // Roll the dice
     let mut rng = Rng::new();
     let mut rolls: Vec<u64> = Vec::new();
     let mut total: u64 = 0;
@@ -54,7 +68,6 @@ fn main() {
         total += roll;
     }
 
-    // Output as JSON
     let rolls_json: Vec<String> = rolls.iter().map(|r| r.to_string()).collect();
     println!(
         r#"{{"rolls":[{}],"total":{},"sides":{},"count":{}}}"#,

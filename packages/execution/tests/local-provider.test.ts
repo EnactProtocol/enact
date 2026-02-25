@@ -119,7 +119,7 @@ describe("LocalExecutionProvider", () => {
   });
 
   describe("executeAction", () => {
-    test("validates inputs against action schema", async () => {
+    test("executes action with valid inputs as flags", async () => {
       const provider = new LocalExecutionProvider();
       const result = await provider.executeAction(
         { name: "@test/tool", description: "test" },
@@ -127,7 +127,7 @@ describe("LocalExecutionProvider", () => {
           actions: {
             greet: {
               description: "Greet someone",
-              command: ["echo", "{{name}}"],
+              command: ["echo"],
               inputSchema: {
                 type: "object" as const,
                 properties: { name: { type: "string" as const } },
@@ -139,40 +139,7 @@ describe("LocalExecutionProvider", () => {
         "greet",
         {
           description: "Greet someone",
-          command: ["echo", "{{name}}"],
-          inputSchema: {
-            type: "object" as const,
-            properties: { name: { type: "string" as const } },
-            required: ["name"],
-          },
-        },
-        { params: {} } // Missing required 'name'
-      );
-      expect(result.success).toBe(false);
-      expect(result.error?.code).toBe("VALIDATION_ERROR");
-    });
-
-    test("executes action with valid inputs", async () => {
-      const provider = new LocalExecutionProvider();
-      const result = await provider.executeAction(
-        { name: "@test/tool", description: "test" },
-        {
-          actions: {
-            greet: {
-              description: "Greet someone",
-              command: ["echo", "{{name}}"],
-              inputSchema: {
-                type: "object" as const,
-                properties: { name: { type: "string" as const } },
-                required: ["name"],
-              },
-            },
-          },
-        },
-        "greet",
-        {
-          description: "Greet someone",
-          command: ["echo", "{{name}}"],
+          command: ["echo"],
           inputSchema: {
             type: "object" as const,
             properties: { name: { type: "string" as const } },
@@ -182,7 +149,30 @@ describe("LocalExecutionProvider", () => {
         { params: { name: "Alice" } }
       );
       expect(result.success).toBe(true);
-      expect(result.output.stdout.trim()).toBe("Alice");
+      expect(result.output.stdout.trim()).toBe("--name Alice");
+    });
+
+    test("executes action with no params", async () => {
+      const provider = new LocalExecutionProvider();
+      const result = await provider.executeAction(
+        { name: "@test/tool", description: "test" },
+        {
+          actions: {
+            greet: {
+              description: "Greet someone",
+              command: ["echo", "hello"],
+            },
+          },
+        },
+        "greet",
+        {
+          description: "Greet someone",
+          command: ["echo", "hello"],
+        },
+        { params: {} }
+      );
+      expect(result.success).toBe(true);
+      expect(result.output.stdout.trim()).toBe("hello");
     });
   });
 

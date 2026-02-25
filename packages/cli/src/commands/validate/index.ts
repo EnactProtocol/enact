@@ -108,7 +108,7 @@ function validateManifest(manifest: ToolManifest, sourceDir: string): Validation
       issues.push({
         level: "info",
         message: `Command uses parameters: ${commandParams.join(", ")}`,
-        suggestion: "Consider using scripts with {{param}} templates for better parameter handling",
+        suggestion: "Consider using scripts for better parameter handling",
       });
     }
 

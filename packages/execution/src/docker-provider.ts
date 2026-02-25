@@ -10,13 +10,7 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { Action, ActionsManifest, ToolManifest } from "@enactprotocol/shared";
-import {
-  applyDefaults,
-  detectRuntime,
-  getEffectiveInputSchema,
-  prepareActionCommand,
-  validateInputs,
-} from "@enactprotocol/shared";
+import { buildCommand, detectRuntime, jsonArgsToFlags } from "@enactprotocol/shared";
 import type {
   ContainerRuntime,
   EngineHealth,
@@ -220,40 +214,9 @@ export class DockerExecutionProvider implements ExecutionProvider {
       );
     }
 
-    // Validate inputs
-    const effectiveSchema = getEffectiveInputSchema(action);
-    const validation = validateInputs(input.params, effectiveSchema);
-    if (!validation.valid) {
-      const errorMessages = validation.errors.map((e) => `${e.path}: ${e.message}`);
-      return this.createErrorResult(
-        toolLabel,
-        executionId,
-        startTime,
-        "VALIDATION_ERROR",
-        `Input validation failed: ${errorMessages.join(", ")}`
-      );
-    }
-
-    const params = applyDefaults(input.params, effectiveSchema);
-
-    // Prepare command
-    let commandArray: string[];
-    try {
-      if (typeof action.command === "string") {
-        commandArray = action.command.split(/\s+/).filter((s) => s.length > 0);
-      } else {
-        commandArray = prepareActionCommand(action.command, params, effectiveSchema);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return this.createErrorResult(
-        toolLabel,
-        executionId,
-        startTime,
-        "COMMAND_ERROR",
-        `Failed to prepare action command: ${message}`
-      );
-    }
+    // Build command: base command + input args as --key value flags
+    const inputFlags = Object.keys(input.params).length > 0 ? jsonArgsToFlags(input.params) : [];
+    const commandArray = buildCommand(action.command, inputFlags);
 
     if (commandArray.length === 0) {
       return this.createErrorResult(

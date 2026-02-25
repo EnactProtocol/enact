@@ -5,4 +5,4 @@ description: A simple Ruby greeting tool
 from: ruby:3.3-alpine
 
 scripts:
-  greet: "ruby /work/hello.rb {{name}}"
+  greet: "ruby /work/hello.rb"

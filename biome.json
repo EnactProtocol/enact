@@ -116,6 +116,18 @@
     },
     "globals": ["Bun", "Deno"]
   },
+  "overrides": [
+    {
+      "include": ["**/tests/**", "**/*.test.ts", "**/*.test.tsx"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    }
+  ],
   "json": {
     "formatter": {
       "enabled": true

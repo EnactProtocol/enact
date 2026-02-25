@@ -179,7 +179,7 @@ tags:
   - greeting
   - utility
 scripts:
-  greet: "echo 'Hello {{name}}'"
+  greet: "echo Hello"
 `;
         const result = parseManifest(yaml, "yaml");
         expect(result.manifest.enact).toBe("2.0.0");

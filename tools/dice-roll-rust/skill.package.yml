@@ -9,4 +9,4 @@ hooks:
     - rustc -o /workspace/dice /workspace/dice.rs
 
 scripts:
-  roll: "/workspace/dice {{sides}} {{count}}"
+  roll: "/workspace/dice"

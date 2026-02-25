@@ -33,7 +33,7 @@ describe("manifest validator", () => {
         license: "MIT",
         tags: ["greeting", "utility"],
         scripts: {
-          greet: "echo 'Hello {{name}}'",
+          greet: "echo Hello",
         },
         outputSchema: {
           type: "object",

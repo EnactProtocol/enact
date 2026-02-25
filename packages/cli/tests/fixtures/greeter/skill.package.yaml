@@ -6,7 +6,7 @@ from: alpine:latest
 
 scripts:
   greet:
-    command: "echo '{\"message\":\"Hello, {{name}}!\"}'"
+    command: "echo"
     inputSchema:
       type: object
       properties:

@@ -46,20 +46,18 @@ import {
   type ActionsManifest,
   type ToolManifest,
   type ToolResolution,
-  applyDefaults,
+  buildCommand,
   getCacheDir,
-  getEffectiveInputSchema,
   getMinimumAttestations,
   getTrustPolicy,
   getTrustedAuditors,
+  jsonArgsToFlags,
   loadConfig,
   parseActionSpecifier,
-  prepareActionCommand,
   prepareCommand,
   toolNameToPath,
   tryResolveTool,
   tryResolveToolDetailed,
-  validateInputs,
 } from "@enactprotocol/shared";
 import type { Command } from "commander";
 import type { CommandContext, GlobalOptions } from "../../types";
@@ -652,7 +650,6 @@ function displayDryRun(
  */
 function displayDebugInfo(
   rawInputs: Record<string, unknown>,
-  inputsWithDefaults: Record<string, unknown>,
   finalInputs: Record<string, unknown>,
   env: Record<string, string>,
   command: string[]
@@ -674,16 +671,8 @@ function displayDebugInfo(
   }
   newline();
 
-  // Show inputs after defaults applied
-  info("After Defaults Applied:");
-  for (const [key, value] of Object.entries(inputsWithDefaults)) {
-    const wasDefault = rawInputs[key] === undefined;
-    dim(`  ${key}: ${JSON.stringify(value)}${wasDefault ? colors.dim(" (default)") : ""}`);
-  }
-  newline();
-
-  // Show final inputs (after coercion)
-  info("Final Inputs (after validation/coercion):");
+  // Show final inputs
+  info("Final Inputs (passed to command):");
   for (const [key, value] of Object.entries(finalInputs)) {
     dim(`  ${key}: ${JSON.stringify(value)}`);
   }
@@ -956,23 +945,8 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
   // Merge inputs: path params override other inputs
   const inputs = { ...otherInputs, ...pathParams };
 
-  // Use action's inputSchema if executing an action, otherwise no schema
-  const effectiveInputSchema = resolvedAction ? getEffectiveInputSchema(resolvedAction) : undefined;
-
-  // Apply defaults from schema
-  const inputsWithDefaults = effectiveInputSchema
-    ? applyDefaults(inputs, effectiveInputSchema)
-    : inputs;
-
-  // Validate inputs against schema
-  const validation = validateInputs(inputsWithDefaults, effectiveInputSchema);
-  if (!validation.valid) {
-    const errors = validation.errors.map((err) => `${err.path}: ${err.message}`).join(", ");
-    throw new ValidationError(`Input validation failed: ${errors}`);
-  }
-
-  // Use coerced values from validation (or inputs with defaults)
-  const finalInputs = validation.coercedValues ?? inputsWithDefaults;
+  // Convert JSON inputs to CLI flags for passthrough
+  const finalInputs = inputs;
 
   // Validate output path if provided
   if (options.output) {
@@ -1055,20 +1029,13 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
   }
 
   // Prepare command
-  // For actions: use {{param}} template system (array form, no shell)
-  // For regular tools: use ${param} template system (shell interpolation)
+  // Convert JSON inputs to --key value flags and append to the base command
   let command: string[];
+  const inputFlags = Object.keys(finalInputs).length > 0 ? jsonArgsToFlags(finalInputs) : [];
 
   if (resolvedAction) {
-    // Action execution: use prepareActionCommand for {{param}} templates
-    const actionCommand = resolvedAction.command;
-    if (typeof actionCommand === "string") {
-      // String form (no templates allowed by validation)
-      command = actionCommand.split(/\s+/).filter((s) => s.length > 0);
-    } else {
-      // Array form with {{param}} templates
-      command = prepareActionCommand(actionCommand, finalInputs, resolvedAction.inputSchema);
-    }
+    // Action execution: build command with passthrough args
+    command = buildCommand(resolvedAction.command, inputFlags);
   } else {
     // Regular tool execution: use prepareCommand for ${param} templates
     command = prepareCommand(manifest.command!, finalInputs);
@@ -1133,7 +1100,7 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
 
   // Debug mode - show detailed parameter resolution info
   if (options.debug) {
-    displayDebugInfo(inputs, inputsWithDefaults, finalInputs, envVars, command);
+    displayDebugInfo(inputs, finalInputs, envVars, command);
   }
 
   // Dry run mode

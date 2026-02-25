@@ -9,12 +9,10 @@ import { basename } from "node:path";
 import { type Client, type Container, ReturnType, connect } from "@dagger.io/dagger";
 import type { Action, ActionsManifest, ToolManifest } from "@enactprotocol/shared";
 import {
-  applyDefaults,
+  buildCommand,
   detectRuntime,
-  getEffectiveInputSchema,
   interpolateCommand,
-  prepareActionCommand,
-  validateInputs,
+  jsonArgsToFlags,
 } from "@enactprotocol/shared";
 import type {
   ContainerRuntime,
@@ -287,10 +285,10 @@ export class DaggerExecutionProvider implements ExecutionProvider {
   /**
    * Execute an action from ACTIONS.yaml
    *
-   * This method uses the {{param}} template system which:
-   * - Passes commands directly to execve() (no shell interpolation)
-   * - Each template becomes a single argument regardless of content
-   * - Omits arguments for optional params without values
+   * This method uses the passthrough args model:
+   * - JSON params are converted to --key value CLI flags
+   * - Commands are passed directly to execve() (no shell interpolation)
+   * - The script handles its own argument parsing
    *
    * @param manifest - The skill manifest (SKILL.md)
    * @param actionsManifest - The actions manifest (ACTIONS.yaml)
@@ -330,50 +328,9 @@ export class DaggerExecutionProvider implements ExecutionProvider {
       );
     }
 
-    // Get effective inputSchema (defaults to empty if not provided)
-    const effectiveSchema = getEffectiveInputSchema(action);
-
-    // Validate inputs against action's inputSchema
-    const validation = validateInputs(input.params, effectiveSchema);
-    if (!validation.valid) {
-      const errorMessages = validation.errors.map((e) => `${e.path}: ${e.message}`);
-      return this.createErrorResult(
-        manifest.name,
-        containerImage,
-        executionId,
-        startTime,
-        "VALIDATION_ERROR",
-        `Input validation failed: ${errorMessages.join(", ")}`
-      );
-    }
-
-    // Apply defaults to inputs
-    const params = applyDefaults(input.params, effectiveSchema);
-
-    // Prepare the command using {{param}} template system
-    // This returns an array suitable for execve() - no shell interpolation
-    let commandArray: string[];
-    try {
-      const actionCommand = action.command;
-      if (typeof actionCommand === "string") {
-        // String-form command (no templates allowed - validation ensures this)
-        // Split into args for execve
-        commandArray = actionCommand.split(/\s+/).filter((s) => s.length > 0);
-      } else {
-        // Array-form command with {{param}} templates
-        commandArray = prepareActionCommand(actionCommand, params, effectiveSchema);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return this.createErrorResult(
-        manifest.name,
-        containerImage,
-        executionId,
-        startTime,
-        "COMMAND_ERROR",
-        `Failed to prepare action command: ${message}`
-      );
-    }
+    // Build command: base command + input args as --key value flags
+    const inputFlags = Object.keys(input.params).length > 0 ? jsonArgsToFlags(input.params) : [];
+    const commandArray = buildCommand(action.command, inputFlags);
 
     if (commandArray.length === 0) {
       return this.createErrorResult(

@@ -9,13 +9,7 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Action, ActionsManifest, ToolManifest } from "@enactprotocol/shared";
-import {
-  applyDefaults,
-  getEffectiveInputSchema,
-  prepareActionCommand,
-  prepareCommand,
-  validateInputs,
-} from "@enactprotocol/shared";
+import { buildCommand, jsonArgsToFlags, prepareCommand } from "@enactprotocol/shared";
 import type {
   EngineHealth,
   ExecutionErrorCode,
@@ -331,46 +325,9 @@ export class LocalExecutionProvider implements ExecutionProvider {
     const startTime = new Date();
     const executionId = this.generateExecutionId();
 
-    // Get effective inputSchema (defaults to empty if not provided)
-    const effectiveSchema = getEffectiveInputSchema(action);
-
-    // Validate inputs against action's inputSchema
-    const validation = validateInputs(input.params, effectiveSchema);
-    if (!validation.valid) {
-      const errorMessages = validation.errors.map((e) => `${e.path}: ${e.message}`);
-      return this.createErrorResult(
-        `${manifest.name}:${actionName}`,
-        executionId,
-        startTime,
-        "VALIDATION_ERROR",
-        `Input validation failed: ${errorMessages.join(", ")}`
-      );
-    }
-
-    // Apply defaults to inputs
-    const params = applyDefaults(input.params, effectiveSchema);
-
-    // Prepare the command using {{param}} template system
-    let commandArray: string[];
-    try {
-      const actionCommand = action.command;
-      if (typeof actionCommand === "string") {
-        // String-form command (no templates allowed - validation ensures this)
-        commandArray = actionCommand.split(/\s+/).filter((s) => s.length > 0);
-      } else {
-        // Array-form command with {{param}} templates
-        commandArray = prepareActionCommand(actionCommand, params, effectiveSchema);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return this.createErrorResult(
-        `${manifest.name}:${actionName}`,
-        executionId,
-        startTime,
-        "COMMAND_ERROR",
-        `Failed to prepare action command: ${message}`
-      );
-    }
+    // Build command: base command + input args as --key value flags
+    const inputFlags = Object.keys(input.params).length > 0 ? jsonArgsToFlags(input.params) : [];
+    const commandArray = buildCommand(action.command, inputFlags);
 
     if (commandArray.length === 0) {
       return this.createErrorResult(

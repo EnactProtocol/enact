@@ -10,4 +10,4 @@ hooks:
     - npm run build
 
 scripts:
-  transform: "node dist/index.js {{input}} {{input_format}} {{output_format}} {{filter_column}} {{filter_value}} {{select_columns}}"
+  transform: "node dist/index.js"

@@ -6,7 +6,6 @@
  */
 
 import type { Action, ActionsManifest, ToolManifest } from "@enactprotocol/shared";
-import { applyDefaults, getEffectiveInputSchema, validateInputs } from "@enactprotocol/shared";
 import type {
   EngineHealth,
   ExecutionErrorCode,
@@ -109,32 +108,14 @@ export class RemoteExecutionProvider implements ExecutionProvider {
     input: ExecutionInput,
     options: ExecutionOptions = {}
   ): Promise<ExecutionResult> {
-    const startTime = new Date();
-    const executionId = `remote-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-
-    // Validate inputs locally before sending to remote
-    const effectiveSchema = getEffectiveInputSchema(action);
-    const validation = validateInputs(input.params, effectiveSchema);
-    if (!validation.valid) {
-      const errorMessages = validation.errors.map((e) => `${e.path}: ${e.message}`);
-      return this.createErrorResult(
-        `${manifest.name}:${actionName}`,
-        executionId,
-        startTime,
-        "VALIDATION_ERROR",
-        `Input validation failed: ${errorMessages.join(", ")}`
-      );
-    }
-
-    const params = applyDefaults(input.params, effectiveSchema);
-
+    // Pass inputs through to remote — the remote end handles command building
     return this.remoteExecute({
       type: "executeAction",
       manifest,
       actionsManifest,
       actionName,
       action,
-      input: { ...input, params },
+      input,
       options,
     });
   }

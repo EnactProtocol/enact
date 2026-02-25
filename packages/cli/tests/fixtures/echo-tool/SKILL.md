@@ -5,7 +5,7 @@ version: "1.0.0"
 description: A tool that echoes its input for testing
 from: alpine:latest
 scripts:
-  echo: "echo '{\"output\":\"{{text}}\"}'"
+  echo: "echo"
 outputSchema:
   type: object
   properties:
@@ -20,5 +20,5 @@ A simple tool that echoes back the input text. Used for testing.
 ## Usage
 
 ```bash
-enact run test/echo-tool:echo --input text="Hello"
+enact run test/echo-tool:echo --text "Hello"
 ```

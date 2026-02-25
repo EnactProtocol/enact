@@ -9,5 +9,5 @@ hooks:
     - rustc /work/hello.rs -o /work/hello
 
 scripts:
-  greet: "/work/hello {{name}}"
+  greet: "/work/hello"
   

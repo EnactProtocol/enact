@@ -1,14 +1,33 @@
 #!/usr/bin/env node
 
-// Use playwright-core which uses pre-installed browsers from the Docker image
 const { chromium } = require("playwright-core");
 
+function parseArgs(argv) {
+  const result = {};
+  const positional = [];
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i].startsWith("--") && i + 1 < argv.length) {
+      result[argv[i].slice(2)] = argv[i + 1];
+      i++;
+    } else if (!argv[i].startsWith("--")) {
+      positional.push(argv[i]);
+    }
+  }
+  return { ...result, _positional: positional };
+}
+
 async function main() {
-  const [url, action = "text", selector = "body"] = process.argv.slice(2);
+  const args = parseArgs(process.argv.slice(2));
+
+  const url = args.url || args._positional[0];
+  const action = args.action || args._positional[1] || "text";
+  const selector = args.selector || args._positional[2] || "body";
 
   if (!url) {
     console.error("Error: URL is required");
-    console.error("Usage: node run.js <url> [action] [selector]");
+    console.error(
+      "Usage: node run.js --url <url> [--action text|screenshot|html] [--selector <css>]"
+    );
     process.exit(1);
   }
 
@@ -19,7 +38,6 @@ async function main() {
 
   let browser;
   try {
-    // Find Chromium in the Microsoft Playwright image
     const fs = require("node:fs");
     const path = require("node:path");
 
@@ -51,7 +69,6 @@ async function main() {
     switch (action) {
       case "screenshot": {
         const buffer = await page.screenshot({ fullPage: true });
-        // Output base64 encoded screenshot
         console.log("SCREENSHOT_START");
         console.log(buffer.toString("base64"));
         console.log("SCREENSHOT_END");

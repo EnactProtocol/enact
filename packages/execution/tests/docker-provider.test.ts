@@ -105,10 +105,12 @@ describe("DockerExecutionProvider", () => {
   });
 
   describe("executeAction", () => {
-    test("validates inputs against action schema", async () => {
+    test("builds command with passthrough args from params", async () => {
       const provider = new DockerExecutionProvider();
       await provider.initialize();
 
+      // With the passthrough model, params are converted to --key value flags
+      // and appended to the base command. No validation error for missing params.
       const result = await provider.executeAction(
         {
           enact: "2.0.0",
@@ -120,13 +122,12 @@ describe("DockerExecutionProvider", () => {
           actions: {
             greet: {
               description: "Greet",
-              command: ["echo", "hello", "{{name}}"],
+              command: ["echo", "hello"],
               inputSchema: {
                 type: "object" as const,
                 properties: {
                   name: { type: "string" as const },
                 },
-                required: ["name"],
               },
             },
           },
@@ -134,20 +135,21 @@ describe("DockerExecutionProvider", () => {
         "greet",
         {
           description: "Greet",
-          command: ["echo", "hello", "{{name}}"],
+          command: ["echo", "hello"],
           inputSchema: {
             type: "object" as const,
             properties: {
               name: { type: "string" as const },
             },
-            required: ["name"],
           },
         },
-        { params: {} } // Missing required 'name'
+        { params: {} } // No params — command runs as "echo hello"
       );
 
-      expect(result.success).toBe(false);
-      expect(result.error?.code).toBe("VALIDATION_ERROR");
+      // This may fail if docker isn't available, but won't be a VALIDATION_ERROR
+      if (!result.success) {
+        expect(result.error?.code).not.toBe("VALIDATION_ERROR");
+      }
     });
 
     test("returns error for empty command array", async () => {

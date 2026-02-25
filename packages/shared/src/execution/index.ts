@@ -73,22 +73,8 @@ export {
   getParamInfo,
 } from "./validation.js";
 
-// Action command interpolation ({{param}} templates)
-export {
-  parseActionCommand,
-  parseActionArgument,
-  interpolateActionCommand,
-  prepareActionCommand,
-  getMissingRequiredParams,
-  getActionCommandParams,
-  hasActionTemplates,
-  type ActionCommandToken,
-  type ActionCommandLiteralToken,
-  type ActionCommandParamToken,
-  type ParsedArgument,
-  type ParsedActionCommand,
-  type ActionInterpolationOptions,
-} from "./action-command.js";
+// Action command building (passthrough args)
+export { buildCommand, jsonArgsToFlags } from "./action-command.js";
 
 // NOTE: Dagger provider moved to @enactprotocol/execution package
 // This keeps @enactprotocol/shared browser-safe (no Dagger SDK dependency)

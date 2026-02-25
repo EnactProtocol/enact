@@ -127,13 +127,15 @@ describe("RemoteExecutionProvider", () => {
     });
   });
 
-  describe("executeAction validation", () => {
-    test("validates inputs locally before sending to remote", async () => {
+  describe("executeAction", () => {
+    test("sends action to remote with passthrough args", async () => {
       const provider = new RemoteExecutionProvider({
         endpoint: "http://localhost:19999",
         defaultTimeout: 2000,
       });
 
+      // With passthrough model, params are sent to remote which handles execution
+      // No local validation — remote endpoint handles everything
       const result = await provider.executeAction(
         {
           enact: "2.0.0",
@@ -145,13 +147,12 @@ describe("RemoteExecutionProvider", () => {
           actions: {
             greet: {
               description: "Greet",
-              command: ["echo", "{{name}}"],
+              command: ["echo"],
               inputSchema: {
                 type: "object" as const,
                 properties: {
                   name: { type: "string" as const },
                 },
-                required: ["name"],
               },
             },
           },
@@ -159,21 +160,20 @@ describe("RemoteExecutionProvider", () => {
         "greet",
         {
           description: "Greet",
-          command: ["echo", "{{name}}"],
+          command: ["echo"],
           inputSchema: {
             type: "object" as const,
             properties: {
               name: { type: "string" as const },
             },
-            required: ["name"],
           },
         },
-        { params: {} } // Missing required 'name'
+        { params: { name: "Alice" } }
       );
 
+      // Will fail because localhost:19999 isn't running, but should be CONNECTION_ERROR not VALIDATION_ERROR
       expect(result.success).toBe(false);
-      expect(result.error?.code).toBe("VALIDATION_ERROR");
-      // Should fail locally without hitting the remote endpoint
+      expect(result.error?.code).not.toBe("VALIDATION_ERROR");
     });
   });
 

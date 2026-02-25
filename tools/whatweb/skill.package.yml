@@ -11,5 +11,5 @@ hooks:
     - gem install addressable
 
 scripts:
-  scan: "/opt/whatweb/whatweb --colour=never --log-json=/dev/stdout -q -a {{aggression}} -t {{max_threads}} {{url}}"
+  scan: "/opt/whatweb/whatweb --colour=never --log-json=/dev/stdout -q -a -t"
   retrieve: "echo 'No retrieval command defined for this package'"

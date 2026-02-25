@@ -5,4 +5,4 @@ description: A simple Go greeting tool
 from: golang:1.23-alpine
 
 scripts:
-  greet: "go run /work/hello.go {{name}}"
+  greet: "go run /work/hello.go"

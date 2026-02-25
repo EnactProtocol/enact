@@ -424,7 +424,7 @@ describe("Secret Resolution Integration", () => {
         },
       },
       scripts: {
-        scrape: "node /work/firecrawl.js {{url}}",
+        scrape: "node /work/firecrawl.js",
       },
     };
 
@@ -443,7 +443,7 @@ describe("Secret Resolution Integration", () => {
       description: "A simple greeting tool",
       from: "node:20",
       scripts: {
-        greet: "node /work/greet.js {{name}}",
+        greet: "node /work/greet.js",
       },
     };
 

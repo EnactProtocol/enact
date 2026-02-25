@@ -5,4 +5,4 @@ description: A simple JavaScript greeting tool
 from: node:22-alpine
 
 scripts:
-  greet: "node /work/hello.js {{name}}"
+  greet: "node /work/hello.js"

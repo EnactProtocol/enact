@@ -45,20 +45,17 @@ export interface Action {
   description: string;
 
   /**
-   * Execution command
+   * Base execution command
    *
-   * Can be string form (simple commands without templates) or array form
-   * (required when using {{}} templates).
-   *
-   * Template syntax: {{param}} - each template is replaced with the literal
-   * value as a single argument, regardless of content.
+   * Can be string or array form. Arguments are appended at runtime
+   * from CLI passthrough or JSON-to-flags conversion.
    *
    * @example
-   * // String form (no templates)
-   * command: "python main.py --version"
+   * // String form
+   * command: "python main.py"
    *
-   * // Array form (with templates)
-   * command: ["python", "main.py", "scrape", "{{url}}"]
+   * // Array form
+   * command: ["python", "main.py", "scrape"]
    */
   command: string | string[];
 
@@ -102,7 +99,7 @@ export interface Action {
  * actions:
  *   scrape:
  *     description: Scrape a URL
- *     command: ["python", "main.py", "{{url}}"]
+ *     command: ["python", "main.py"]
  *     inputSchema:
  *       type: object
  *       required: [url]
@@ -129,7 +126,7 @@ export interface ActionsManifest {
    * actions:
    *   scrape:
    *     description: Scrape a URL
-   *     command: ["python", "main.py", "{{url}}"]
+   *     command: ["python", "main.py"]
    *   list-formats:
    *     description: List supported formats
    *     command: ffmpeg -formats
