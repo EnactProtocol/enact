@@ -3,7 +3,7 @@
  *
  * Resolution order:
  * 1. Direct file path (if provided path exists)
- * 2. Project skills (agents/skills/{name}/)
+ * 2. Project skills (.agents/skills/{name}/)
  * 3. Global tools (via ~/.enact/tools.json → ~/.agents/skills/)
  * 4. Skills directory (~/.agents/skills/{name}/)
  */
@@ -336,7 +336,7 @@ export function resolveTool(toolName: string, options: ResolveOptions = {}): Too
     }
   }
 
-  // 1. Try project skills (agents/skills/{name}/)
+  // 1. Try project skills (.agents/skills/{name}/)
   if (!options.skipProject) {
     const agentsDir = getProjectAgentsDir(options.startDir);
     if (agentsDir) {

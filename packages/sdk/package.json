@@ -1,0 +1,31 @@
+{
+  "name": "@enactprotocol/sdk",
+  "version": "0.1.0",
+  "description": "Programmatic SDK for running and composing Enact skills",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "test": "bun test",
+    "clean": "rm -rf dist"
+  },
+  "keywords": ["enact", "skills", "sdk", "tools", "agents"],
+  "author": "Enact Protocol",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@enactprotocol/shared": "workspace:*",
+    "@enactprotocol/execution": "workspace:*",
+    "@enactprotocol/api": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3"
+  }
+}

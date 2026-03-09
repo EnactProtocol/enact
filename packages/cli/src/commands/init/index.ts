@@ -70,19 +70,19 @@ function loadTemplate(templateName: string, replacements: Record<string, string>
 }
 
 /**
- * Create agents/skills.json for project skill tracking
+ * Create .agents/skills.json for project skill tracking
  */
 function createAgentsSkillsJson(targetDir: string, force: boolean): boolean {
-  const agentsDir = join(targetDir, "agents");
+  const agentsDir = join(targetDir, ".agents");
   const skillsJsonPath = join(agentsDir, "skills.json");
 
   // Check if skills.json already exists
   if (existsSync(skillsJsonPath) && !force) {
-    info("agents/skills.json already exists, skipping");
+    info(".agents/skills.json already exists, skipping");
     return false;
   }
 
-  // Create agents directory if it doesn't exist
+  // Create .agents directory if it doesn't exist
   if (!existsSync(agentsDir)) {
     mkdirSync(agentsDir, { recursive: true });
   }
@@ -265,9 +265,9 @@ async function initHandler(options: InitOptions, ctx: CommandContext): Promise<v
       success(`Created CLAUDE.md: ${claudePath}`);
     }
 
-    // Create agents/skills.json
+    // Create .agents/skills.json
     if (createAgentsSkillsJson(targetDir, options.force ?? false)) {
-      success("Created agents/skills.json");
+      success("Created .agents/skills.json");
     }
 
     info("");
@@ -301,7 +301,7 @@ async function initHandler(options: InitOptions, ctx: CommandContext): Promise<v
     }
 
     if (createAgentsSkillsJson(targetDir, options.force ?? false)) {
-      success("Created agents/skills.json");
+      success("Created .agents/skills.json");
     }
 
     info("");
@@ -375,8 +375,8 @@ export function configureInitCommand(program: Command): void {
     .option("-n, --name <name>", "Tool name (default: username/my-tool)")
     .option("-f, --force", "Overwrite existing files")
     .option("--tool", "Create a new Enact tool (SKILL.md + AGENTS.md)")
-    .option("--agent", "Create AGENTS.md + agents/skills.json")
-    .option("--claude", "Create CLAUDE.md + agents/skills.json")
+    .option("--agent", "Create AGENTS.md + .agents/skills.json")
+    .option("--claude", "Create CLAUDE.md + .agents/skills.json")
     .option("-v, --verbose", "Show detailed output")
     .action(async (options: InitOptions) => {
       const ctx: CommandContext = {

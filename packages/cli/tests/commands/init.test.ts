@@ -128,7 +128,6 @@ describe("init command", () => {
 
       const content = readFileSync(packagePath, "utf-8");
       expect(content).toContain("name: test/my-tool");
-      expect(content).toContain("enact:");
       expect(content).toContain("scripts:");
     });
 
@@ -280,7 +279,7 @@ describe("init command", () => {
         process.chdir(originalCwd);
       }
 
-      const skillsJsonPath = join(testDir, "agents", "skills.json");
+      const skillsJsonPath = join(testDir, ".agents", "skills.json");
       expect(existsSync(skillsJsonPath)).toBe(true);
 
       const content = JSON.parse(readFileSync(skillsJsonPath, "utf-8"));
@@ -303,7 +302,7 @@ describe("init command", () => {
         process.chdir(originalCwd);
       }
 
-      const skillsJsonPath = join(testDir, "agents", "skills.json");
+      const skillsJsonPath = join(testDir, ".agents", "skills.json");
       expect(existsSync(skillsJsonPath)).toBe(true);
 
       const content = JSON.parse(readFileSync(skillsJsonPath, "utf-8"));
@@ -312,7 +311,7 @@ describe("init command", () => {
 
     test("--agent mode with --force overwrites existing agents/skills.json", async () => {
       // Create existing agents/skills.json with some content
-      const agentsDir = join(testDir, "agents");
+      const agentsDir = join(testDir, ".agents");
       mkdirSync(agentsDir, { recursive: true });
       const skillsJsonPath = join(agentsDir, "skills.json");
       const existingContent = { tools: { "some/tool": "1.0.0" } };
@@ -339,7 +338,7 @@ describe("init command", () => {
 
     test("--agent mode preserves existing agents/skills.json without --force", async () => {
       // Create existing agents/skills.json with some content
-      const agentsDir = join(testDir, "agents");
+      const agentsDir = join(testDir, ".agents");
       mkdirSync(agentsDir, { recursive: true });
       const skillsJsonPath = join(agentsDir, "skills.json");
       const existingContent = { tools: { "some/tool": "1.0.0" } };
@@ -384,7 +383,7 @@ describe("init command", () => {
         process.chdir(originalCwd);
       }
 
-      const skillsJsonPath = join(testDir, "agents", "skills.json");
+      const skillsJsonPath = join(testDir, ".agents", "skills.json");
       expect(existsSync(skillsJsonPath)).toBe(false);
     });
 
@@ -474,7 +473,7 @@ describe("init command", () => {
       expect(content).toContain("enact search");
       expect(content).toContain("enact install");
       expect(content).toContain("enact list");
-      expect(content).toContain("agents/skills.json");
+      expect(content).toContain(".agents/skills.json");
     });
   });
 

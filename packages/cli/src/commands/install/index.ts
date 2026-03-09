@@ -3,7 +3,7 @@
  *
  * Install a tool to the project or globally.
  * All tools are extracted to ~/.agents/skills/{tool}/
- * - Project install: Adds entry to agents/skills.json
+ * - Project install: Adds entry to .agents/skills.json
  * - Global install: Adds entry to ~/.enact/tools.json
  *
  * Supports local paths and registry tools with verification.
@@ -529,7 +529,7 @@ async function installFromRegistry(
   keyValue("Tool", toolName);
   keyValue("Version", targetVersion ?? "unknown");
   keyValue("Location", cachePath);
-  keyValue("Scope", isGlobal ? "global (~/.enact/tools.json)" : "project (agents/skills.json)");
+  keyValue("Scope", isGlobal ? "global (~/.enact/tools.json)" : "project (.agents/skills.json)");
   keyValue("Size", formatBytes(bundleResult.size));
   keyValue("Hash", `${bundleResult.hash.substring(0, 20)}...`);
   if (options.alias) {
@@ -544,7 +544,7 @@ async function installFromRegistry(
  *
  * Both global and project installs:
  * 1. Copy tool to ~/.agents/skills/{tool}/
- * 2. Update registry (global: ~/.enact/tools.json, project: agents/skills.json)
+ * 2. Update registry (global: ~/.enact/tools.json, project: .agents/skills.json)
  */
 async function installFromPath(
   sourcePath: string,
@@ -653,7 +653,7 @@ async function installFromPath(
   keyValue("Tool", manifest.name);
   keyValue("Version", manifest.version ?? "unversioned");
   keyValue("Location", cachePath);
-  keyValue("Scope", isGlobal ? "global (~/.enact/tools.json)" : "project (agents/skills.json)");
+  keyValue("Scope", isGlobal ? "global (~/.enact/tools.json)" : "project (.agents/skills.json)");
   if (options.alias) {
     keyValue("Alias", options.alias);
   }
@@ -681,13 +681,13 @@ async function installFromName(
 }
 
 /**
- * Install all tools from project agents/skills.json
+ * Install all tools from project .agents/skills.json
  */
 async function installProjectTools(options: InstallOptions, ctx: CommandContext): Promise<void> {
   const agentsDir = getProjectAgentsDir(ctx.cwd);
 
   if (!agentsDir) {
-    info("No agents/ directory found. Nothing to install.");
+    info("No .agents/ directory found. Nothing to install.");
     suggest("Run 'enact install <tool>' to install a specific tool.");
     return;
   }
@@ -695,7 +695,7 @@ async function installProjectTools(options: InstallOptions, ctx: CommandContext)
   const skillsJsonPath = join(agentsDir, "skills.json");
 
   if (!existsSync(skillsJsonPath)) {
-    info("No agents/skills.json found. Nothing to install.");
+    info("No .agents/skills.json found. Nothing to install.");
     suggest("Run 'enact install <tool>' to install a specific tool.");
     return;
   }
@@ -706,11 +706,11 @@ async function installProjectTools(options: InstallOptions, ctx: CommandContext)
     const content = await Bun.file(skillsJsonPath).text();
     toolsConfig = JSON.parse(content);
   } catch (err) {
-    throw new ManifestError(`Failed to parse agents/skills.json: ${formatError(err)}`);
+    throw new ManifestError(`Failed to parse .agents/skills.json: ${formatError(err)}`);
   }
 
   if (!toolsConfig.tools || Object.keys(toolsConfig.tools).length === 0) {
-    info("No tools specified in agents/skills.json");
+    info("No tools specified in .agents/skills.json");
     return;
   }
 

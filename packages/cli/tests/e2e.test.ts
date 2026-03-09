@@ -121,7 +121,7 @@ describe("E2E: Tool Installation Flow", () => {
   });
 
   test("installs tool to project agents/skills directory", () => {
-    const destBase = join(tempDir, "agents", "skills");
+    const destBase = join(tempDir, ".agents", "skills");
     const { manifest, destPath } = installTool(GREETER_TOOL, destBase);
 
     expect(manifest.name).toBe("test/greeter");
@@ -139,7 +139,7 @@ describe("E2E: Tool Installation Flow", () => {
   });
 
   test("installs markdown tool correctly", () => {
-    const destBase = join(tempDir, "agents", "skills");
+    const destBase = join(tempDir, ".agents", "skills");
     const { manifest, destPath } = installTool(ECHO_TOOL, destBase);
 
     expect(manifest.name).toBe("test/echo-tool");
@@ -147,7 +147,7 @@ describe("E2E: Tool Installation Flow", () => {
   });
 
   test("installs multiple tools without conflict", () => {
-    const destBase = join(tempDir, "agents", "skills");
+    const destBase = join(tempDir, ".agents", "skills");
 
     const result1 = installTool(GREETER_TOOL, destBase);
     const result2 = installTool(ECHO_TOOL, destBase);
@@ -164,7 +164,7 @@ describe("E2E: Tool Installation Flow", () => {
   });
 
   test("overwrites existing tool on reinstall", () => {
-    const destBase = join(tempDir, "agents", "skills");
+    const destBase = join(tempDir, ".agents", "skills");
 
     // First install
     const result1 = installTool(GREETER_TOOL, destBase);
@@ -193,7 +193,7 @@ describe("E2E: Tool Resolution Flow", () => {
     mkdirSync(resolveTempDir, { recursive: true });
 
     // Install tools
-    const destBase = join(resolveTempDir, "agents", "skills");
+    const destBase = join(resolveTempDir, ".agents", "skills");
     installTool(GREETER_TOOL, destBase);
     installTool(ECHO_TOOL, destBase);
     installTool(CALCULATOR_TOOL, destBase);
@@ -213,7 +213,7 @@ describe("E2E: Tool Resolution Flow", () => {
 
   test("resolves tool by path", () => {
     // Resolve from installed location
-    const toolPath = join(resolveTempDir, "agents", "skills", "test", "greeter");
+    const toolPath = join(resolveTempDir, ".agents", "skills", "test", "greeter");
     const resolution = tryResolveTool(toolPath);
     expect(resolution).not.toBeNull();
     expect(resolution?.manifest.name).toBe("test/greeter");
@@ -491,7 +491,7 @@ describe("E2E: Full Workflow", () => {
 
   test("complete install -> resolve -> validate -> prepare flow (scripts)", () => {
     // 1. Install tool
-    const destBase = join(tempDir, "agents", "skills");
+    const destBase = join(tempDir, ".agents", "skills");
     const { manifest } = installTool(GREETER_TOOL, destBase);
     expect(manifest.name).toBe("test/greeter");
 
@@ -513,7 +513,7 @@ describe("E2E: Full Workflow", () => {
 
   test("complete calculator workflow (scripts)", () => {
     // 1. Install tool
-    const destBase = join(tempDir, "agents", "skills");
+    const destBase = join(tempDir, ".agents", "skills");
     const { manifest } = installTool(CALCULATOR_TOOL, destBase);
 
     // 2. Resolve tool
@@ -547,7 +547,7 @@ describe("E2E: Full Workflow", () => {
 
   test("handles markdown tool workflow (scripts)", () => {
     // Install markdown-based tool
-    const destBase = join(tempDir, "agents", "skills");
+    const destBase = join(tempDir, ".agents", "skills");
     const { manifest } = installTool(ECHO_TOOL, destBase);
     expect(manifest.name).toBe("test/echo-tool");
 

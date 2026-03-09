@@ -21,7 +21,7 @@ describe("path utilities", () => {
     // Create test directory structure
     mkdirSync(NESTED_DIR, { recursive: true });
     mkdirSync(join(TEST_DIR, ".enact"), { recursive: true });
-    mkdirSync(join(TEST_DIR, "agents"), { recursive: true });
+    mkdirSync(join(TEST_DIR, ".agents"), { recursive: true });
   });
 
   afterAll(() => {
@@ -88,17 +88,17 @@ describe("path utilities", () => {
       expect(result).toBe(expected);
     });
 
-    test("returns agents/skills/ for project scope", () => {
+    test("returns .agents/skills/ for project scope", () => {
       const result = getToolsDir("project", TEST_DIR);
-      expect(result).toBe(join(TEST_DIR, "agents", "skills"));
+      expect(result).toBe(join(TEST_DIR, ".agents", "skills"));
     });
 
     test("finds project tools in parent directory", () => {
       const result = getToolsDir("project", NESTED_DIR);
-      expect(result).toBe(join(TEST_DIR, "agents", "skills"));
+      expect(result).toBe(join(TEST_DIR, ".agents", "skills"));
     });
 
-    test("returns null for project scope when agents/ not found", () => {
+    test("returns null for project scope when .agents/ not found", () => {
       const result = getToolsDir("project", "/tmp/no-agents-unlikely-path");
       // Result will be null or a valid skills directory
       if (result !== null) {

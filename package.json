@@ -11,6 +11,7 @@
     "packages/execution",
     "packages/api",
     "packages/registry",
+    "packages/sdk",
     "packages/server",
     "packages/mcp-server",
     "packages/cli",
@@ -23,7 +24,7 @@
     "packages/web"
   ],
   "scripts": {
-    "build": "bun run build:keyring && bun run build:trust && bun run build:secrets && bun run build:shared && bun run build:execution && bun run build:api && bun run build:server && bun run build:mcp-server && bun run build:cli && bun run build:web",
+    "build": "bun run build:keyring && bun run build:trust && bun run build:secrets && bun run build:shared && bun run build:execution && bun run build:api && bun run build:sdk && bun run build:server && bun run build:mcp-server && bun run build:cli && bun run build:web",
     "build:binary:local": "bun run build:keyring && bun run build:trust && bun run build:secrets && bun run build:shared && bun run build:execution && bun run build:api && bun run build:cli && node scripts/build-platform-binary.mjs",
     "build:keyring": "cd packages/keyring && bun run build",
     "build:trust": "cd packages/trust && bun run build",
@@ -31,6 +32,7 @@
     "build:shared": "cd packages/shared && bun run build",
     "build:execution": "cd packages/execution && bun run build",
     "build:api": "cd packages/api && bun run build",
+    "build:sdk": "cd packages/sdk && bun run build",
     "build:server": "cd packages/server && bun run build",
     "build:mcp-server": "cd packages/mcp-server && bun run build",
     "build:cli": "cd packages/cli && bun run build",

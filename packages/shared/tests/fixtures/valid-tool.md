@@ -1,5 +1,4 @@
 ---
-enact: "2.0.0"
 name: acme/analyzer
 description: Analyzes documentation for completeness
 version: "1.2.0"

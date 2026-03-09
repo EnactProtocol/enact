@@ -2,7 +2,7 @@
  * enact list command
  *
  * List installed tools from tools.json registries.
- * - Default: project tools (via agents/skills.json)
+ * - Default: project tools (via .agents/skills.json)
  * - --global/-g: global tools (via ~/.enact/tools.json)
  *
  * All tools are stored in ~/.agents/skills/{tool}/
@@ -77,7 +77,7 @@ async function listHandler(options: ListOptions, ctx: CommandContext): Promise<v
     const globalTools = listToolsFromRegistry("global");
     allTools.push(...globalTools);
   } else {
-    // Project tools (via agents/skills.json)
+    // Project tools (via .agents/skills.json)
     const projectTools = listToolsFromRegistry("project", ctx.cwd);
     allTools.push(...projectTools);
   }

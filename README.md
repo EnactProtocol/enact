@@ -117,23 +117,30 @@ my-skill/
 **skill.package.yml** defines identity, execution, and secrets:
 
 ```yaml
-enact: "2.0.0"
 name: acme/scraper
 version: "1.0.0"
 description: Scrape URLs and convert web pages to clean markdown
 from: python:3.12-slim
-
-hooks:
-  build:
-    - pip install -r requirements.txt
 
 env:
   API_KEY:
     secret: true
 
 scripts:
+  build: "pip install -r requirements.txt"
   scrape: "python /workspace/scrape.py"
 ```
+
+Scripts define executable commands. The `build` script can be called explicitly to set up dependencies. All scripts become executable capabilities that agents can invoke.
+
+**Arguments are passed through** — from CLI flags or converted from JSON:
+```bash
+enact run acme/scraper:scrape --url "https://example.com" --format markdown
+# or
+enact run acme/scraper:scrape -a '{"url":"https://example.com"}'
+```
+
+Your script receives standard `--key value` flags and handles its own parsing (argparse, commander, clap, etc).
 
 **SKILL.md** teaches the agent how to use the skill — plain markdown, no special syntax.
 

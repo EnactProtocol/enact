@@ -1,5 +1,4 @@
 ---
-enact: "2.0.0"
 name: test/echo-tool
 version: "1.0.0"
 description: A tool that echoes its input for testing

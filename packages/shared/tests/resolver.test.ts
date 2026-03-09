@@ -16,7 +16,7 @@ import {
 
 const TEST_DIR = join(import.meta.dir, "temp-resolver-test");
 const PROJECT_DIR = join(TEST_DIR, "project");
-const PROJECT_AGENTS_DIR = join(PROJECT_DIR, "agents");
+const PROJECT_AGENTS_DIR = join(PROJECT_DIR, ".agents");
 
 describe("tool resolver", () => {
   beforeAll(() => {

@@ -3,7 +3,7 @@
  *
  * Manages skills.json files for tracking installed tools:
  * - Global: ~/.enact/tools.json (installed with -g)
- * - Project: agents/skills.json (project dependencies)
+ * - Project: .agents/skills.json (project dependencies)
  *
  * Tools are stored in cache and referenced by version in the registry.
  */
@@ -40,7 +40,7 @@ export interface InstalledToolInfo {
 /**
  * Get the path to the registry file for the specified scope
  * - Global: ~/.enact/tools.json
- * - Project: agents/skills.json
+ * - Project: .agents/skills.json
  */
 export function getToolsJsonPath(scope: RegistryScope, startDir?: string): string | null {
   if (scope === "global") {
@@ -85,10 +85,10 @@ export function saveToolsRegistry(
 ): void {
   let registryPath = getToolsJsonPath(scope, startDir);
 
-  // For project scope, create agents/ directory if it doesn't exist
+  // For project scope, create .agents/ directory if it doesn't exist
   if (!registryPath && scope === "project") {
     const projectRoot = resolve(startDir ?? process.cwd());
-    const agentsDir = join(projectRoot, "agents");
+    const agentsDir = join(projectRoot, ".agents");
     mkdirSync(agentsDir, { recursive: true });
     registryPath = join(agentsDir, "skills.json");
   }

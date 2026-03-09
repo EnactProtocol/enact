@@ -126,9 +126,11 @@ export class DockerExecutionProvider implements ExecutionProvider {
     }
 
     try {
-      // Run build commands if specified (e.g., manifest.build or hooks.build)
-      if (manifest.build) {
-        const buildCommands = Array.isArray(manifest.build) ? manifest.build : [manifest.build];
+      // Run build commands if specified in legacy manifest.build or hooks.build (backwards compat)
+      // Note: scripts.build is NOT auto-executed - it's just another script the agent calls explicitly
+      const buildCmd = manifest.build ?? manifest.hooks?.build;
+      if (buildCmd) {
+        const buildCommands = Array.isArray(buildCmd) ? buildCmd : [buildCmd];
         for (const cmd of buildCommands) {
           const buildArgs = this.buildRunArgs(image, sourceDir, env, cmd);
           const buildOutput = await this.runContainer(buildArgs, 600000); // 10 min build timeout

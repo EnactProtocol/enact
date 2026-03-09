@@ -260,7 +260,7 @@ describe("tools.json edge cases", () => {
   const EDGE_TEST_DIR = join(TEST_BASE, "edge-cases");
 
   beforeAll(() => {
-    mkdirSync(join(EDGE_TEST_DIR, "agents"), { recursive: true });
+    mkdirSync(join(EDGE_TEST_DIR, ".agents"), { recursive: true });
   });
 
   afterAll(() => {
@@ -270,10 +270,10 @@ describe("tools.json edge cases", () => {
   });
 
   beforeEach(() => {
-    // Ensure agents directory exists
-    mkdirSync(join(EDGE_TEST_DIR, "agents"), { recursive: true });
+    // Ensure .agents directory exists
+    mkdirSync(join(EDGE_TEST_DIR, ".agents"), { recursive: true });
 
-    const jsonPath = join(EDGE_TEST_DIR, "agents", "skills.json");
+    const jsonPath = join(EDGE_TEST_DIR, ".agents", "skills.json");
     if (existsSync(jsonPath)) {
       rmSync(jsonPath);
     }

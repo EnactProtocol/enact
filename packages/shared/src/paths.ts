@@ -49,17 +49,17 @@ export function getProjectEnactDir(startDir?: string): string | null {
 }
 
 /**
- * Get the project-level agents directory
- * Searches up from current working directory to find agents/
+ * Get the project-level .agents directory
+ * Searches up from current working directory to find .agents/
  * @param startDir - Directory to start searching from (defaults to cwd)
- * @returns Absolute path to agents/ or null if not found
+ * @returns Absolute path to .agents/ or null if not found
  */
 export function getProjectAgentsDir(startDir?: string): string | null {
   let currentDir = resolve(startDir ?? process.cwd());
   const root = resolve("/");
 
   while (currentDir !== root) {
-    const agentsDir = join(currentDir, "agents");
+    const agentsDir = join(currentDir, ".agents");
     if (existsSync(agentsDir)) {
       return agentsDir;
     }
@@ -93,9 +93,9 @@ export function getProjectRoot(startDir?: string): string {
  * Global tools are now tracked in ~/.enact/tools.json and stored in cache (~/.agents/skills/).
  * Use getToolsJsonPath("global") and getToolCachePath() from ./registry instead.
  *
- * For project scope, this returns agents/skills/ where project tools are installed.
+ * For project scope, this returns .agents/skills/ where project tools are installed.
  *
- * @param scope - 'user' for ~/.agents/skills/ or 'project' for agents/skills/
+ * @param scope - 'user' for ~/.agents/skills/ or 'project' for .agents/skills/
  * @param startDir - For project scope, directory to start searching from
  * @returns Absolute path to tools directory or null if project scope and not found
  * @deprecated Use registry.ts functions for global tools
