@@ -25,7 +25,7 @@ enact search "resize images"
 **Run instantly** — Execute without manual setup or environment wiring:
 
 ```bash
-enact run alice/resizer:resize -a '{"width": 800}'
+enact run alice/resizer --width 800
 ```
 
 **Know what's available** — Agents and developers can inspect installed capabilities:
@@ -110,11 +110,11 @@ A skill is just agent-facing documentation, a runtime manifest, and implementati
 ```
 my-skill/
 ├── SKILL.md              # Agent-facing documentation
-├── skill.package.yml     # Runtime manifest
+├── skill.package.yaml    # Runtime manifest
 └── code/
 ```
 
-**skill.package.yml** defines identity, execution, and secrets:
+**skill.package.yaml** defines identity, execution, and secrets:
 
 ```yaml
 name: acme/scraper
@@ -128,19 +128,22 @@ env:
 
 scripts:
   build: "pip install -r requirements.txt"
-  scrape: "python /workspace/scrape.py"
+  default: "python /workspace/scrape.py"   # invoked by: enact run acme/scraper
+  scrape: "python /workspace/scrape.py"    # invoked by: enact run acme/scraper:scrape
 ```
 
-Scripts define executable commands. The `build` script can be called explicitly to set up dependencies. All scripts become executable capabilities that agents can invoke.
+Scripts define executable commands. The `build` script sets up dependencies. A script named `default` is invoked automatically when no script is specified — so `enact run acme/scraper` works without a `:script` suffix.
 
-**Arguments are passed through** — from CLI flags or converted from JSON:
+**Arguments are passed directly to the script:**
 ```bash
-enact run acme/scraper:scrape --url "https://example.com" --format markdown
-# or
-enact run acme/scraper:scrape -a '{"url":"https://example.com"}'
+enact run acme/scraper --url "https://example.com" --format markdown
+# explicit script name also works:
+enact run acme/scraper:scrape --url "https://example.com"
+# for complex types (arrays, objects), use JSON:
+enact run acme/scraper -a '{"items":["a","b"],"count":5}'
 ```
 
-Your script receives standard `--key value` flags and handles its own parsing (argparse, commander, clap, etc).
+Unknown flags are passed straight through to your script, which handles its own parsing (argparse, commander, clap, etc).
 
 **SKILL.md** teaches the agent how to use the skill — plain markdown, no special syntax.
 
@@ -220,7 +223,7 @@ User: "Scrape the Anthropic homepage and summarize it"
 
 Agent searches → finds enact/firecrawl
 Agent learns  → reads docs, sees it needs FIRECRAWL_API_KEY
-Agent runs    → enact/firecrawl:scrape with url: "https://anthropic.com"
+Agent runs    → enact/firecrawl with url: "https://anthropic.com"
 Agent summarizes the returned markdown
 ```
 
@@ -233,15 +236,16 @@ Manage skills from the terminal.
 ```bash
 enact search "pdf parser"      # Find skills
 enact learn alice/parser       # Read docs
-enact run alice/parser:parse   # Execute
-enact install alice/parser     # Cache locally
+enact run alice/parser         # Execute (uses 'default' script)
+enact run alice/parser:parse   # Execute a specific script
+enact install alice/parser     # Install to .agents/skills/ (project) or ~/.agents/skills/ (--global)
 enact publish                  # Share your skill
 ```
 
 ### Create a Skill
 
 ```bash
-enact init          # Scaffold a new skill
+enact init          # Scaffold a new skill (creates skill.package.yaml + hello.py)
 enact run ./        # Test locally
 enact login         # Authenticate
 enact publish       # Publish to registry
@@ -289,7 +293,7 @@ Install the CLI and run your first skill in seconds.
 ```bash
 npm install -g @enactprotocol/cli
 enact search scraper
-enact run enact/firecrawl:scrape -a '{"url":"https://example.com"}'
+enact run enact/firecrawl --url "https://example.com"
 ```
 
 **[Read the Docs](./GETTING-STARTED.md)** · **[Browse Skills](https://enact.tools)**
@@ -299,6 +303,10 @@ enact run enact/firecrawl:scrape -a '{"url":"https://example.com"}'
 ## Addressing
 
 Packages are `scope/name`. Scripts within a package are `scope/name:script`.
+
+A script named `default` is invoked automatically — `enact run scope/name` is equivalent to `enact run scope/name:default`.
+
+Installed skills live in `.agents/skills/` (project-local) or `~/.agents/skills/` (global). The `.agents/skills.json` file tracks project dependencies.
 
 ## Documentation
 

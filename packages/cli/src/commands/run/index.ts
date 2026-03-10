@@ -95,6 +95,7 @@ interface RunOptions extends GlobalOptions {
   apply?: boolean;
   debug?: boolean;
   action?: string;
+  passthroughArgs?: string[];
 }
 
 /**
@@ -932,6 +933,14 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
     if (options.verbose) {
       info(`Using action: ${actionName}`);
     }
+  } else if (resolution.actionsManifest?.actions?.default) {
+    // No action specified but skill has a 'default' script — use it automatically
+    actionsManifest = resolution.actionsManifest;
+    resolvedAction = actionsManifest.actions.default;
+    actionName = "default";
+    if (options.verbose) {
+      info("Using default action");
+    }
   }
 
   const manifest = resolution.manifest;
@@ -1032,13 +1041,14 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
   // Convert JSON inputs to --key value flags and append to the base command
   let command: string[];
   const inputFlags = Object.keys(finalInputs).length > 0 ? jsonArgsToFlags(finalInputs) : [];
+  const passthrough = options.passthroughArgs ?? [];
 
   if (resolvedAction) {
     // Action execution: build command with passthrough args
-    command = buildCommand(resolvedAction.command, inputFlags);
+    command = buildCommand(resolvedAction.command, [...inputFlags, ...passthrough]);
   } else {
     // Regular tool execution: use prepareCommand for ${param} templates
-    command = prepareCommand(manifest.command!, finalInputs);
+    command = [...prepareCommand(manifest.command!, finalInputs), ...passthrough];
   }
 
   // Resolve environment variables (non-secrets)
@@ -1272,7 +1282,8 @@ export function configureRunCommand(program: Command): void {
       "<tool>",
       "Tool or action to run (name, owner/skill/action, path, or '.' for current directory)"
     )
-    .option("-a, --args <json>", "Input arguments as JSON string (recommended)")
+    .allowUnknownOption()
+    .option("-a, --args <json>", "Input arguments as JSON string")
     .option("-f, --input-file <path>", "Load input arguments from JSON file")
     .option(
       "-i, --input <value...>",
@@ -1292,7 +1303,8 @@ export function configureRunCommand(program: Command): void {
     .option("--action <name>", "Script to execute (alternative to colon syntax: tool:script)")
     .option("-v, --verbose", "Show progress spinners and detailed output")
     .option("--json", "Output result as JSON")
-    .action(async (tool: string, options: RunOptions) => {
+    .action(async (tool: string, options: RunOptions, cmd: Command) => {
+      options.passthroughArgs = cmd.args;
       const ctx: CommandContext = {
         cwd: process.cwd(),
         options,
