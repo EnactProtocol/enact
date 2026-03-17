@@ -58,6 +58,13 @@ export {
   type RemoteProviderConfig,
 } from "./remote-provider.js";
 
+// Binary execution provider (pre-compiled platform binaries)
+export {
+  BinaryExecutionProvider,
+  createBinaryProvider,
+  type BinaryProviderConfig,
+} from "./binary-provider.js";
+
 // Execution router (config-driven backend selection)
 export {
   ExecutionRouter,

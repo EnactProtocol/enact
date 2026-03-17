@@ -34,8 +34,10 @@ import {
   verifyAllAttestations,
 } from "@enactprotocol/api";
 import {
+  BinaryExecutionProvider,
   DaggerExecutionProvider,
   DockerExecutionProvider,
+  type ExecutionProvider,
   type ExecutionResult,
   ExecutionRouter,
   LocalExecutionProvider,
@@ -996,7 +998,7 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
   }
 
   // Check if this is an instruction-based tool (no command) - but actions always have commands
-  if (!manifest.command && !resolvedAction) {
+  if (!manifest.command && !resolvedAction && !manifest.binaries) {
     // For instruction tools, just display the markdown body
     let instructions: string | undefined;
 
@@ -1136,20 +1138,31 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
     providerConfig.verbose = true;
   }
 
-  const config = loadConfig();
-  const router = new ExecutionRouter({
-    default: config.execution?.default,
-    fallback: config.execution?.fallback,
-    trusted_scopes: config.execution?.trusted_scopes,
-  });
-  router.registerProvider("local", new LocalExecutionProvider(providerConfig));
-  router.registerProvider("docker", new DockerExecutionProvider(providerConfig));
-  router.registerProvider("dagger", new DaggerExecutionProvider(providerConfig));
+  // Binary tools bypass the container router entirely
+  let provider: ExecutionProvider;
+  if (manifest.binaries) {
+    provider = new BinaryExecutionProvider({
+      ...providerConfig,
+      onDownload: (toolName, _url) => {
+        info(`Downloading ${toolName} binary...`);
+      },
+    });
+  } else {
+    const config = loadConfig();
+    const router = new ExecutionRouter({
+      default: config.execution?.default,
+      fallback: config.execution?.fallback,
+      trusted_scopes: config.execution?.trusted_scopes,
+    });
+    router.registerProvider("local", new LocalExecutionProvider(providerConfig));
+    router.registerProvider("docker", new DockerExecutionProvider(providerConfig));
+    router.registerProvider("dagger", new DaggerExecutionProvider(providerConfig));
 
-  const provider = await router.selectProvider(manifest.name, {
-    forceLocal: options.local,
-    forceRemote: options.remote,
-  });
+    provider = await router.selectProvider(manifest.name, {
+      forceLocal: options.local,
+      forceRemote: options.remote,
+    });
+  }
 
   // For --apply, we export to a temp directory first, then atomically replace
   let tempOutputDir: string | undefined;
@@ -1165,9 +1178,11 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
         mountDirs: Record<string, string>;
         inputPaths: typeof inputPaths;
         outputPath?: string;
+        passthroughArgs?: string[];
       } = {
         mountDirs,
         inputPaths,
+        ...(passthrough.length > 0 && { passthroughArgs: passthrough }),
       };
 
       // When using --apply, export to temp dir first
@@ -1202,11 +1217,12 @@ async function runHandler(tool: string, options: RunOptions, ctx: CommandContext
       );
     };
 
-    // Build a descriptive message - container may need to be pulled
-    const containerImage = manifest.from ?? "node:18-alpine";
+    // Build a descriptive message
     const toolDisplayName =
       resolvedAction && actionName ? `${manifest.name}:${actionName}` : manifest.name;
-    const spinnerMessage = `Running ${toolDisplayName} (${containerImage})...`;
+    const spinnerMessage = manifest.binaries
+      ? `Running ${toolDisplayName} (binary)...`
+      : `Running ${toolDisplayName} (${manifest.from ?? "node:18-alpine"})...`;
 
     const result = !options.verbose
       ? await executeTask()

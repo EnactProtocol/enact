@@ -1,0 +1,26 @@
+name: Text Analysis Pipeline
+on:
+  manual:
+    inputs:
+      text:
+        description: The text to analyze
+        required: true
+
+jobs:
+  pipeline:
+    steps:
+      - id: count
+        name: Count words and characters
+        uses: demo/word-counter:count
+        with:
+          text: ${{ inputs.text }}
+
+      - id: report
+        name: Generate analysis report
+        uses: demo/report:generate
+        needs: [count]
+        with:
+          text: ${{ inputs.text }}
+          word_count: ${{ steps.count.outputs.word_count }}
+          char_count: ${{ steps.count.outputs.char_count }}
+          unique_words: ${{ steps.count.outputs.unique_words }}

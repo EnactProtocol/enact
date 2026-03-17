@@ -6,7 +6,7 @@
 
 Discover, verify, and execute capabilities on demand.
 
-Enact packages tools as portable skill bundles and runs them securely — locally, in containers, or remotely — with policy enforcement and cryptographic verification.
+Enact packages tools as portable skill bundles and runs them securely — locally, in containers, or remotely — with policy enforcement and cryptographic verification. Skills can be chained into workflows that mix deterministic execution with model reasoning.
 
 **[Browse Skills](https://enact.tools)** · **[Get Started](./GETTING-STARTED.md)**
 
@@ -26,6 +26,12 @@ enact search "resize images"
 
 ```bash
 enact run alice/resizer --width 800
+```
+
+**Chain into workflows** — Combine skills and model reasoning into repeatable pipelines:
+
+```bash
+enact workflow run research-pipeline.yaml --input url=https://example.com
 ```
 
 **Know what's available** — Agents and developers can inspect installed capabilities:
@@ -81,6 +87,100 @@ Before execution, Enact:
 
 ---
 
+## Workflows
+
+Chain skills and model steps into repeatable pipelines using GitHub Actions-style YAML.
+
+```yaml
+name: Research and Report
+on:
+  manual:
+    inputs:
+      url:
+        description: URL to research
+        required: true
+
+jobs:
+  pipeline:
+    steps:
+      - id: scrape
+        name: Scrape page
+        uses: enact/web-scrape:scrape
+        with:
+          url: ${{ inputs.url }}
+
+      - id: analyze
+        name: Analyze content
+        model: agent
+        prompt: |
+          Extract the key themes and action items from this content:
+          ${{ steps.scrape.outputs.text }}
+        needs: [scrape]
+
+      - id: report
+        name: Format report
+        uses: enact/report:generate
+        with:
+          content: ${{ steps.analyze.outputs.response }}
+        needs: [analyze]
+```
+
+```bash
+enact workflow run research.yaml --input url=https://example.com
+enact workflow run research.yaml --dry-run   # preview without executing
+enact workflow run research.yaml --json       # machine-readable output
+```
+
+### Two step types
+
+**Skill steps** run deterministically in a container:
+
+```yaml
+- id: count
+  uses: demo/word-counter:count
+  with:
+    text: ${{ inputs.text }}
+```
+
+**Model steps** delegate reasoning to a model:
+
+```yaml
+- id: summarize
+  model: agent                    # delegate to the running agent
+  prompt: Summarize: ${{ steps.count.outputs.text }}
+
+- id: deep-research
+  model: claude-opus-4-6          # or call a specific model directly
+  prompt: Research this topic in depth...
+  tools:
+    - enact/search:query          # skills the model can call during this step
+```
+
+`model: agent` means "whoever is running this workflow handles this step" — no extra API call when Claude is already orchestrating. `model: claude-*` makes a direct API call with the specified model.
+
+### Expressions
+
+Steps reference inputs and prior step outputs using `${{ }}` expressions:
+
+```yaml
+text: ${{ inputs.query }}
+content: ${{ steps.fetch.outputs.text }}
+token: ${{ secrets.API_TOKEN }}
+```
+
+### Visual Editor
+
+Build workflows visually with the Workflow Studio:
+
+```bash
+cd packages/workflow-ui && bun run dev
+# Opens at http://localhost:3001
+```
+
+Drag skill and model nodes onto the canvas, connect them, configure inputs — the YAML is generated live.
+
+---
+
 ## Run Anywhere
 
 Skills are portable across environments. Write once, run anywhere.
@@ -122,17 +222,18 @@ version: "1.0.0"
 description: Scrape URLs and convert web pages to clean markdown
 from: python:3.12-slim
 
+build: "pip install -r requirements.txt"
+
 env:
   API_KEY:
     secret: true
 
 scripts:
-  build: "pip install -r requirements.txt"
   default: "python /workspace/scrape.py"   # invoked by: enact run acme/scraper
   scrape: "python /workspace/scrape.py"    # invoked by: enact run acme/scraper:scrape
 ```
 
-Scripts define executable commands. The `build` script sets up dependencies. A script named `default` is invoked automatically when no script is specified — so `enact run acme/scraper` works without a `:script` suffix.
+The `build` field installs dependencies before execution (run once, cached). Scripts define executable commands. A script named `default` is invoked automatically when no script is specified — so `enact run acme/scraper` works without a `:script` suffix.
 
 **Arguments are passed directly to the script:**
 ```bash
@@ -242,6 +343,16 @@ enact install alice/parser     # Install to .agents/skills/ (project) or ~/.agen
 enact publish                  # Share your skill
 ```
 
+### Workflows
+
+```bash
+enact workflow run pipeline.yaml                        # Run a workflow
+enact workflow run pipeline.yaml --input key=value      # Pass inputs
+enact workflow run pipeline.yaml --dry-run              # Preview steps
+enact workflow run pipeline.yaml --verbose              # Step-by-step output
+enact workflow run pipeline.yaml --json                 # JSON result
+```
+
 ### Create a Skill
 
 ```bash
@@ -281,6 +392,7 @@ A public registry is available at **[enact.tools](https://enact.tools)**.
 | **Portable** | Skills run across environments without modification |
 | **Secure by default** | Verification and policy enforcement before execution |
 | **Agent-native** | Designed for dynamic capability discovery |
+| **Composable** | Chain skills and model reasoning into workflows |
 | **Flexible** | Works locally, in containers, or remotely |
 | **Open** | Self-host, extend, or integrate into your stack |
 
@@ -328,7 +440,9 @@ packages/
 ├── secrets       # Secure credential storage
 ├── shared        # Core types, manifest parsing, config
 ├── trust         # Sigstore signing and verification
-└── web           # Web UI (enact.tools)
+├── web           # Web UI (enact.tools)
+├── workflow      # Workflow runner (skill + model steps, DAG execution)
+└── workflow-ui   # Visual workflow editor (Workflow Studio)
 ```
 
 ## Contributing

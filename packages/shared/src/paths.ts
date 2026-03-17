@@ -129,6 +129,15 @@ export function getCacheDir(): string {
 }
 
 /**
+ * Get the binary cache directory (~/.enact/bin/)
+ * Downloaded binaries from tools with `binaries` manifest field are cached here.
+ * @returns Absolute path to ~/.enact/bin/
+ */
+export function getBinDir(): string {
+  return join(getEnactHome(), "bin");
+}
+
+/**
  * Get the configuration file path (~/.enact/config.yaml)
  * @returns Absolute path to ~/.enact/config.yaml
  */

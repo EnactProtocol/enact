@@ -29,6 +29,7 @@ export {
   getToolsDir,
   getSkillsDir,
   getCacheDir,
+  getBinDir,
   getConfigPath,
   getGlobalEnvPath,
   getProjectEnvPath,

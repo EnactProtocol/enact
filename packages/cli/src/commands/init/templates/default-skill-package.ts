@@ -7,5 +7,5 @@ description: A simple tool that echoes a greeting
 from: python:3.12-slim
 
 scripts:
-  greet: "python /workspace/hello.py"
+  default: "python /workspace/hello.py"
 `;

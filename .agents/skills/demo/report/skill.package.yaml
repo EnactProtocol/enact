@@ -1,0 +1,31 @@
+name: demo/report
+version: "1.0.0"
+description: Format text analysis stats into a readable report
+from: python:3.12-slim
+
+scripts:
+  generate:
+    command: "python3 /workspace/report.py"
+    inputSchema:
+      type: object
+      required: [text, word_count, char_count]
+      properties:
+        text:
+          type: string
+          description: Original text
+        word_count:
+          type: integer
+          description: Number of words
+        char_count:
+          type: integer
+          description: Number of characters
+        unique_words:
+          type: integer
+          description: Number of unique words
+    outputSchema:
+      type: object
+      properties:
+        report:
+          type: string
+        grade:
+          type: string

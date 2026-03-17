@@ -1,0 +1,38 @@
+{
+  "name": "@enactprotocol/workflow",
+  "version": "2.3.9",
+  "description": "GitHub Actions-style workflow runner for Enact skills",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "rm -rf dist",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src/",
+    "lint:fix": "biome check --write src/"
+  },
+  "dependencies": {
+    "@enactprotocol/api": "workspace:*",
+    "@enactprotocol/execution": "workspace:*",
+    "@enactprotocol/secrets": "workspace:*",
+    "@enactprotocol/shared": "workspace:*",
+    "js-yaml": "^4.1.1",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.10.1",
+    "typescript": "^5.7.2"
+  },
+  "keywords": ["enact", "workflow", "pipeline"],
+  "author": "Enact Protocol",
+  "license": "Apache-2.0"
+}

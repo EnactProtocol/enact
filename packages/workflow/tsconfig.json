@@ -4,17 +4,16 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "composite": true,
+    "declaration": true,
+    "declarationMap": true,
     "noEmit": false
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "tests"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"],
   "references": [
-    { "path": "../trust" },
     { "path": "../shared" },
-    { "path": "../secrets" },
     { "path": "../execution" },
     { "path": "../api" },
-    { "path": "../registry" },
-    { "path": "../workflow" }
+    { "path": "../secrets" }
   ]
 }

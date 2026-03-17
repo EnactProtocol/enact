@@ -164,6 +164,22 @@ export interface ToolManifest {
   /** Lifecycle hooks (e.g., postinstall build step) */
   hooks?: ToolHooks;
 
+  // ==================== Binary Distribution ====================
+
+  /**
+   * Platform-specific pre-compiled binary URLs.
+   * When present, the tool is executed as a native binary instead of in a container.
+   * Keys follow the pattern "{os}-{arch}" (e.g., "darwin-arm64", "linux-x64", "windows-x64").
+   *
+   * @example
+   * binaries:
+   *   darwin-arm64: https://github.com/example/releases/tool-darwin-arm64
+   *   darwin-x64: https://github.com/example/releases/tool-darwin-x64
+   *   linux-x64: https://github.com/example/releases/tool-linux-x64
+   *   linux-arm64: https://github.com/example/releases/tool-linux-arm64
+   */
+  binaries?: Record<string, string>;
+
   // ==================== Scripts ====================
 
   /**

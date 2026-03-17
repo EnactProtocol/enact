@@ -34,6 +34,7 @@ import {
   configureUnyankCommand,
   configureValidateCommand,
   configureVisibilityCommand,
+  configureWorkflowCommand,
   configureYankCommand,
 } from "./commands";
 import { error, formatError } from "./utils";
@@ -96,6 +97,9 @@ async function main() {
 
   // Organizations
   configureOrgCommand(program);
+
+  // Workflow runner
+  configureWorkflowCommand(program);
 
   // Global error handler - handle Commander's help/version exits gracefully
   program.exitOverride((err) => {

@@ -44,3 +44,6 @@ export { configureServeCommand } from "./serve";
 
 // Organizations
 export { configureOrgCommand } from "./org";
+
+// Workflow runner
+export { configureWorkflowCommand } from "./workflow";

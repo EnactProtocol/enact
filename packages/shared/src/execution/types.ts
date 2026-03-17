@@ -163,6 +163,12 @@ export interface ExecutionOptions {
   retry?: RetryConfig;
   /** Dry run mode (don't actually execute) */
   dryRun?: boolean;
+  /**
+   * Raw passthrough arguments for binary tools.
+   * When set, these args are appended directly to the binary command
+   * without JSON-to-flag conversion.
+   */
+  passthroughArgs?: string[];
 }
 
 /**
